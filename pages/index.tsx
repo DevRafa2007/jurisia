@@ -190,7 +190,7 @@ export default function Home() {
         <div 
           className={`${
             sidebarAberta 
-              ? 'fixed inset-0 z-20 bg-gray-900 bg-opacity-50 md:bg-opacity-0 md:relative md:inset-auto'
+              ? 'fixed inset-0 z-20 md:relative md:inset-auto'
               : 'hidden md:block'
           } md:w-96 lg:w-1/4 xl:w-1/5 h-full transition-all duration-300`}
           onClick={(e) => {
@@ -200,12 +200,22 @@ export default function Home() {
             }
           }}
         >
+          {/* Overlay escuro para dispositivos móveis */}
+          <div 
+            className={`absolute inset-0 bg-gray-900 ${
+              sidebarAberta 
+                ? 'opacity-50' 
+                : 'opacity-0 pointer-events-none'
+            } md:hidden transition-opacity duration-300 ease-in-out`}
+            aria-hidden="true"
+          ></div>
+          
           <div 
             className={`${
               sidebarAberta 
-                ? 'translate-x-0 h-full w-3/4 sm:w-96 md:w-full'
+                ? 'translate-x-0 h-full w-3/4 sm:w-96 md:w-full shadow-lg'
                 : '-translate-x-full md:translate-x-0'
-            } transition-transform duration-300 absolute md:relative top-0 left-0 h-full`}
+            } transition-all duration-300 ease-in-out transform absolute md:relative top-0 left-0 h-full z-30 md:z-auto`}
           >
             <ConversasSidebar
               usuarioId={user.id}

@@ -17,6 +17,7 @@
     "@supabase/supabase-js": "^2.49.1",
     "autoprefixer": "^10.4.16",
     "axios": "^1.6.2",
+    "formidable": "^3.5.2",
     "groq-sdk": "^0.3.1",
     "next": "^14.0.4",
     "postcss": "^8.4.32",

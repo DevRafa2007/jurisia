@@ -67,19 +67,19 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
   };
 
   return (
-    <div className="h-full w-full flex flex-col bg-white dark:bg-gray-800 shadow-md rounded-r-lg md:rounded-none transition-colors duration-300">
-      <div className="p-2 sm:p-3 md:p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between transition-colors duration-300">
+    <div className="h-full w-full flex flex-col bg-white dark:bg-gray-800 shadow-md rounded-r-lg md:rounded-none transition-all duration-300 ease-in-out">
+      <div className="p-2 sm:p-3 md:p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between transition-all duration-300 ease-in-out">
         <div className="flex items-center">
           {/* Botão para fechar o menu em dispositivos móveis */}
           {isMobile && toggleSidebar && (
             <button 
               onClick={toggleSidebar}
-              className="md:hidden mr-2 p-1.5 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50 transition-colors duration-300"
+              className="md:hidden mr-2 p-1.5 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50 transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95"
               aria-label="Fechar menu de conversas"
             >
               <svg 
                 xmlns="http://www.w3.org/2000/svg" 
-                className="h-5 w-5 text-primary-600 dark:text-primary-400" 
+                className="h-5 w-5 text-primary-600 dark:text-primary-400 transition-colors duration-300" 
                 fill="none" 
                 viewBox="0 0 24 24" 
                 stroke="currentColor"
@@ -95,7 +95,7 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
         </div>
         <button 
           onClick={onNovaConversa}
-          className="p-1 sm:p-2 rounded-full bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors duration-300"
+          className="p-1 sm:p-2 rounded-full bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95"
           title="Nova Conversa"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 dark:text-gray-400 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -122,7 +122,7 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
             {conversas.map((conversa) => (
               <li 
                 key={conversa.id} 
-                className={`p-2 sm:p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex justify-between items-center group transition-colors duration-300 ${
+                className={`p-2 sm:p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex justify-between items-center group transition-all duration-300 ease-in-out ${
                   conversa.id === conversaAtual ? 'bg-gray-100 dark:bg-gray-700' : ''
                 }`}
                 onClick={() => onSelecionarConversa(conversa.id)}
@@ -137,7 +137,7 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
                 </div>
                 <button
                   onClick={(e) => handleExcluirConversa(e, conversa.id)}
-                  className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1"
+                  className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all duration-300 ease-in-out p-1 transform hover:scale-110 active:scale-95"
                   title="Excluir conversa"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

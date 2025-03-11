@@ -17,6 +17,13 @@
     min-height: -webkit-fill-available;
     position: relative;
   }
+  
+  /* Aplicar transições suaves por padrão */
+  * {
+    @apply transition-property-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter];
+    @apply transition-timing-function-[cubic-bezier(0.4,0,0.2,1)];
+    @apply transition-duration-300;
+  }
 }
 
 @layer components {
@@ -38,6 +45,25 @@
   
   .input {
     @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500;
+  }
+  
+  /* Adicionar classe para animação de abertura da sidebar */
+  .sidebar-slide-enter {
+    transform: translateX(-100%);
+  }
+  
+  .sidebar-slide-enter-active {
+    transform: translateX(0);
+    transition: transform 300ms ease-in-out;
+  }
+  
+  .sidebar-slide-exit {
+    transform: translateX(0);
+  }
+  
+  .sidebar-slide-exit-active {
+    transform: translateX(-100%);
+    transition: transform 300ms ease-in-out;
   }
   
   /* Animação melhorada para loading dots */
@@ -69,6 +95,58 @@
     }
     40% {
       transform: scale(1);
+    }
+  }
+  
+  /* Animação de onda para gravação de áudio */
+  .audio-wave {
+    display: flex;
+    align-items: center;
+    height: 1rem;
+  }
+  
+  .audio-wave-bar {
+    width: 0.25rem;
+    margin: 0 1px;
+    border-radius: 1rem;
+    background-color: currentColor;
+    animation: audio-wave 0.8s ease-in-out infinite;
+  }
+  
+  .audio-wave-bar:nth-child(1) { height: 0.5rem; animation-delay: -0.4s; }
+  .audio-wave-bar:nth-child(2) { height: 0.75rem; animation-delay: -0.2s; }
+  .audio-wave-bar:nth-child(3) { height: 1rem; animation-delay: 0s; }
+  .audio-wave-bar:nth-child(4) { height: 0.75rem; animation-delay: -0.2s; }
+  .audio-wave-bar:nth-child(5) { height: 0.5rem; animation-delay: -0.4s; }
+  
+  @keyframes audio-wave {
+    0%, 100% {
+      transform: scaleY(1);
+    }
+    50% {
+      transform: scaleY(1.5);
+    }
+  }
+  
+  /* Animação para reprodução de áudio */
+  .audio-playing {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.75rem;
+    color: currentColor;
+  }
+  
+  .audio-playing-icon {
+    animation: pulse 1.5s infinite;
+    margin-right: 0.25rem;
+  }
+  
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
     }
   }
 } 

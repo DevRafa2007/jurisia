@@ -1,22 +1,24 @@
-import type { AppProps } from 'next/app';
-import { useState, useEffect } from 'react';
 import '../styles/globals.css';
+import type { AppProps } from 'next/app';
 import { AuthProvider } from '../contexts/AuthContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import Head from 'next/head';
+import { useEffect } from 'react';
 
-export default function App({ Component, pageProps }: AppProps) {
-  // Usar o useState para garantir que não aconteça renderização no servidor
-  const [isMounted, setIsMounted] = useState(false);
-
+function MyApp({ Component, pageProps }: AppProps) {
+  // Inicializar vozes do sistema para garantir que estejam disponíveis
   useEffect(() => {
-    setIsMounted(true);
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
+      
+      // No Chrome, precisamos usar este evento
+      if ('onvoiceschanged' in window.speechSynthesis) {
+        window.speechSynthesis.onvoiceschanged = () => {
+          window.speechSynthesis.getVoices();
+        };
+      }
+    }
   }, []);
-
-  // Não renderizar os providers até que o componente esteja montado no cliente
-  if (!isMounted) {
-    return null; // ou um loading state
-  }
 
   return (
     <ThemeProvider>
@@ -28,4 +30,6 @@ export default function App({ Component, pageProps }: AppProps) {
       </AuthProvider>
     </ThemeProvider>
   );
-} 
+}
+
+export default MyApp; 
