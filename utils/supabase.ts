@@ -42,6 +42,16 @@ export interface Mensagem {
   criado_em?: string;
 }
 
+// Interface para o perfil do usuário
+export interface PerfilUsuario {
+  id?: string;
+  usuario_id: string;
+  nome_completo?: string;
+  url_foto?: string;
+  criado_em?: string;
+  atualizado_em?: string;
+}
+
 // Cria o cliente Supabase somente no cliente
 export const supabase = typeof window !== 'undefined' 
   ? createClient(supabaseUrl, supabaseAnonKey)
@@ -212,5 +222,141 @@ export async function excluirConversa(conversaId: string): Promise<void> {
   } catch (error) {
     console.error('Erro inesperado ao excluir conversa:', error);
     throw error;
+  }
+}
+
+// Função para obter o perfil do usuário
+export async function obterPerfilUsuario(usuarioId: string): Promise<PerfilUsuario | null> {
+  if (!supabase) {
+    console.error('Cliente Supabase não inicializado');
+    return null;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('perfis')
+      .select('*')
+      .eq('usuario_id', usuarioId)
+      .single();
+
+    if (error) {
+      // Se o erro for "no rows returned", pode ser que o usuário não tenha perfil ainda
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      console.error('Erro ao carregar perfil do usuário:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Erro inesperado ao carregar perfil do usuário:', error);
+    return null;
+  }
+}
+
+// Função para criar ou atualizar o perfil do usuário
+export async function atualizarPerfilUsuario(
+  usuarioId: string,
+  dados: { nome_completo?: string; url_foto?: string }
+): Promise<PerfilUsuario | null> {
+  if (!supabase) {
+    console.error('Cliente Supabase não inicializado');
+    return null;
+  }
+
+  try {
+    // Verificar se o perfil já existe
+    const perfilExistente = await obterPerfilUsuario(usuarioId);
+    
+    if (perfilExistente) {
+      // Atualizar perfil existente
+      const { data, error } = await supabase
+        .from('perfis')
+        .update({ 
+          ...dados, 
+          atualizado_em: new Date().toISOString() 
+        })
+        .eq('usuario_id', usuarioId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Erro ao atualizar perfil:', error);
+        throw error;
+      }
+
+      return data;
+    } else {
+      // Criar novo perfil
+      const { data, error } = await supabase
+        .from('perfis')
+        .insert([{ 
+          usuario_id: usuarioId, 
+          ...dados,
+          criado_em: new Date().toISOString(),
+          atualizado_em: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Erro ao criar perfil:', error);
+        throw error;
+      }
+
+      return data;
+    }
+  } catch (error) {
+    console.error('Erro inesperado ao atualizar perfil:', error);
+    return null;
+  }
+}
+
+// Função para fazer upload de uma imagem de perfil
+export async function uploadImagemPerfil(
+  usuarioId: string, 
+  arquivo: File
+): Promise<string | null> {
+  if (!supabase) {
+    console.error('Cliente Supabase não inicializado');
+    return null;
+  }
+
+  try {
+    // Definir o caminho do arquivo no storage
+    const filePath = `perfis/${usuarioId}/${Date.now()}_${arquivo.name}`;
+    
+    // Upload do arquivo
+    const { data, error } = await supabase
+      .storage
+      .from('uploads')
+      .upload(filePath, arquivo, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (error) {
+      console.error('Erro ao fazer upload da imagem:', error);
+      throw error;
+    }
+
+    // Obter URL pública da imagem
+    const { data: urlData } = await supabase
+      .storage
+      .from('uploads')
+      .getPublicUrl(data.path);
+
+    if (!urlData.publicUrl) {
+      throw new Error('Não foi possível obter a URL pública da imagem');
+    }
+
+    // Atualizar o perfil do usuário com a URL da imagem
+    await atualizarPerfilUsuario(usuarioId, { url_foto: urlData.publicUrl });
+
+    return urlData.publicUrl;
+  } catch (error) {
+    console.error('Erro inesperado ao fazer upload da imagem:', error);
+    return null;
   }
 } 

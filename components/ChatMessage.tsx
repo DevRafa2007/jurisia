@@ -4,12 +4,12 @@ import ReactMarkdown from 'react-markdown';
 type ChatMessageProps = {
   conteudo: string;
   isUsuario: boolean;
+  onErroAudio?: (mensagem: string | null) => void;
 };
 
-const ChatMessage: React.FC<ChatMessageProps> = ({ conteudo, isUsuario }) => {
+const ChatMessage: React.FC<ChatMessageProps> = ({ conteudo, isUsuario, onErroAudio }) => {
   const [isReproducao, setIsReproducao] = useState(false);
   const [vozesDisponiveis, setVozesDisponiveis] = useState<SpeechSynthesisVoice[]>([]);
-  const [erroAudio, setErroAudio] = useState<string | null>(null);
 
   useEffect(() => {
     // Verificar se o navegador suporta síntese de voz
@@ -33,7 +33,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ conteudo, isUsuario }) => {
   // Função para reproduzir o texto em áudio usando a API de Speech Synthesis
   const reproduzirAudio = () => {
     if (!('speechSynthesis' in window)) {
-      setErroAudio('Seu navegador não suporta a API de Text-to-Speech');
+      if (onErroAudio) {
+        onErroAudio('⚠️ Seu navegador não suporta a função de áudio. Tente usar Chrome, Edge ou Safari no computador.');
+      }
       return;
     }
 
@@ -43,7 +45,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ conteudo, isUsuario }) => {
 
       // Iniciar nova reprodução
       setIsReproducao(true);
-      setErroAudio(null);
+      if (onErroAudio) {
+        onErroAudio(null); // Limpar qualquer erro anterior
+      }
 
       const utterance = new SpeechSynthesisUtterance(conteudo);
       
@@ -74,14 +78,18 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ conteudo, isUsuario }) => {
       utterance.onerror = (event) => {
         console.error('Erro na reprodução de áudio:', event);
         setIsReproducao(false);
-        setErroAudio('Erro ao reproduzir áudio');
+        if (onErroAudio) {
+          onErroAudio('⚠️ Não foi possível reproduzir o áudio. Em computadores, verifique se o som não está mudo e se permitiu acesso ao microfone/áudio no navegador.');
+        }
       };
       
       window.speechSynthesis.speak(utterance);
     } catch (erro) {
       console.error('Erro ao iniciar reprodução:', erro);
       setIsReproducao(false);
-      setErroAudio('Não foi possível iniciar a reprodução de áudio');
+      if (onErroAudio) {
+        onErroAudio('⚠️ Erro ao iniciar áudio. Em computadores, verifique as configurações de som nas preferências do sistema e permissões do navegador.');
+      }
     }
   };
 
@@ -99,7 +107,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ conteudo, isUsuario }) => {
         isUsuario
           ? 'bg-primary-100 dark:bg-primary-700 ml-auto'
           : 'bg-gray-100 dark:bg-gray-700 mr-auto'
-      } max-w-[92%] sm:max-w-[85%] md:max-w-[80%] break-words`}
+      } max-w-[92%] sm:max-w-[85%] md:max-w-[80%] break-words shadow-none message-container mb-4 relative`}
     >
       <div className="flex justify-between items-start mb-2">
         <div 
@@ -144,15 +152,21 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ conteudo, isUsuario }) => {
         )}
       </div>
       
-      {/* Mensagem de erro de áudio */}
-      {erroAudio && (
-        <div className="text-xs text-red-600 dark:text-red-400 mb-2">
-          <span className="mr-1">⚠️</span> {erroAudio}
-        </div>
-      )}
-      
-      <div className={`prose prose-sm sm:prose max-w-none ${!isUsuario ? 'dark:prose-invert' : ''}`}>
-        <ReactMarkdown>{conteudo}</ReactMarkdown>
+      <div className={`prose prose-sm sm:prose max-w-none ${!isUsuario ? 'dark:prose-invert' : ''} overflow-visible`}>
+        <ReactMarkdown
+          components={{
+            p: ({node, ...props}) => <div className="mb-2 last:mb-0 overflow-visible" {...props} />,
+            pre: ({node, ...props}) => <pre className="overflow-x-auto rounded bg-gray-200 dark:bg-gray-800 p-2 my-2 text-sm" {...props} />,
+            ul: ({node, ...props}) => <ul className="list-disc pl-5 my-2 overflow-visible" {...props} />,
+            ol: ({node, ...props}) => <ol className="list-decimal pl-5 my-2 overflow-visible" {...props} />,
+            li: ({node, ...props}) => <li className="mb-1 overflow-visible" {...props} />,
+            h1: ({node, ...props}) => <h1 className="text-xl font-bold my-3 overflow-visible" {...props} />,
+            h2: ({node, ...props}) => <h2 className="text-lg font-bold my-2 overflow-visible" {...props} />,
+            h3: ({node, ...props}) => <h3 className="text-base font-bold my-2 overflow-visible" {...props} />,
+          }}
+        >
+          {conteudo}
+        </ReactMarkdown>
       </div>
     </div>
   );
