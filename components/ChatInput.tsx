@@ -24,12 +24,14 @@ const ChatInput: React.FC<ChatInputProps> = ({ onEnviar, isCarregando }) => {
           value={mensagem}
           onChange={(e) => setMensagem(e.target.value)}
           placeholder="Digite sua mensagem..."
-          className="flex-grow p-2 sm:p-3 text-sm sm:text-base border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 focus:ring-primary-500 dark:focus:ring-primary-400 focus:border-primary-500 transition-colors duration-300"
+          className="flex-grow p-2 sm:p-3 text-sm sm:text-base border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 focus:ring-primary-500 dark:focus:ring-primary-400 focus:border-primary-500 transition-colors duration-300 z-10"
           disabled={isCarregando}
+          autoComplete="off"
+          autoFocus
         />
         <button
           type="submit"
-          className="px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-xs sm:text-sm bg-primary-600 hover:bg-primary-700 dark:bg-primary-700 dark:hover:bg-primary-800 text-white rounded-lg transition-colors duration-300 min-w-[60px] sm:min-w-[80px] md:min-w-[100px] whitespace-nowrap"
+          className="px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-xs sm:text-sm bg-primary-600 hover:bg-primary-700 dark:bg-primary-700 dark:hover:bg-primary-800 text-white rounded-lg transition-colors duration-300 min-w-[60px] sm:min-w-[80px] md:min-w-[100px] whitespace-nowrap z-10"
           disabled={isCarregando || !mensagem.trim()}
         >
           {isCarregando ? (

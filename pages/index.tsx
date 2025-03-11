@@ -225,7 +225,7 @@ export default function Home() {
         </div>
 
         {/* Área principal de chat - Responsiva */}
-        <div className="flex-1 flex flex-col overflow-hidden w-full h-full">
+        <div className="flex-1 flex flex-col overflow-hidden w-full h-full relative">
           <div className="p-2 sm:p-3 md:p-4 bg-primary-50 dark:bg-gray-800 border-b border-primary-100 dark:border-gray-700 rounded-t-lg shadow-sm">
             <div className="flex justify-between items-center">
               <div>
@@ -256,7 +256,7 @@ export default function Home() {
           {/* Área de mensagens */}
           <div 
             ref={chatContainerRef}
-            className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 bg-white dark:bg-gray-900 relative"
+            className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 bg-white dark:bg-gray-900 relative pb-[70px] sm:pb-4"
           >
             {/* Marca d'água do símbolo de Direito - Versão detalhada e realista */}
             <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.06] dark:opacity-[0.035] overflow-hidden">
@@ -362,8 +362,8 @@ export default function Home() {
             )}
           </div>
 
-          {/* Área de input */}
-          <div className="p-2 sm:p-3 md:p-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 rounded-b-lg shadow-inner">
+          {/* Área de input - Fixa na parte inferior em dispositivos móveis */}
+          <div className="p-2 sm:p-3 md:p-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 rounded-b-lg shadow-inner absolute bottom-0 left-0 right-0 sm:relative">
             <ChatInput onEnviar={handleEnviarMensagem} isCarregando={isCarregando} />
           </div>
         </div>
