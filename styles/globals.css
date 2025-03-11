@@ -6,6 +6,17 @@
   body {
     @apply bg-gray-50 text-gray-900;
   }
+  
+  /* Ajuste para garantir que o conteúdo não fique escondido atrás da barra de digitação fixa */
+  html {
+    height: -webkit-fill-available;
+  }
+  
+  body {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    position: relative;
+  }
 }
 
 @layer components {

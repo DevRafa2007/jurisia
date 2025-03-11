@@ -256,7 +256,7 @@ export default function Home() {
           {/* Área de mensagens */}
           <div 
             ref={chatContainerRef}
-            className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 bg-white dark:bg-gray-900 relative pb-[70px] sm:pb-4"
+            className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 bg-white dark:bg-gray-900 relative"
           >
             {/* Marca d'água do símbolo de Direito - Versão detalhada e realista */}
             <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.06] dark:opacity-[0.035] overflow-hidden">
@@ -341,7 +341,7 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-2 sm:space-y-4 relative z-10">
+              <div className="space-y-2 sm:space-y-4 relative z-10 mb-16 sm:mb-0">
                 {mensagens.map((mensagem, index) => (
                   <ChatMessage
                     key={index}
@@ -363,7 +363,7 @@ export default function Home() {
           </div>
 
           {/* Área de input - Fixa na parte inferior em dispositivos móveis */}
-          <div className="p-2 sm:p-3 md:p-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 rounded-b-lg shadow-inner absolute bottom-0 left-0 right-0 sm:relative">
+          <div className="p-2 sm:p-3 md:p-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 rounded-b-lg shadow-inner fixed bottom-0 left-0 w-full z-20 sm:absolute sm:bottom-0 sm:w-full sm:max-w-full">
             <ChatInput onEnviar={handleEnviarMensagem} isCarregando={isCarregando} />
           </div>
         </div>

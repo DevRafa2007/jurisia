@@ -28,11 +28,11 @@ const Layout: React.FC<LayoutProps> = ({
 
       <Header sidebarAberta={sidebarAberta} toggleSidebar={toggleSidebar} />
 
-      <main className="flex-grow w-full mx-auto px-1 sm:px-2 md:px-4 my-2 sm:my-4 md:my-6 max-w-[98%] xl:max-w-[95%] 2xl:max-w-[90%]">
+      <main className="flex-grow w-full mx-auto px-1 sm:px-2 md:px-4 my-2 sm:my-4 md:my-6 max-w-[98%] xl:max-w-[95%] 2xl:max-w-[90%] pb-16 sm:pb-0">
         {children}
       </main>
 
-      <footer className="bg-white dark:bg-gray-800 py-1 sm:py-2 md:py-4 text-[10px] sm:text-xs md:text-sm text-gray-600 dark:text-gray-400 shadow-inner transition-colors duration-300">
+      <footer className="bg-white dark:bg-gray-800 py-1 sm:py-2 md:py-4 text-[10px] sm:text-xs md:text-sm text-gray-600 dark:text-gray-400 shadow-inner transition-colors duration-300 mt-auto">
         <div className="w-full mx-auto px-1 sm:px-2 md:px-4 max-w-[98%] xl:max-w-[95%] 2xl:max-w-[90%]">
           <div className="flex flex-row justify-between items-center">
             <div className="text-center sm:text-left">
