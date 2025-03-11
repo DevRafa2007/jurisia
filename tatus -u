@@ -1,0 +1,38 @@
+warning: in the working copy of '.next/server/pages/_app.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.next/server/pages/_error.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.next/server/pages/index.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.next/static/chunks/pages/_app.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.next/static/chunks/pages/index.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.next/static/chunks/webpack.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.next/trace', LF will be replaced by CRLF the next time Git touches it
+.next/cache/webpack/client-development/0.pack.gz
+.next/cache/webpack/client-development/1.pack.gz
+.next/cache/webpack/client-development/2.pack.gz
+.next/cache/webpack/client-development/index.pack.gz
+.next/cache/webpack/client-development/index.pack.gz.old
+.next/cache/webpack/server-development/0.pack.gz
+.next/cache/webpack/server-development/1.pack.gz
+.next/cache/webpack/server-development/index.pack.gz
+.next/cache/webpack/server-development/index.pack.gz.old
+.next/server/_error.js
+.next/server/pages/_app.js
+.next/server/pages/_error.js
+.next/server/pages/index.js
+.next/static/chunks/_error.js
+.next/static/chunks/pages/_app.js
+.next/static/chunks/pages/index.js
+.next/static/chunks/webpack.js
+.next/static/webpack/b5b300aaade02cf3.webpack.hot-update.json
+.next/static/webpack/pages/_app.b5b300aaade02cf3.hot-update.js
+.next/static/webpack/webpack.b5b300aaade02cf3.hot-update.js
+.next/trace
+components/Auth.tsx
+components/ChatInput.tsx
+components/ChatMessage.tsx
+components/ConversasSidebar.tsx
+components/Header.tsx
+components/Layout.tsx
+pages/_app.tsx
+pages/index.tsx
+styles/globals.css
+tailwind.config.js

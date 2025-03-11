@@ -2,18 +2,20 @@ import { useState } from 'react';
 import { Auth as SupabaseAuth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '../utils/supabase';
+import { useTheme } from '../contexts/ThemeContext';
 
 const Auth = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { theme } = useTheme();
 
   return (
-    <div className="flex flex-col space-y-4 p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold text-primary-700 text-center mb-4">
+    <div className="flex flex-col space-y-4 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold text-primary-700 dark:text-primary-400 text-center mb-4">
         Acesse sua conta
       </h2>
       
       {errorMessage && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+        <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded relative mb-4">
           <span className="block sm:inline">{errorMessage}</span>
         </div>
       )}
@@ -25,13 +27,22 @@ const Auth = () => {
           variables: {
             default: {
               colors: {
-                brand: '#0369a1', // primary-700
-                brandAccent: '#0284c7', // primary-600
+                brand: theme === 'dark' ? '#0ea5e9' : '#0369a1', // primary-500 : primary-700
+                brandAccent: theme === 'dark' ? '#38bdf8' : '#0284c7', // primary-400 : primary-600
               },
               borderRadii: {
                 borderRadiusButton: '0.375rem',
                 buttonBorderRadius: '0.375rem',
                 inputBorderRadius: '0.375rem',
+              },
+            },
+            dark: {
+              colors: {
+                brandButtonText: 'white',
+                inputBackground: '#374151', // gray-700
+                inputBorder: '#4B5563', // gray-600
+                inputText: 'white',
+                inputPlaceholder: '#9CA3AF', // gray-400
               },
             },
           },
@@ -49,7 +60,7 @@ const Auth = () => {
             },
           },
         }}
-        theme="default"
+        theme={theme}
         providers={[]}
         redirectTo={typeof window !== 'undefined' ? window.location.origin : undefined}
         localization={{
