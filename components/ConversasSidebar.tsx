@@ -42,8 +42,9 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
     carregarDados();
   }, [usuarioId]);
 
-  const handleExcluirConversa = async (e: React.MouseEvent, conversaId: string) => {
+  const handleExcluirConversa = async (e: React.MouseEvent, conversaId: string | undefined) => {
     e.stopPropagation();
+    if (!conversaId) return;
     if (!confirm('Tem certeza que deseja excluir esta conversa?')) return;
 
     try {
@@ -125,7 +126,7 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
                 className={`p-2 sm:p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex justify-between items-center group transition-colors duration-200 ease-in-out ${
                   conversa.id === conversaAtual ? 'bg-gray-100 dark:bg-gray-700' : ''
                 }`}
-                onClick={() => onSelecionarConversa(conversa.id)}
+                onClick={() => conversa.id && onSelecionarConversa(conversa.id)}
               >
                 <div className="truncate flex-grow">
                   <div className="font-medium text-xs sm:text-sm text-gray-800 dark:text-gray-200 truncate">
@@ -136,9 +137,9 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
                   </div>
                 </div>
                 <button
-                  onClick={(e) => handleExcluirConversa(e, conversa.id)}
-                  className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-in-out"
-                  title="Excluir conversa"
+                  className="text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => conversa.id && handleExcluirConversa(e, conversa.id)}
+                  aria-label="Excluir conversa"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

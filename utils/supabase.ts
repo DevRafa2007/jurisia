@@ -84,9 +84,14 @@ export async function carregarConversas(usuarioId: string): Promise<Conversa[]> 
 }
 
 // Função para carregar mensagens de uma conversa
-export async function carregarMensagens(conversaId: string): Promise<Mensagem[]> {
+export async function carregarMensagens(conversaId: string | undefined): Promise<Mensagem[]> {
   if (!supabase) {
     console.error('Cliente Supabase não inicializado');
+    return [];
+  }
+
+  if (!conversaId) {
+    console.error('ID da conversa não definido');
     return [];
   }
 
@@ -99,7 +104,7 @@ export async function carregarMensagens(conversaId: string): Promise<Mensagem[]>
 
     if (error) {
       console.error('Erro ao carregar mensagens:', error);
-      throw error;
+      return [];
     }
 
     return data || [];
@@ -135,37 +140,37 @@ export async function criarConversa(usuarioId: string, titulo: string): Promise<
   }
 }
 
-// Função para adicionar uma mensagem
+// Função para adicionar uma mensagem a uma conversa
 export async function adicionarMensagem(
-  conversaId: string,
+  conversaId: string | undefined,
   conteudo: string,
   tipo: 'usuario' | 'assistente'
-): Promise<Mensagem> {
+): Promise<void> {
   if (!supabase) {
     console.error('Cliente Supabase não inicializado');
     throw new Error('Cliente Supabase não inicializado');
   }
 
+  if (!conversaId) {
+    console.error('ID da conversa não definido');
+    throw new Error('ID da conversa não definido');
+  }
+
   try {
-    // Primeiro, adiciona a mensagem
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('mensagens')
-      .insert([{ conversa_id: conversaId, conteudo, tipo }])
-      .select()
-      .single();
+      .insert([{ conversa_id: conversaId, conteudo, tipo }]);
 
     if (error) {
       console.error('Erro ao adicionar mensagem:', error);
       throw error;
     }
 
-    // Depois, atualiza a data de atualização da conversa
+    // Atualiza o timestamp da conversa
     await supabase
       .from('conversas')
       .update({ atualizado_em: new Date().toISOString() })
       .eq('id', conversaId);
-
-    return data;
   } catch (error) {
     console.error('Erro inesperado ao adicionar mensagem:', error);
     throw error;
@@ -173,10 +178,15 @@ export async function adicionarMensagem(
 }
 
 // Função para atualizar o título de uma conversa
-export async function atualizarTituloConversa(conversaId: string, titulo: string): Promise<void> {
+export async function atualizarTituloConversa(conversaId: string | undefined, titulo: string): Promise<void> {
   if (!supabase) {
     console.error('Cliente Supabase não inicializado');
     throw new Error('Cliente Supabase não inicializado');
+  }
+
+  if (!conversaId) {
+    console.error('ID da conversa não definido');
+    throw new Error('ID da conversa não definido');
   }
 
   try {
@@ -196,10 +206,15 @@ export async function atualizarTituloConversa(conversaId: string, titulo: string
 }
 
 // Função para excluir uma conversa
-export async function excluirConversa(conversaId: string): Promise<void> {
+export async function excluirConversa(conversaId: string | undefined): Promise<void> {
   if (!supabase) {
     console.error('Cliente Supabase não inicializado');
     throw new Error('Cliente Supabase não inicializado');
+  }
+  
+  if (!conversaId) {
+    console.error('ID da conversa não definido');
+    throw new Error('ID da conversa não definido');
   }
 
   try {
