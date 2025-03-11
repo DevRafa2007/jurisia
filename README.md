@@ -9,12 +9,13 @@ JurisIA é uma aplicação web que integra a IA do Groq para fornecer assistênc
 - Sistema de autenticação com Supabase
 - Armazenamento de histórico de conversas
 - Foco em legislação brasileira e termos jurídicos
-- Interface moderna e responsiva construída com Next.js e TailwindCSS
+- Interface moderna e responsiva construída com Next.js 14 e TailwindCSS
 - Respostas estruturadas com citações de leis e jurisprudências
+- Reprodução de áudio das respostas para maior acessibilidade
 
 ## Requisitos
 
-- Node.js 16.x ou superior
+- Node.js 18.17 ou superior (requisito do Next.js 14)
 - Chave de API do Groq (obtenha em https://console.groq.com/)
 - Projeto Supabase (criado em https://supabase.com/)
 
@@ -84,25 +85,20 @@ CREATE INDEX idx_mensagens_criado_em ON public.mensagens (criado_em);
 
 5. Acesse `http://localhost:3000` no seu navegador
 
-## Hospedagem Gratuita
+## Deploy no Vercel
 
-Você pode hospedar este aplicativo gratuitamente em plataformas como:
+Este projeto está otimizado para deploy no Vercel. Siga os passos abaixo:
 
-1. **Vercel** (recomendado): https://vercel.com
-   - Integração perfeita com Next.js
-   - Deploy automático conectado ao GitHub
-   - Suporte a variáveis de ambiente
-   - Interface amigável
+1. Crie uma conta no [Vercel](https://vercel.com) se ainda não tiver
+2. Conecte sua conta do GitHub/GitLab/Bitbucket
+3. Importe o repositório
+4. Configure as seguintes variáveis de ambiente:
+   - `GROQ_API_KEY`
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+5. Clique em "Deploy"
 
-2. **Netlify**: https://netlify.com
-   - Fácil configuração
-   - Integração contínua
-
-3. **Render**: https://render.com
-   - Opções gratuitas para projetos pessoais
-   - Fácil configuração
-
-Para a melhor experiência, recomendamos o Vercel, pois é otimizado para aplicações Next.js.
+A aplicação será implantada automaticamente e estará disponível em um domínio fornecido pelo Vercel. Para configurar um domínio personalizado, acesse as configurações do projeto no painel do Vercel.
 
 ## Utilização
 
@@ -112,12 +108,20 @@ Para a melhor experiência, recomendamos o Vercel, pois é otimizado para aplica
 4. Receba uma resposta baseada no conhecimento jurídico brasileiro
 5. Continue a conversa para obter esclarecimentos ou fazer novas perguntas
 6. Acesse conversas anteriores pela barra lateral
+7. Utilize o botão de áudio para ouvir as respostas (funciona melhor em navegadores como Chrome, Safari ou Edge)
+
+## Compatibilidade
+
+- Navegadores modernos (Chrome, Firefox, Safari, Edge)
+- Dispositivos móveis e tablets (layout responsivo)
+- Recursos de acessibilidade para melhor experiência
 
 ## Limitações
 
 - Este assistente não substitui a consulta a um advogado qualificado
 - As respostas devem ser verificadas contra fontes oficiais
 - A legislação pode mudar, verifique sempre as datas de atualização das leis citadas
+- A reprodução de áudio pode não funcionar em todos os navegadores
 
 ## Licença
 

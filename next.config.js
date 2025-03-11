@@ -5,11 +5,17 @@ const nextConfig = {
   env: {
     GROQ_API_KEY: process.env.GROQ_API_KEY,
   },
+  // Configurações adicionais para otimização no Vercel
+  poweredByHeader: false,
+  compress: true,
+  images: {
+    domains: ['api.groq.com'],
+    unoptimized: false,
+  },
+  // Configurações para TypeScript
   typescript: {
-    // !! ATENÇÃO !!
-    // Ignorando erros de TypeScript temporariamente
-    // Remova isso em produção
-    ignoreBuildErrors: true,
+    // Verificação rigorosa de tipos para garantir código de qualidade
+    ignoreBuildErrors: false,
   },
 }
 
