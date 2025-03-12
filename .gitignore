@@ -24,9 +24,6 @@ yarn-error.log*
 
 # local env files
 .env*.local
-.env
-.env.development
-.env.production
 
 # vercel
 .vercel
@@ -34,24 +31,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# IDE/Editor folders
-.idea/
-.vscode/
-*.sublime-project
-*.sublime-workspace
-
-# OS files
-Thumbs.db
-.directory
-desktop.ini
-
-# Logs
-logs
-*.log
-
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Conversa, carregarConversas, excluirConversa } from '../utils/supabase';
 
 interface ConversasSidebarProps {
@@ -21,98 +21,36 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
   const [conversas, setConversas] = useState<Conversa[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
-  const [tentativas, setTentativas] = useState(0);
-  const maxTentativas = 3;
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Função de carregamento de dados separada para poder ser chamada de diferentes lugares
-  const carregarDados = useCallback(async (mostrarLoading = true, isRetry = false) => {
-    if (!usuarioId) return;
-    
-    if (mostrarLoading) {
-      setCarregando(true);
-    }
-    
-    try {
-      console.log(`[SIDEBAR] Carregando conversas para usuário: ${usuarioId} (tentativa: ${isRetry ? tentativas + 1 : 1})`);
-      const dados = await carregarConversas(usuarioId);
+  useEffect(() => {
+    const carregarDados = async () => {
+      if (!usuarioId) return;
       
-      if (dados && Array.isArray(dados)) {
-        console.log(`[SIDEBAR] Carregadas ${dados.length} conversas com sucesso`);
+      try {
+        setCarregando(true);
+        const dados = await carregarConversas(usuarioId);
         setConversas(dados);
         setErro(null);
-        setTentativas(0); // Resetar contagem de tentativas ao ter sucesso
-      } else {
-        // Se dados for null ou não for um array, tratamos como erro
-        console.error('[SIDEBAR] Dados inválidos recebidos:', dados);
-        
-        if (isRetry) {
-          setTentativas(prev => prev + 1);
-        } else {
-          setTentativas(1);
-        }
-        
-        if (!isRetry || tentativas + 1 >= maxTentativas) {
-          setErro(`Falha ao carregar conversas. Dados inválidos recebidos.`);
-        }
-      }
-    } catch (error) {
-      console.error('[SIDEBAR] Erro ao carregar conversas:', error);
-      
-      if (isRetry) {
-        setTentativas(prev => prev + 1);
-      } else {
-        setTentativas(1);
-      }
-      
-      if (!isRetry || tentativas + 1 >= maxTentativas) {
+      } catch (error) {
+        console.error('Erro ao carregar conversas:', error);
         setErro('Falha ao carregar conversas. Tente novamente.');
-      }
-    } finally {
-      setCarregando(false);
-    }
-  }, [usuarioId, tentativas]);
-
-  // Tentativa automatizada quando há falha
-  useEffect(() => {
-    // Limpar qualquer intervalo existente
-    if (intervalRef.current) {
-      clearTimeout(intervalRef.current);
-      intervalRef.current = null;
-    }
-    
-    // Se tiver erro e ainda não excedeu o número máximo de tentativas
-    if (erro && tentativas > 0 && tentativas < maxTentativas) {
-      console.log(`[SIDEBAR] Agendando nova tentativa ${tentativas + 1}/${maxTentativas} em ${tentativas * 2}s`);
-      
-      // Tentar novamente com backoff exponencial
-      intervalRef.current = setTimeout(() => {
-        carregarDados(false, true);
-      }, tentativas * 2000); // 2s, 4s, 6s...
-    }
-    
-    return () => {
-      if (intervalRef.current) {
-        clearTimeout(intervalRef.current);
+      } finally {
+        setCarregando(false);
       }
     };
-  }, [erro, tentativas, carregarDados]);
 
-  // Carregamento inicial
-  useEffect(() => {
     carregarDados();
-  }, [usuarioId, carregarDados]);
+  }, [usuarioId]);
 
-  const handleExcluirConversa = async (e: React.MouseEvent, conversaId: string | undefined) => {
+  const handleExcluirConversa = async (e: React.MouseEvent, conversaId: string) => {
     e.stopPropagation();
-    if (!conversaId) return;
     if (!confirm('Tem certeza que deseja excluir esta conversa?')) return;
 
     try {
       await excluirConversa(conversaId);
       setConversas(conversas.filter(c => c.id !== conversaId));
     } catch (error) {
-      console.error('[SIDEBAR] Erro ao excluir conversa:', error);
+      console.error('Erro ao excluir conversa:', error);
       setErro('Falha ao excluir conversa. Tente novamente.');
     }
   };
@@ -128,27 +66,20 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
     });
   };
 
-  // Botão de tentar novamente manualmente
-  const handleTentarNovamente = () => {
-    setErro(null);
-    setTentativas(0);
-    carregarDados(true);
-  };
-
   return (
-    <div className="h-full w-full flex flex-col bg-white dark:bg-gray-800 shadow-md rounded-r-lg md:rounded-none transition-all duration-300 ease-in-out">
-      <div className="p-2 sm:p-3 md:p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+    <div className="h-full w-full flex flex-col bg-white dark:bg-gray-800 shadow-md rounded-r-lg md:rounded-none transition-colors duration-300">
+      <div className="p-2 sm:p-3 md:p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between transition-colors duration-300">
         <div className="flex items-center">
           {/* Botão para fechar o menu em dispositivos móveis */}
           {isMobile && toggleSidebar && (
             <button 
               onClick={toggleSidebar}
-              className="md:hidden mr-2 p-1.5 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50 transition-all duration-200 ease-in-out hover:scale-105 active:scale-95"
+              className="md:hidden mr-2 p-1.5 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50 transition-colors duration-300"
               aria-label="Fechar menu de conversas"
             >
               <svg 
                 xmlns="http://www.w3.org/2000/svg" 
-                className="h-5 w-5 text-primary-600 dark:text-primary-400 transition-transform duration-300 ease-in-out" 
+                className="h-5 w-5 text-primary-600 dark:text-primary-400" 
                 fill="none" 
                 viewBox="0 0 24 24" 
                 stroke="currentColor"
@@ -158,16 +89,16 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
               </svg>
             </button>
           )}
-          <h2 className="font-medium text-base sm:text-lg text-gray-800 dark:text-gray-300">
+          <h2 className="font-medium text-base sm:text-lg text-gray-800 dark:text-gray-300 transition-colors duration-300">
             Conversas
           </h2>
         </div>
         <button 
           onClick={onNovaConversa}
-          className="p-1 sm:p-2 rounded-full bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 transition-all duration-200 ease-in-out hover:scale-110 active:scale-95"
+          className="p-1 sm:p-2 rounded-full bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors duration-300"
           title="Nova Conversa"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 dark:text-gray-400 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
         </button>
@@ -176,46 +107,38 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
       <div className="flex-grow overflow-y-auto">
         {carregando ? (
           <div className="p-3 flex justify-center">
-            <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-primary-600 dark:border-primary-400"></div>
+            <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-primary-600 dark:border-primary-400 transition-colors duration-300"></div>
           </div>
         ) : erro ? (
-          <div className="p-3 flex flex-col items-center">
-            <div className="text-red-600 dark:text-red-400 text-xs sm:text-sm text-center mb-2">
-              {erro}
-            </div>
-            <button 
-              onClick={handleTentarNovamente}
-              className="mt-2 px-3 py-1 bg-primary-600 hover:bg-primary-700 dark:bg-primary-700 dark:hover:bg-primary-800 text-white text-xs rounded-md transition-colors"
-            >
-              Tentar Novamente
-            </button>
+          <div className="p-3 text-red-600 dark:text-red-400 text-xs sm:text-sm transition-colors duration-300">
+            Erro ao carregar conversas.
           </div>
         ) : conversas.length === 0 ? (
-          <div className="p-3 text-gray-500 dark:text-gray-400 text-xs sm:text-sm text-center">
+          <div className="p-3 text-gray-500 dark:text-gray-400 text-xs sm:text-sm text-center transition-colors duration-300">
             Nenhuma conversa iniciada. Clique no botão + para iniciar uma nova conversa.
           </div>
         ) : (
-          <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+          <ul className="divide-y divide-gray-200 dark:divide-gray-700 transition-colors duration-300">
             {conversas.map((conversa) => (
               <li 
                 key={conversa.id} 
-                className={`p-2 sm:p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex justify-between items-center group transition-colors duration-200 ease-in-out ${
+                className={`p-2 sm:p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex justify-between items-center group transition-colors duration-300 ${
                   conversa.id === conversaAtual ? 'bg-gray-100 dark:bg-gray-700' : ''
                 }`}
-                onClick={() => conversa.id && onSelecionarConversa(conversa.id)}
+                onClick={() => onSelecionarConversa(conversa.id)}
               >
                 <div className="truncate flex-grow">
-                  <div className="font-medium text-xs sm:text-sm text-gray-800 dark:text-gray-200 truncate">
+                  <div className="font-medium text-xs sm:text-sm text-gray-800 dark:text-gray-200 truncate transition-colors duration-300">
                     {conversa.titulo || 'Nova Conversa'}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">
                     {formatarData(conversa.criado_em)}
                   </div>
                 </div>
                 <button
-                  className="text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => conversa.id && handleExcluirConversa(e, conversa.id)}
-                  aria-label="Excluir conversa"
+                  onClick={(e) => handleExcluirConversa(e, conversa.id)}
+                  className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1"
+                  title="Excluir conversa"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

@@ -9,23 +9,22 @@ declare global {
   }
 }
 
-// Configurações
-const GROQ_TIMEOUT_MS = 20000; // 20 segundos
-const MAX_RETRIES = 2; // Número máximo de retentativas
-const RETRY_DELAY_MS = 1000; // Tempo de espera entre retentativas (1 segundo inicial)
-
 // Inicializa o cliente Groq
 const getGroqClient = () => {
-  // Usar uma abordagem mais segura para acessar variáveis de ambiente
-  const apiKey = typeof window === 'undefined' 
-    ? process.env.GROQ_API_KEY 
-    : '';
+  // Verificar o ambiente
+  const isServer = typeof window === 'undefined';
+  
+  // No cliente, não podemos acessar variáveis de ambiente do servidor
+  if (!isServer) {
+    throw new Error("O cliente Groq só pode ser inicializado no servidor.");
+  }
+  
+  const apiKey = process.env.GROQ_API_KEY;
   
   if (!apiKey) {
     throw new Error("A chave de API do Groq não está definida. Configure a variável de ambiente GROQ_API_KEY.");
   }
   
-  // Criamos o cliente com a configuração básica - sem timeout como propriedade direta
   return new Groq({ apiKey });
 };
 
@@ -45,103 +44,60 @@ export interface ConsultaJuridica {
   historico?: Array<{ role: "user" | "assistant"; content: string }>;
 }
 
-// Função para delay entre tentativas (com backoff exponencial)
-const delay = (retry: number) => {
-  const ms = RETRY_DELAY_MS * Math.pow(2, retry);
-  return new Promise(resolve => setTimeout(resolve, ms));
-};
-
-// Função para obter resposta da IA com tratamento de erros e retries
+// Função para obter resposta da IA
 export async function obterRespostaJuridica({ consulta, historico = [] }: ConsultaJuridica) {
-  // Contador de tentativas
-  let tentativas = 0;
-  
-  while (true) {
-    try {
-      console.log(`[GROQ] Enviando consulta para API do Groq (tentativa ${tentativas + 1}/${MAX_RETRIES + 1})`);
-      
-      const startTime = Date.now();
-      const client = getGroqClient();
-      
-      // Cria o contexto da conversa
-      const mensagens = [
-        { role: "system", content: SISTEMA_PROMPT },
-        ...historico,
-        { role: "user", content: consulta }
-      ];
-      
-      // Implementamos o timeout manualmente com Promise.race
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => {
-          reject(new Error("Timeout ao conectar com a API Groq"));
-        }, GROQ_TIMEOUT_MS);
-      });
-      
-      // Criamos a promise de resposta da API
-      const responsePromise = client.chat.completions.create({
-        messages: mensagens,
-        model: "llama3-70b-8192",
-        temperature: 0.2,
-        max_tokens: 4096,
-        top_p: 0.9,
-      });
-      
-      // Corrida entre o timeout e a resposta da API
-      const resposta = await Promise.race([responsePromise, timeoutPromise]) as Awaited<typeof responsePromise>;
-      
-      const tempoTotal = Date.now() - startTime;
-      console.log(`[GROQ] Resposta recebida com sucesso em ${tempoTotal}ms`);
-      
-      return {
-        conteudo: resposta.choices[0]?.message?.content || "Não foi possível processar sua consulta.",
-        modeloUsado: resposta.model,
-        tokens: {
-          entrada: resposta.usage?.prompt_tokens || 0,
-          saida: resposta.usage?.completion_tokens || 0,
-          total: resposta.usage?.total_tokens || 0
-        }
-      };
-    } catch (erro: any) {
-      tentativas++;
-      
-      // Log detalhado do erro
-      const mensagemErro = erro.message || 'Erro desconhecido';
-      const statusCode = erro.status || 'N/A';
-      console.error(`[GROQ] Erro (status: ${statusCode}) ao consultar a API do Groq (tentativa ${tentativas}/${MAX_RETRIES + 1}):`, mensagemErro);
-      
-      // Verifica se é um erro que merece retry
-      const deveRetentar = (
-        // Erros temporários da API (429, 500, 503, etc)
-        (statusCode >= 429 && statusCode < 600) || 
-        // Erros de timeout ou rede
-        mensagemErro.includes('timeout') || 
-        mensagemErro.includes('timed out') || 
-        mensagemErro.includes('Timeout') ||
-        mensagemErro.includes('network') ||
-        mensagemErro.includes('ETIMEDOUT') ||
-        mensagemErro.includes('ECONNRESET')
-      );
-      
-      // Se esgotou as tentativas ou não é um erro que merece retry, lançar o erro
-      if (tentativas > MAX_RETRIES || !deveRetentar) {
-        let mensagemFinal = "Falha ao processar sua consulta jurídica.";
-        
-        if (statusCode === 429) {
-          mensagemFinal = "O serviço de IA está sobrecarregado no momento. Por favor, tente novamente em alguns minutos.";
-        } else if (mensagemErro.includes('timeout') || mensagemErro.includes('timed out') || mensagemErro.includes('Timeout')) {
-          mensagemFinal = "Tempo limite excedido ao processar sua consulta. Por favor, tente uma consulta mais simples.";
-        } else if (statusCode >= 500 && statusCode < 600) {
-          mensagemFinal = "O serviço de IA está enfrentando problemas técnicos. Por favor, tente novamente mais tarde.";
-        }
-        
-        throw new Error(mensagemFinal);
-      }
-      
-      // Aguardar antes de tentar novamente (com backoff exponencial)
-      console.log(`[GROQ] Aguardando ${RETRY_DELAY_MS * Math.pow(2, tentativas-1)}ms antes de tentar novamente...`);
-      await delay(tentativas-1);
-      
-      // Continua no loop para tentar novamente
+  // Verificar se estamos no servidor
+  if (typeof window !== 'undefined') {
+    throw new Error("Esta função só pode ser chamada no servidor");
+  }
+
+  try {
+    const client = getGroqClient();
+    
+    // Limitar o histórico para evitar exceder o limite de tokens
+    const historicoCortado = historico.slice(-10); // Manter apenas as 10 mensagens mais recentes
+    
+    // Cria o contexto da conversa
+    const mensagens = [
+      { role: "system", content: SISTEMA_PROMPT },
+      ...historicoCortado,
+      { role: "user", content: consulta }
+    ];
+    
+    // Envia a consulta para o modelo Llama-3 através do Groq
+    const resposta = await client.chat.completions.create({
+      messages: mensagens,
+      model: "llama3-70b-8192",
+      temperature: 0.2,
+      max_tokens: 4096,
+      top_p: 0.9,
+    });
+    
+    // Verificar se temos uma resposta válida
+    if (!resposta.choices || resposta.choices.length === 0) {
+      throw new Error("Resposta vazia recebida do serviço de IA");
     }
+    
+    return {
+      conteudo: resposta.choices[0]?.message?.content || "Não foi possível processar sua consulta.",
+      modeloUsado: resposta.model,
+      tokens: {
+        entrada: resposta.usage?.prompt_tokens || 0,
+        saida: resposta.usage?.completion_tokens || 0,
+        total: resposta.usage?.total_tokens || 0
+      }
+    };
+  } catch (erro: any) {
+    console.error("Erro ao consultar a API do Groq:", erro);
+    
+    // Fornecer mensagem de erro mais específica quando possível
+    const mensagemErro = erro.message || "Falha ao processar sua consulta jurídica. Por favor, tente novamente mais tarde.";
+    
+    // Se for um erro relacionado à API key ou autenticação
+    if (mensagemErro.includes("API key") || mensagemErro.includes("authentication") || mensagemErro.includes("auth")) {
+      throw new Error("Erro de configuração no servidor. Entre em contato com o suporte.");
+    }
+    
+    throw new Error(mensagemErro);
   }
 } 

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 
 type ChatInputProps = {
   onEnviar: (mensagem: string) => void;
@@ -7,72 +7,43 @@ type ChatInputProps = {
 
 const ChatInput: React.FC<ChatInputProps> = ({ onEnviar, isCarregando }) => {
   const [mensagem, setMensagem] = useState('');
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const mensagemTrimmed = mensagem.trim();
-    if (mensagemTrimmed && !isCarregando) {
-      onEnviar(mensagemTrimmed);
+    if (mensagem.trim() && !isCarregando) {
+      onEnviar(mensagem);
       setMensagem('');
-      
-      // Resetar altura do textarea
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
-      }
     }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e);
-    }
-  };
-
-  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setMensagem(e.target.value);
-    
-    // Auto-resize do textarea
-    const textarea = e.target;
-    textarea.style.height = 'auto';
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 150)}px`;
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex items-center w-full relative">
-      <div className="relative flex-grow">
-        <textarea
-          ref={textareaRef}
+    <form onSubmit={handleSubmit} className="w-full">
+      <div className="flex items-center gap-1 sm:gap-2 w-full">
+        <input
+          type="text"
           value={mensagem}
-          onChange={handleTextareaChange}
-          onKeyDown={handleKeyDown}
-          placeholder="Digite sua consulta jurídica..."
-          className="w-full py-2 px-3 pr-10 rounded-l-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-500 dark:focus:border-primary-500 resize-none overflow-hidden text-gray-900 dark:text-gray-100"
-          rows={1}
+          onChange={(e) => setMensagem(e.target.value)}
+          placeholder="Digite sua mensagem..."
+          className="flex-grow p-2 sm:p-3 text-sm sm:text-base border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 focus:ring-primary-500 dark:focus:ring-primary-400 focus:border-primary-500 transition-colors duration-300 z-10"
           disabled={isCarregando}
+          autoComplete="off"
+          autoFocus
         />
+        <button
+          type="submit"
+          className="px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-xs sm:text-sm bg-primary-600 hover:bg-primary-700 dark:bg-primary-700 dark:hover:bg-primary-800 text-white rounded-lg transition-colors duration-300 min-w-[60px] sm:min-w-[80px] md:min-w-[100px] whitespace-nowrap z-10"
+          disabled={isCarregando || !mensagem.trim()}
+        >
+          {isCarregando ? (
+            <svg className="animate-spin h-4 w-4 sm:h-5 sm:w-5 text-white mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          ) : (
+            'Enviar'
+          )}
+        </button>
       </div>
-      
-      <button
-        type="submit"
-        disabled={!mensagem.trim() || isCarregando}
-        className={`p-2 sm:p-3 rounded-r-lg ${
-          !mensagem.trim() || isCarregando 
-            ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed' 
-            : 'bg-primary-600 hover:bg-primary-700 dark:bg-primary-700 dark:hover:bg-primary-800'
-        } transition-colors duration-200`}
-        title="Enviar mensagem"
-      >
-        {isCarregando ? (
-          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-        ) : (
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clipRule="evenodd" transform="rotate(90, 10, 10)" />
-          </svg>
-        )}
-      </button>
     </form>
   );
 };

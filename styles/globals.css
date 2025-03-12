@@ -16,64 +16,31 @@
     min-height: 100vh;
     min-height: -webkit-fill-available;
     position: relative;
-    overscroll-behavior-y: none; /* Previne scroll indesejado */
-  }
-  
-  /* Aplicar transições suaves por padrão */
-  * {
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important; /* ease-in-out */
   }
 }
 
 @layer components {
   .btn {
-    @apply inline-block px-4 py-2 rounded shadow hover:shadow-md transition-all duration-300 font-medium;
+    @apply px-4 py-2 rounded-md transition duration-200 font-medium focus:outline-none focus:ring-2 focus:ring-offset-2;
   }
   
   .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700;
+    @apply bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-500;
   }
   
   .btn-secondary {
-    @apply bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600;
+    @apply bg-secondary-100 hover:bg-secondary-200 text-secondary-800 focus:ring-secondary-500;
   }
   
-  .btn-danger {
-    @apply bg-red-600 text-white hover:bg-red-700;
+  .container-custom {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
   
-  .btn-ghost {
-    @apply bg-transparent text-current shadow-none hover:bg-gray-100 dark:hover:bg-gray-800;
+  .input {
+    @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500;
   }
   
-  .btn-small {
-    @apply px-2 py-1 text-sm;
-  }
-  
-  .btn:disabled {
-    @apply opacity-50 cursor-not-allowed;
-  }
-  
-  .sidebar-animation {
-    @apply transition-all ease-in-out duration-300;
-  }
-  
-  .input-default {
-    @apply w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-500 dark:focus:border-primary-500 text-gray-900 dark:text-gray-100;
-  }
-  
-  .card {
-    @apply bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden;
-  }
-  
-  .card-header {
-    @apply p-4 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600;
-  }
-  
-  .card-body {
-    @apply p-4;
-  }
-  
+  /* Animação melhorada para loading dots */
   .loading {
     display: flex;
     justify-content: center;
@@ -104,291 +71,4 @@
       transform: scale(1);
     }
   }
-}
-
-/* Estilo para o gradiente de indicação de rolagem */
-.scroll-fade-indicator {
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none !important;
-  height: 40px !important; /* Reduzindo a altura do gradiente */
-  z-index: 5 !important; /* Menor z-index para não sobrepor as mensagens */
-}
-
-.has-overflow .scroll-fade-indicator {
-  opacity: 0.5;
-}
-
-/* Garantir que as mensagens sejam exibidas sem qualquer corte */
-.message-container {
-  box-shadow: none !important;
-  border: none !important;
-  z-index: 10 !important; /* Garantir que as mensagens estão acima do indicador */
-  position: relative !important;
-  overflow: visible !important;
-  margin-top: 10px !important;
-  padding-top: 2px !important;
-}
-
-/* Melhorar a exibição das mensagens no ReactMarkdown */
-.prose {
-  overflow: visible !important;
-  position: relative !important;
-  z-index: 10 !important;
-}
-
-.prose p, .prose div, .prose pre, .prose ul, .prose ol, .prose li {
-  position: relative !important;
-  z-index: inherit !important;
-}
-
-/* Remover quaisquer efeitos de sombra indesejados em elementos dentro do chat */
-.message-area > * {
-  box-shadow: none !important;
-}
-
-/* Ajustar a área de mensagens para garantir que não haja cortes */
-.message-area {
-  padding-bottom: 80px !important; /* Mais espaço na parte inferior */
-}
-
-/* Ajustes de espaçamento para telas maiores */
-@media (min-width: 1200px) {
-  .chat-container {
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-  
-  .message-area {
-    padding-bottom: 50px !important;
-  }
-  
-  .input-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    border-radius: 0 0 0.5rem 0.5rem;
-  }
-}
-
-/* Melhorias na renderização de mensagens no ReactMarkdown */
-.prose pre {
-  margin-top: 0.5em !important;
-  margin-bottom: 0.5em !important;
-  background-color: rgba(0, 0, 0, 0.05) !important;
-  padding: 0.75rem !important;
-  border-radius: 0.375rem !important;
-  overflow-x: auto !important;
-}
-
-.dark .prose pre {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-}
-
-.prose p {
-  margin-top: 0.5em !important;
-  margin-bottom: 0.5em !important;
-}
-
-.prose ul, .prose ol {
-  margin-top: 0.5em !important;
-  margin-bottom: 0.5em !important;
-  padding-left: 1.5em !important;
-}
-
-.prose li {
-  margin-top: 0.25em !important;
-  margin-bottom: 0.25em !important;
-}
-
-.prose hr {
-  margin-top: 1em !important;
-  margin-bottom: 1em !important;
-  border-top-width: 1px !important;
-}
-
-.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
-  margin-top: 1em !important;
-  margin-bottom: 0.5em !important;
-  font-weight: 600 !important;
-}
-
-/* Estilo para corrigir a visualização de mensagens longas */
-.space-y-2 > *, .space-y-4 > * {
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-}
-
-.space-y-2 > * + *, .space-y-4 > * + * {
-  margin-top: 0.5rem !important;
-}
-
-.space-y-4 > * + * {
-  margin-top: 1rem !important;
-}
-
-@media (min-width: 640px) {
-  .space-y-4 > * + * {
-    margin-top: 1.5rem !important;
-  }
-}
-
-/* Garantir que as mensagens apareçam completamente */
-.prose strong, .prose em, .prose code, .prose a {
-  position: relative;
-  z-index: 1;
-}
-
-/* Remover qualquer sombra indesejada */
-.prose *, .message-container * {
-  text-shadow: none !important;
-  box-shadow: none !important;
-}
-
-/* Ajustar áreas com conteúdo muito longo */
-.prose pre code {
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-/* Garantir que as notificações de erro fiquem acima de todos os outros elementos */
-.absolute.top-0.z-30 {
-  z-index: 50 !important;
-}
-
-/* Garantir espaçamento adequado entre as mensagens para acomodar as notificações */
-.mt-4 {
-  margin-top: 2rem !important;
-}
-
-@media (min-width: 640px) {
-  .mt-4 {
-    margin-top: 2.5rem !important;
-  }
-}
-
-/* Estilo de alerta personalizado para mensagens de erro */
-.bg-red-100.dark\:bg-red-900 {
-  border: 1px solid rgba(255, 0, 0, 0.2);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
-}
-
-/* Estilo para a notificação de erro global */
-.notification-error {
-  animation: slideInDown 0.5s ease forwards, pulse-border 2s infinite, attention-pulse 1s ease-in-out infinite;
-  transform-origin: top center;
-  z-index: 99999 !important; /* Z-index extremamente alto apenas para notificações de erro */
-  position: fixed !important;
-}
-
-/* Estilos específicos para notificação em celulares */
-.mobile-notification {
-  animation: slideInDown 0.5s ease forwards, pulse-border 2s infinite;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-}
-
-/* Estilos específicos para notificação em desktops */
-.desktop-notification {
-  animation: fadeIn 0.3s ease forwards, pulse-background 3s ease-in-out infinite;
-  transform-origin: center center;
-}
-
-/* Modal overlay effect apenas para desktop */
-.desktop-notification::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: -1;
-}
-
-@keyframes slideInDown {
-  0% {
-    transform: translateY(-20px);
-    opacity: 0;
-  }
-  100% {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes fadeIn {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.9);
-  }
-  100% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
-
-@keyframes pulse-border {
-  0% {
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2), 0 0 0 2px rgba(255, 0, 0, 0.3);
-  }
-  50% {
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25), 0 0 0 4px rgba(255, 0, 0, 0.5);
-  }
-  100% {
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2), 0 0 0 2px rgba(255, 0, 0, 0.3);
-  }
-}
-
-@keyframes pulse-background {
-  0%, 100% {
-    box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.5);
-  }
-  50% {
-    box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.7);
-  }
-}
-
-@keyframes attention-pulse {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.02);
-  }
-}
-
-/* Melhorias visuais para desktop */
-@media (min-width: 768px) {
-  .notification-error {
-    width: 90% !important;
-    max-width: 500px !important;
-    padding: 12px !important;
-    border-width: 3px !important;
-  }
-}
-
-/* Botão de fechar na notificação */
-.notification-error button {
-  transition: all 0.2s ease;
-  padding: 5px !important;
-  border-radius: 50% !important;
-  background-color: rgba(255, 255, 255, 0.2) !important;
-}
-
-.notification-error button:hover {
-  transform: scale(1.1);
-  background-color: rgba(255, 255, 255, 0.3) !important;
-}
-
-/* Garantir que a área de input não sobreponha a barra lateral */
-.input-container {
-  z-index: 20 !important;
-}
-
-/* Garantir que a barra lateral tenha prioridade sobre outros elementos */
-.sidebar-animation {
-  z-index: 30 !important;
 } 
