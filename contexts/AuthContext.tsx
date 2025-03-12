@@ -13,6 +13,7 @@ interface AuthContextType {
   atualizarNome: (nomeCompleto: string) => Promise<void>;
   uploadFotoPerfil: (arquivo: File) => Promise<string | null>;
   recarregarPerfil: () => Promise<void>;
+  recarregarSessao: () => Promise<void>;
 }
 
 // Usar um valor inicial em vez de undefined
@@ -26,6 +27,7 @@ const initialAuthContext: AuthContextType = {
   atualizarNome: async () => {},
   uploadFotoPerfil: async () => null,
   recarregarPerfil: async () => {},
+  recarregarSessao: async () => {},
 };
 
 const AuthContext = createContext<AuthContextType>(initialAuthContext);
@@ -37,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
   const [authError, setAuthError] = useState<Error | null>(null);
+  const [lastInitAttempt, setLastInitAttempt] = useState<number>(0);
 
   // Função para carregar o perfil do usuário
   const carregarPerfil = async (userId: string) => {
@@ -49,19 +52,82 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Função para recarregar a sessão manualmente
+  const recarregarSessao = async () => {
+    try {
+      setIsLoading(true);
+      console.log("[AUTH] Recarregando sessão manualmente");
+      
+      // Limpar erros anteriores
+      setAuthError(null);
+      
+      // Buscar sessão atual
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('[AUTH] Erro ao recarregar sessão:', error);
+        setAuthError(error);
+        throw error;
+      }
+      
+      console.log("[AUTH] Sessão recarregada:", !!data.session);
+      setSession(data.session);
+      setUser(data.session?.user ?? null);
+      
+      // Carregar perfil se o usuário estiver logado
+      if (data.session?.user) {
+        await carregarPerfil(data.session.user.id);
+      } else {
+        setPerfil(null);
+      }
+      
+      // Marcar como inicializado e carregado
+      setIsInitialized(true);
+    } catch (error) {
+      console.error('[AUTH] Erro ao recarregar sessão:', error);
+      // Mesmo em caso de erro, marcamos como inicializado para evitar loops infinitos
+      setIsInitialized(true); 
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
     console.log("[AUTH] Inicializando contexto de autenticação");
+
+    // Registrar o tempo da última tentativa
+    setLastInitAttempt(Date.now());
 
     // Buscar sessão inicial
     const getInitialSession = async () => {
       try {
         console.log("[AUTH] Buscando sessão inicial");
+        
+        // Primeiro verificar qualquer erro com o Supabase
+        if (!supabase) {
+          throw new Error('[AUTH] Cliente Supabase não inicializado');
+        }
+
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('[AUTH] Erro ao buscar sessão:', error);
           setAuthError(error);
+          
+          // Detectar se a sessão é inválida
+          if (error.message.includes('JWT expired') || error.message.includes('invalid token')) {
+            console.log('[AUTH] Sessão expirada ou token inválido. Limpando dados locais.');
+            
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.removeItem('jurisia-auth-storage');
+              } catch (e) {
+                console.error('[AUTH] Erro ao limpar localStorage após token inválido:', e);
+              }
+            }
+          }
+          
           throw error;
         }
         
@@ -87,6 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } finally {
         if (mounted) {
+          // Independentemente do resultado, marcar como inicializado e não carregando
           setIsLoading(false);
           setIsInitialized(true);
         }
@@ -109,6 +176,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setPerfil(null);
         }
         
+        // Garantir que isInitialized esteja sempre true após mudança de estado
+        setIsInitialized(true);
         setIsLoading(false);
       }
     });
@@ -118,6 +187,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe();
     };
   }, []);
+
+  // Verificar se a inicialização está demorando muito tempo
+  useEffect(() => {
+    // Se ainda estiver carregando e não inicializado após 5 segundos, forçar inicialização
+    if (isLoading && !isInitialized && lastInitAttempt > 0) {
+      const timeoutId = setTimeout(() => {
+        console.warn('[AUTH] Timeout de inicialização atingido. Forçando finalização do carregamento.');
+        setIsLoading(false);
+        setIsInitialized(true);
+      }, 5000); // 5 segundos de timeout
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isLoading, isInitialized, lastInitAttempt]);
 
   const signOut = async () => {
     try {
@@ -131,6 +214,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       setPerfil(null);
+      setUser(null);
+      setSession(null);
       console.log("[AUTH] Logout concluído com sucesso");
       
       // Limpar dados locais após logout
@@ -201,6 +286,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     atualizarNome,
     uploadFotoPerfil,
     recarregarPerfil,
+    recarregarSessao,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

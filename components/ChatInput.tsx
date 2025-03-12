@@ -1,4 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  getSpeechRecognition, 
+  checkMicrophonePermission, 
+  extractTranscriptFromEvent 
+} from '../utils/speechRecognition';
 
 // Definição do tipo SpeechRecognition para TypeScript
 declare global {
@@ -19,45 +24,44 @@ const ChatInput: React.FC<ChatInputProps> = ({ onEnviar, isCarregando }) => {
   const [isTranscrevendo, setIsTranscrevendo] = useState(false);
   const [temPermissao, setTemPermissao] = useState<boolean | null>(null);
   const [erroAudio, setErroAudio] = useState<string | null>(null);
-  const [recognition, setRecognition] = useState<any>(null);
   const [comandoDetectado, setComandoDetectado] = useState(false);
+  const [compatibilidadeNavegador, setCompatibilidadeNavegador] = useState<string>('');
+  const timeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
-    // Verificar se o navegador suporta a API de reconhecimento de voz
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    // Inicializar o gerenciador de reconhecimento de voz e verificar compatibilidade
+    const speechRecognition = getSpeechRecognition();
+    const mensagemCompatibilidade = speechRecognition.getCompatibilityMessage();
+    setCompatibilidadeNavegador(mensagemCompatibilidade);
+    
+    console.log(`[AUDIO] API de reconhecimento suportada: ${speechRecognition.isSupported()}`);
+    
+    if (!speechRecognition.isSupported()) {
       setTemPermissao(false);
-      setErroAudio("Seu navegador não suporta reconhecimento de voz");
+      setErroAudio("Seu navegador não suporta reconhecimento de voz. Tente usar Chrome, Edge ou Safari.");
       return;
     }
     
     // Verificar permissão de microfone
-    navigator.mediaDevices.getUserMedia({ audio: true })
-      .then(() => {
-        setTemPermissao(true);
-        setErroAudio(null);
-      })
-      .catch((err) => {
-        console.log("Erro ao acessar o microfone:", err);
-        setTemPermissao(false);
-        setErroAudio("Permissão para acessar o microfone negada");
-      });
-      
-    // Inicializar vozes do sistema (para o TTS funcionar melhor)
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.getVoices();
-    }
-
-    // Limpar o reconhecimento ao desmontar o componente
-    return () => {
-      if (recognition) {
-        try {
-          recognition.stop();
-        } catch (e) {
-          // Ignorar erros ao parar o reconhecimento
+    checkMicrophonePermission()
+      .then((hasPermission) => {
+        console.log('[AUDIO] Permissão de microfone:', hasPermission ? 'concedida' : 'negada');
+        setTemPermissao(hasPermission);
+        if (!hasPermission) {
+          setErroAudio("Permissão para acessar o microfone negada. Clique no ícone de cadeado na barra de endereço e permita o acesso.");
+        } else {
+          setErroAudio(null);
         }
+      });
+
+    // Limpar timeouts ao desmontar o componente
+    return () => {
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current);
       }
+      pararGravacao();
     };
-  }, [recognition]);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,6 +97,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onEnviar, isCarregando }) => {
         if (mensagemSemComando.length > 0) {
           // Atualizar mensagem sem o comando
           setMensagem(mensagemSemComando);
+          console.log('[AUDIO] Comando de envio detectado:', comando);
           return true;
         }
       }
@@ -104,86 +109,107 @@ const ChatInput: React.FC<ChatInputProps> = ({ onEnviar, isCarregando }) => {
   const iniciarGravacao = () => {
     setErroAudio(null);
     setComandoDetectado(false);
+    setIsTranscrevendo(false);
     
     try {
-      // Inicializar o reconhecimento de voz
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognitionInstance = new SpeechRecognition();
+      console.log('[AUDIO] Iniciando reconhecimento de voz');
       
-      // Configurar
-      recognitionInstance.lang = 'pt-BR';
-      recognitionInstance.continuous = false;
-      recognitionInstance.interimResults = true;
-      recognitionInstance.maxAlternatives = 1;
+      const speechRecognition = getSpeechRecognition();
       
-      // Eventos
-      recognitionInstance.onstart = () => {
-        setIsGravando(true);
-        setIsTranscrevendo(false);
-        console.log('Reconhecimento de voz iniciado');
-      };
+      if (!speechRecognition.isSupported()) {
+        throw new Error('API de reconhecimento de voz não disponível neste navegador');
+      }
       
-      // Capturar resultados intermediários para feedback imediato
-      recognitionInstance.onresult = (event: any) => {
-        const transcript = Array.from(event.results)
-          .map((result: any) => result[0].transcript)
-          .join('');
+      // Configurar handlers de eventos
+      speechRecognition.setHandlers({
+        onStart: () => {
+          console.log('[AUDIO] Reconhecimento de voz iniciado com sucesso');
+          setIsGravando(true);
+          setIsTranscrevendo(false);
+        },
+        
+        onResult: (event) => {
+          console.log('[AUDIO] Evento onresult recebido');
           
-        console.log('Transcrição:', transcript);
-        setMensagem(transcript);
+          // Extrair transcrição do evento
+          const { transcript, isFinal } = extractTranscriptFromEvent(event);
+          
+          if (transcript) {
+            console.log(`[AUDIO] Transcrição ${isFinal ? 'final' : 'intermediária'}: "${transcript}"`);
+            
+            // Atualizar o campo de texto
+            setMensagem(transcript);
+            setIsTranscrevendo(true);
+            
+            // Verificar comando de envio em resultados finais
+            if (isFinal && verificarComandoEnviar(transcript)) {
+              setComandoDetectado(true);
+              speechRecognition.stop();
+            }
+          }
+        },
         
-        // Verificar se há um comando para enviar a mensagem automaticamente
-        if (verificarComandoEnviar(transcript)) {
-          setComandoDetectado(true);
-          recognitionInstance.stop();
-        }
-      };
-      
-      recognitionInstance.onerror = (event: any) => {
-        console.error('Erro no reconhecimento de voz:', event.error);
-        setErroAudio(`Erro no reconhecimento: ${event.error}`);
-        setIsGravando(false);
+        onError: (event) => {
+          console.error('[AUDIO] Erro no reconhecimento de voz:', event.error);
+          
+          // Obter mensagem de erro amigável baseada no código de erro
+          const errorMessage = speechRecognition.getErrorMessage(event.error);
+          setErroAudio(errorMessage);
+          setIsGravando(false);
+        },
         
-        // Tentar parar o reconhecimento
-        try {
-          recognitionInstance.stop();
-        } catch (e) {
-          // Ignorar erros ao parar
+        onEnd: () => {
+          console.log('[AUDIO] Reconhecimento de voz finalizado');
+          setIsGravando(false);
+          
+          // Se um comando de envio foi detectado, enviar a mensagem automaticamente
+          if (comandoDetectado && mensagem.trim()) {
+            console.log('[AUDIO] Enviando mensagem após comando:', mensagem.trim());
+            setComandoDetectado(false);
+            
+            // Atraso pequeno para garantir que a mensagem foi atualizada corretamente
+            timeoutRef.current = window.setTimeout(() => {
+              onEnviar(mensagem);
+              setMensagem('');
+            }, 100);
+          }
         }
-      };
-      
-      recognitionInstance.onend = () => {
-        console.log('Reconhecimento de voz finalizado');
-        setIsGravando(false);
-        
-        // Se um comando de envio foi detectado, enviar a mensagem automaticamente
-        if (comandoDetectado && mensagem.trim()) {
-          setComandoDetectado(false);
-          onEnviar(mensagem);
-          setMensagem('');
-        }
-      };
+      });
       
       // Iniciar reconhecimento
-      recognitionInstance.start();
-      setRecognition(recognitionInstance);
+      const started = speechRecognition.start();
+      
+      if (!started) {
+        throw new Error('Falha ao iniciar reconhecimento de voz');
+      }
+      
+      console.log('[AUDIO] Reconhecimento iniciado e configurado');
       
     } catch (err) {
-      console.error("Erro ao iniciar reconhecimento de voz:", err);
+      console.error("[AUDIO] Erro ao iniciar reconhecimento de voz:", err);
       setTemPermissao(false);
-      setErroAudio("Não foi possível iniciar o reconhecimento de voz");
+      setErroAudio("Não foi possível iniciar o reconhecimento de voz. Verifique se seu navegador é compatível (Chrome, Edge, Safari) e se você permitiu acesso ao microfone.");
     }
   };
 
   const pararGravacao = () => {
-    if (recognition) {
-      try {
-        recognition.stop();
-      } catch (e) {
-        console.error("Erro ao parar reconhecimento:", e);
-      }
-    }
+    console.log('[AUDIO] Tentando parar gravação');
+    const speechRecognition = getSpeechRecognition();
+    speechRecognition.stop();
     setIsGravando(false);
+  };
+
+  const reiniciarReconhecimento = () => {
+    console.log('[AUDIO] Reiniciando reconhecimento');
+    const speechRecognition = getSpeechRecognition();
+    speechRecognition.restart();
+    setIsTranscrevendo(false);
+    // Mostrar mensagem indicando o reinício
+    setErroAudio("Reconhecimento reiniciado. Por favor, tente falar novamente.");
+    // Limpar a mensagem de erro após 3 segundos
+    timeoutRef.current = window.setTimeout(() => {
+      setErroAudio(null);
+    }, 3000);
   };
 
   return (
@@ -194,7 +220,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onEnviar, isCarregando }) => {
           value={mensagem}
           onChange={(e) => setMensagem(e.target.value)}
           placeholder="Digite sua mensagem..."
-          className="flex-grow p-2 sm:p-3 text-sm sm:text-base border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 focus:ring-primary-500 dark:focus:ring-primary-400 focus:border-primary-500 transition-colors duration-300 z-10"
+          className={`flex-grow p-2 sm:p-3 text-sm sm:text-base border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 focus:ring-primary-500 dark:focus:ring-primary-400 focus:border-primary-500 transition-colors duration-300 z-10 ${isTranscrevendo ? 'transcribing-text' : ''}`}
           disabled={isCarregando || isGravando}
           autoComplete="off"
           autoFocus
@@ -208,7 +234,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onEnviar, isCarregando }) => {
             disabled={isCarregando || temPermissao === null}
             className={`p-2 sm:p-3 rounded-lg transition-colors duration-300 z-10 ${
               isGravando 
-                ? 'bg-red-600 hover:bg-red-700 text-white' 
+                ? 'bg-red-600 hover:bg-red-700 text-white pulse-recording' 
                 : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200'
             }`}
             title={isGravando ? "Parar gravação" : "Gravar mensagem de voz"}
@@ -253,7 +279,30 @@ const ChatInput: React.FC<ChatInputProps> = ({ onEnviar, isCarregando }) => {
             <div className="audio-wave-bar"></div>
             <div className="audio-wave-bar"></div>
           </div>
-          <span>Falando... (clique no botão para parar ou diga "enviar" ao final)</span>
+          <span>{isTranscrevendo ? 'Ouvindo... Continue falando' : 'Aguardando fala... Fale alguma coisa'}</span>
+        </div>
+      )}
+      
+      {/* Adicionar botão para reiniciar se estiver com problemas */}
+      {isGravando && !isTranscrevendo && (
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={reiniciarReconhecimento}
+            className="text-xs text-blue-600 dark:text-blue-400 underline"
+          >
+            Não está funcionando? Clique para reiniciar o reconhecimento
+          </button>
+        </div>
+      )}
+
+      {/* Status da transcrição */}
+      {isTranscrevendo && (
+        <div className="mt-1 text-xs text-green-600 dark:text-green-400">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          Reconhecimento funcionando! Diga "enviar" quando terminar.
         </div>
       )}
       
@@ -264,10 +313,17 @@ const ChatInput: React.FC<ChatInputProps> = ({ onEnviar, isCarregando }) => {
         </div>
       )}
       
+      {/* Dica de compatibilidade */}
+      {compatibilidadeNavegador && !isGravando && !erroAudio && (
+        <div className="mt-2 text-xs text-yellow-600 dark:text-yellow-400">
+          <span className="mr-1">ℹ️</span> {compatibilidadeNavegador}
+        </div>
+      )}
+      
       {/* Dica de uso */}
-      {!isGravando && !erroAudio && temPermissao === true && (
+      {!isGravando && !erroAudio && temPermissao === true && !compatibilidadeNavegador && (
         <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-          <span className="mr-1">💡</span> Dica: Clique no ícone de microfone e diga "enviar" ao final para enviar automaticamente
+          <span className="mr-1">💡</span> Dica: Clique no ícone de microfone para iniciar gravação. Fale sua mensagem e diga "enviar" ao final.
         </div>
       )}
     </form>

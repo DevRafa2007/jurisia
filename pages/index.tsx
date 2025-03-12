@@ -20,7 +20,7 @@ type Mensagem = {
 };
 
 export default function Home() {
-  const { user, isLoading, isInitialized } = useAuth();
+  const { user, isLoading, isInitialized, recarregarSessao } = useAuth();
   const router = useRouter();
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [isCarregando, setIsCarregando] = useState(false);
@@ -33,6 +33,9 @@ export default function Home() {
   const [erroAudioGlobal, setErroAudioGlobal] = useState<string | null>(null);
   const [portalContainer, setPortalContainer] = useState<Element | null>(null);
   const [inicializacaoCompleta, setInicializacaoCompleta] = useState(false);
+  const [erroSessao, setErroSessao] = useState<string | null>(null);
+  const [recarregandoSessao, setRecarregandoSessao] = useState(false);
+  const inicializacaoTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Atualizar a largura da janela quando redimensionar
   useEffect(() => {
@@ -68,17 +71,40 @@ export default function Home() {
   useEffect(() => {
     console.log("[HOME] Estado de autenticação:", { isInitialized, isLoading, user: !!user });
     
-    // Só redirecionar quando temos certeza que a autenticação foi verificada
-    if (isInitialized && !isLoading && !user) {
-      console.log("[HOME] Redirecionando para login - usuário não autenticado");
-      router.push('/login');
+    // Limpar timeout anterior se existir
+    if (inicializacaoTimeout.current) {
+      clearTimeout(inicializacaoTimeout.current);
     }
     
-    // Marcar inicialização como completa para evitar cálculos redundantes
-    if (isInitialized && !isLoading && user) {
-      console.log("[HOME] Inicialização completa - usuário autenticado");
-      setInicializacaoCompleta(true);
+    // Só redirecionar quando temos certeza que a autenticação foi verificada
+    if (isInitialized && !isLoading) {
+      if (!user) {
+        console.log("[HOME] Redirecionando para login - usuário não autenticado");
+        router.push('/login');
+      } else {
+        console.log("[HOME] Inicialização completa - usuário autenticado");
+        setInicializacaoCompleta(true);
+        setErroSessao(null);
+      }
+    } 
+    // Se a inicialização demorar muito tempo, exibir erro
+    else if (!isInitialized && !isLoading) {
+      setErroSessao("A sessão não pode ser inicializada corretamente. Por favor, recarregue a sessão.");
     }
+    // Se estiver carregando por muito tempo
+    else if (isLoading) {
+      inicializacaoTimeout.current = setTimeout(() => {
+        if (isLoading) {
+          setErroSessao("A inicialização está demorando mais que o esperado. Talvez a sessão esteja com problemas.");
+        }
+      }, 8000); // 8 segundos é muito tempo para carregar
+    }
+    
+    return () => {
+      if (inicializacaoTimeout.current) {
+        clearTimeout(inicializacaoTimeout.current);
+      }
+    };
   }, [user, isLoading, isInitialized, router]);
 
   // Hook para rolar para o final da conversa quando novas mensagens são adicionadas
@@ -351,6 +377,21 @@ export default function Home() {
     }
   };
 
+  // Função para tentar recarregar a sessão
+  const handleRecarregarSessao = async () => {
+    try {
+      setRecarregandoSessao(true);
+      setErroSessao("Recarregando sessão...");
+      await recarregarSessao();
+      setErroSessao(null);
+    } catch (error) {
+      console.error("[HOME] Erro ao recarregar sessão:", error);
+      setErroSessao("Erro ao recarregar a sessão. Tente novamente ou vá para a página de login.");
+    } finally {
+      setRecarregandoSessao(false);
+    }
+  };
+
   // Mostrar estado de carregamento enquanto verificamos autenticação
   if (!isInitialized || isLoading) {
     return (
@@ -362,6 +403,25 @@ export default function Home() {
           <div className="text-center">
             <div className="w-16 h-16 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-gray-600 dark:text-gray-300">Inicializando aplicação...</p>
+            {isLoading && <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Verificando autenticação...</p>}
+            {!isInitialized && !isLoading && (
+              <div className="mt-4">
+                <p className="text-red-600 dark:text-red-400 mb-2">Problema ao inicializar a sessão</p>
+                <button 
+                  onClick={handleRecarregarSessao}
+                  disabled={recarregandoSessao}
+                  className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded text-sm transition-colors duration-300"
+                >
+                  {recarregandoSessao ? 'Recarregando...' : 'Recarregar Sessão'}
+                </button>
+                <button 
+                  onClick={() => router.push('/login')}
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm transition-colors duration-300 ml-2"
+                >
+                  Ir para Login
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </Layout>
@@ -374,6 +434,42 @@ export default function Home() {
       {/* Componente vazio para satisfazer o prop children */}
       <div></div>
     </Layout>;
+  }
+
+  // Se tiver um erro de sessão, mesmo com o usuário logado
+  if (erroSessao) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md max-w-md">
+            <div className="text-red-600 dark:text-red-400 text-5xl mb-4">⚠️</div>
+            <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">Problema com a Sessão</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">{erroSessao}</p>
+            <div className="flex justify-center space-x-4">
+              <button 
+                onClick={handleRecarregarSessao}
+                disabled={recarregandoSessao}
+                className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded text-sm transition-colors duration-300"
+              >
+                {recarregandoSessao ? 'Recarregando...' : 'Recarregar Sessão'}
+              </button>
+              <button 
+                onClick={() => router.push('/debug')}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm transition-colors duration-300"
+              >
+                Diagnóstico
+              </button>
+              <button 
+                onClick={() => router.push('/login')}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm transition-colors duration-300"
+              >
+                Ir para Login
+              </button>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
   }
 
   return (
