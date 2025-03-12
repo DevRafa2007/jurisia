@@ -27,43 +27,53 @@
 
 @layer components {
   .btn {
-    @apply px-4 py-2 rounded-md transition duration-200 font-medium focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply inline-block px-4 py-2 rounded shadow hover:shadow-md transition-all duration-300 font-medium;
   }
   
   .btn-primary {
-    @apply bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-500;
+    @apply bg-primary-600 text-white hover:bg-primary-700;
   }
   
   .btn-secondary {
-    @apply bg-secondary-100 hover:bg-secondary-200 text-secondary-800 focus:ring-secondary-500;
+    @apply bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600;
   }
   
-  .container-custom {
-    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  .btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700;
   }
   
-  .input {
-    @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500;
+  .btn-ghost {
+    @apply bg-transparent text-current shadow-none hover:bg-gray-100 dark:hover:bg-gray-800;
   }
   
-  /* Estilos simplificados para a barra lateral */
+  .btn-small {
+    @apply px-2 py-1 text-sm;
+  }
+  
+  .btn:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+  
   .sidebar-animation {
-    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), 
-                box-shadow 0.5s cubic-bezier(0.4, 0, 0.2, 1), 
-                opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    will-change: transform;
-    -webkit-overflow-scrolling: touch;
-    transform-origin: left center;
-    backface-visibility: hidden;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    -webkit-tap-highlight-color: transparent;
-    -webkit-transform-style: preserve-3d;
-    transform-style: preserve-3d;
-    z-index: 30 !important;
+    @apply transition-all ease-in-out duration-300;
   }
   
-  /* Animação para loading dots */
+  .input-default {
+    @apply w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-500 dark:focus:border-primary-500 text-gray-900 dark:text-gray-100;
+  }
+  
+  .card {
+    @apply bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden;
+  }
+  
+  .card-header {
+    @apply p-4 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600;
+  }
+  
+  .card-body {
+    @apply p-4;
+  }
+  
   .loading {
     display: flex;
     justify-content: center;
@@ -92,118 +102,6 @@
     }
     40% {
       transform: scale(1);
-    }
-  }
-  
-  /* Animações para indicador de gravação de áudio */
-  .audio-wave {
-    display: flex;
-    align-items: center;
-    height: 15px;
-  }
-  
-  .audio-wave-bar {
-    display: inline-block;
-    width: 3px;
-    height: 5px;
-    margin: 0 1px;
-    background-color: rgb(220, 38, 38);
-    animation: audio-wave-animation 1.2s ease-in-out infinite;
-    border-radius: 1px;
-  }
-  
-  .audio-wave-bar:nth-child(2) {
-    animation-delay: 0.1s;
-    height: 10px;
-  }
-  
-  .audio-wave-bar:nth-child(3) {
-    animation-delay: 0.2s;
-    height: 15px;
-  }
-  
-  .audio-wave-bar:nth-child(4) {
-    animation-delay: 0.3s;
-    height: 10px;
-  }
-  
-  .audio-wave-bar:nth-child(5) {
-    animation-delay: 0.4s;
-    height: 5px;
-  }
-  
-  @keyframes audio-wave-animation {
-    0%, 100% {
-      transform: scaleY(0.5);
-    }
-    50% {
-      transform: scaleY(1.5);
-    }
-  }
-  
-  /* Animação para reprodução de áudio */
-  .audio-playing {
-    display: inline-flex;
-    align-items: center;
-    font-size: 0.75rem;
-    color: currentColor;
-  }
-  
-  .audio-playing-icon {
-    animation: pulse 1.5s infinite;
-    margin-right: 0.25rem;
-  }
-  
-  @keyframes pulse {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.5;
-    }
-  }
-  
-  /* Animação para o botão de gravação */
-  .pulse-recording {
-    animation: pulse-red 2s infinite;
-  }
-  
-  @keyframes pulse-red {
-    0% {
-      transform: scale(0.95);
-      box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
-    }
-    
-    70% {
-      transform: scale(1);
-      box-shadow: 0 0 0 8px rgba(220, 38, 38, 0);
-    }
-    
-    100% {
-      transform: scale(0.95);
-      box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
-    }
-  }
-  
-  /* Correção para o layout em browsers específicos */
-  @supports (-webkit-appearance:none) {
-    .audio-wave {
-      position: relative;
-      top: 1px;
-    }
-  }
-  
-  /* Texto piscando de transcrição */
-  .transcribing-text {
-    animation: blink 1.5s infinite;
-  }
-  
-  @keyframes blink {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.5;
     }
   }
 }

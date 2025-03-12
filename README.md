@@ -11,7 +11,6 @@ JurisIA é uma aplicação web que integra a IA do Groq para fornecer assistênc
 - Foco em legislação brasileira e termos jurídicos
 - Interface moderna e responsiva construída com Next.js 14 e TailwindCSS
 - Respostas estruturadas com citações de leis e jurisprudências
-- Reprodução de áudio das respostas para maior acessibilidade
 
 ## Requisitos
 
@@ -108,7 +107,6 @@ A aplicação será implantada automaticamente e estará disponível em um domí
 4. Receba uma resposta baseada no conhecimento jurídico brasileiro
 5. Continue a conversa para obter esclarecimentos ou fazer novas perguntas
 6. Acesse conversas anteriores pela barra lateral
-7. Utilize o botão de áudio para ouvir as respostas (funciona melhor em navegadores como Chrome, Safari ou Edge)
 
 ## Compatibilidade
 
@@ -121,7 +119,6 @@ A aplicação será implantada automaticamente e estará disponível em um domí
 - Este assistente não substitui a consulta a um advogado qualificado
 - As respostas devem ser verificadas contra fontes oficiais
 - A legislação pode mudar, verifique sempre as datas de atualização das leis citadas
-- A reprodução de áudio pode não funcionar em todos os navegadores
 
 ## Licença
 
