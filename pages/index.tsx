@@ -209,7 +209,9 @@ export default function Home() {
 
   // Se o usuário não estiver logado, não renderiza o conteúdo (será redirecionado)
   if (!user) {
-    return <Layout />;
+    return <Layout>
+      <div></div>
+    </Layout>;
   }
 
   return (

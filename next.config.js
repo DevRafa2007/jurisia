@@ -6,10 +6,13 @@ const nextConfig = {
     GROQ_API_KEY: process.env.GROQ_API_KEY,
   },
   typescript: {
-    // !! ATENÇÃO !!
-    // Ignorando erros de TypeScript temporariamente
-    // Remova isso em produção
+    // Ignorando erros de TypeScript temporariamente para permitir o deploy
+    // Isso será necessário até resolvermos todos os problemas de tipagem
     ignoreBuildErrors: true,
+  },
+  experimental: {
+    // Otimizações de compilação
+    optimizePackageImports: ['@supabase/supabase-js'],
   },
 }
 
