@@ -67,14 +67,14 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
   };
 
   return (
-    <div className="h-full w-full flex flex-col bg-white dark:bg-gray-800 shadow-md rounded-r-lg md:rounded-none transition-colors duration-300">
-      <div className="p-2 sm:p-3 md:p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between transition-colors duration-300">
+    <div className="h-full w-full flex flex-col bg-white dark:bg-gray-800 shadow-md rounded-r-lg overflow-hidden">
+      <div className="p-2 sm:p-3 md:p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
         <div className="flex items-center">
           {/* Botão para fechar o menu em dispositivos móveis */}
           {isMobile && toggleSidebar && (
             <button 
               onClick={toggleSidebar}
-              className="md:hidden mr-2 p-1.5 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50 transition-colors duration-300"
+              className="md:hidden mr-2 p-1.5 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50"
               aria-label="Fechar menu de conversas"
             >
               <svg 
@@ -89,16 +89,16 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
               </svg>
             </button>
           )}
-          <h2 className="font-medium text-base sm:text-lg text-gray-800 dark:text-gray-300 transition-colors duration-300">
+          <h2 className="font-medium text-base sm:text-lg text-gray-800 dark:text-gray-300">
             Conversas
           </h2>
         </div>
         <button 
           onClick={onNovaConversa}
-          className="p-1 sm:p-2 rounded-full bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors duration-300"
+          className="p-1 sm:p-2 rounded-full bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
           title="Nova Conversa"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 dark:text-gray-400 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
         </button>
@@ -107,31 +107,31 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
       <div className="flex-grow overflow-y-auto">
         {carregando ? (
           <div className="p-3 flex justify-center">
-            <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-primary-600 dark:border-primary-400 transition-colors duration-300"></div>
+            <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-primary-600 dark:border-primary-400"></div>
           </div>
         ) : erro ? (
-          <div className="p-3 text-red-600 dark:text-red-400 text-xs sm:text-sm transition-colors duration-300">
+          <div className="p-3 text-red-600 dark:text-red-400 text-xs sm:text-sm">
             Erro ao carregar conversas.
           </div>
         ) : conversas.length === 0 ? (
-          <div className="p-3 text-gray-500 dark:text-gray-400 text-xs sm:text-sm text-center transition-colors duration-300">
+          <div className="p-3 text-gray-500 dark:text-gray-400 text-xs sm:text-sm text-center">
             Nenhuma conversa iniciada. Clique no botão + para iniciar uma nova conversa.
           </div>
         ) : (
-          <ul className="divide-y divide-gray-200 dark:divide-gray-700 transition-colors duration-300">
+          <ul className="divide-y divide-gray-200 dark:divide-gray-700">
             {conversas.map((conversa) => (
               <li 
                 key={conversa.id} 
-                className={`p-2 sm:p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex justify-between items-center group transition-colors duration-300 ${
+                className={`p-2 sm:p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex justify-between items-center group ${
                   conversa.id === conversaAtual ? 'bg-gray-100 dark:bg-gray-700' : ''
                 }`}
                 onClick={() => onSelecionarConversa(conversa.id)}
               >
                 <div className="truncate flex-grow">
-                  <div className="font-medium text-xs sm:text-sm text-gray-800 dark:text-gray-200 truncate transition-colors duration-300">
+                  <div className="font-medium text-xs sm:text-sm text-gray-800 dark:text-gray-200 truncate">
                     {conversa.titulo || 'Nova Conversa'}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
                     {formatarData(conversa.criado_em)}
                   </div>
                 </div>

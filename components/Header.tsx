@@ -33,20 +33,11 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
                 onClick={toggleSidebar}
                 aria-label={sidebarAberta ? "Fechar menu de conversas" : "Abrir menu de conversas"}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-primary-600 dark:text-primary-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  {sidebarAberta ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                  )}
-                </svg>
+                <div className="relative w-5 h-5 flex flex-col justify-center items-center">
+                  <span className={`absolute block w-5 h-0.5 bg-primary-600 dark:bg-primary-400 rounded-full transform transition-transform duration-300 ease-in-out ${sidebarAberta ? 'rotate-45' : '-translate-y-1.5'}`}></span>
+                  <span className={`absolute block w-5 h-0.5 bg-primary-600 dark:bg-primary-400 rounded-full transition-opacity duration-300 ease-in-out ${sidebarAberta ? 'opacity-0' : 'opacity-100'}`}></span>
+                  <span className={`absolute block w-5 h-0.5 bg-primary-600 dark:bg-primary-400 rounded-full transform transition-transform duration-300 ease-in-out ${sidebarAberta ? '-rotate-45' : 'translate-y-1.5'}`}></span>
+                </div>
               </button>
             )}
             
@@ -105,7 +96,7 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
                   </button>
                   
                   {menuOpen && (
-                    <div className="absolute right-0 top-full mt-1 sm:mt-2 w-40 sm:w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-10 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+                    <div className="absolute right-0 top-full mt-1 sm:mt-2 w-40 sm:w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-50 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
                       <div className="px-3 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 transition-colors duration-300 break-all">
                         {user.email}
                       </div>

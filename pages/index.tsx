@@ -25,7 +25,33 @@ export default function Home() {
   const [isCarregando, setIsCarregando] = useState(false);
   const [conversaAtual, setConversaAtual] = useState<string | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-  const [sidebarAberta, setSidebarAberta] = useState(true);
+  const [sidebarAberta, setSidebarAberta] = useState(false);
+
+  // Inicializar a barra lateral aberta apenas em dispositivos maiores (desktop)
+  useEffect(() => {
+    // Checar se estamos no cliente
+    if (typeof window !== 'undefined') {
+      setSidebarAberta(window.innerWidth >= 768);
+      
+      // Função para atualizar o estado da barra lateral quando a tela é redimensionada
+      const handleResize = () => {
+        const isMobile = window.innerWidth < 768;
+        // Em desktop, sempre mostrar a barra lateral
+        // Em mobile, manter o estado atual
+        if (!isMobile) {
+          setSidebarAberta(true);
+        }
+      };
+      
+      // Adicionar listener para eventos de redimensionamento
+      window.addEventListener('resize', handleResize);
+      
+      // Limpar o listener quando o componente for desmontado
+      return () => {
+        window.removeEventListener('resize', handleResize);
+      };
+    }
+  }, []);
 
   // Redirecionar para login se não estiver autenticado
   useEffect(() => {
@@ -219,11 +245,11 @@ export default function Home() {
       <div className="flex flex-col md:flex-row h-[calc(100vh-48px-32px)] sm:h-[calc(100vh-56px-36px)] md:h-[calc(100vh-64px-48px)]">
         {/* Sidebar com conversas - Responsiva */}
         <div 
-          className={`${
+          className={`fixed inset-0 z-20 transition-opacity duration-300 ease-in-out md:relative md:block md:opacity-100 ${
             sidebarAberta 
-              ? 'fixed inset-0 z-20 bg-gray-900 bg-opacity-50 md:bg-opacity-0 md:relative md:inset-auto'
-              : 'hidden md:block'
-          } md:w-96 lg:w-1/4 xl:w-1/5 h-full transition-all duration-300`}
+              ? 'bg-gray-900 bg-opacity-50 opacity-100 pointer-events-auto' 
+              : 'opacity-0 pointer-events-none'
+          } md:w-96 lg:w-1/4 xl:w-1/5 h-full md:bg-transparent`}
           onClick={(e: MouseEvent<HTMLDivElement>) => {
             // Fechar o sidebar quando clicar fora dele em dispositivos móveis
             if (window.innerWidth < 768 && e.target === e.currentTarget) {
@@ -231,12 +257,11 @@ export default function Home() {
             }
           }}
         >
+          {/* Conteúdo da barra lateral */}
           <div 
-            className={`${
-              sidebarAberta 
-                ? 'translate-x-0 h-full w-3/4 sm:w-96 md:w-full'
-                : '-translate-x-full md:translate-x-0'
-            } transition-transform duration-300 absolute md:relative top-0 left-0 h-full`}
+            className={`absolute h-full w-3/4 sm:w-96 md:w-full top-0 left-0 bg-white dark:bg-gray-800 shadow-lg transform transition-transform duration-300 ease-in-out ${
+              sidebarAberta ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+            }`}
           >
             <ConversasSidebar
               usuarioId={user.id}
@@ -394,7 +419,7 @@ export default function Home() {
           </div>
 
           {/* Área de input - Fixa na parte inferior em dispositivos móveis */}
-          <div className="p-2 sm:p-3 md:p-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 rounded-b-lg shadow-inner fixed bottom-0 left-0 w-full z-20 sm:absolute sm:bottom-0 sm:w-full sm:max-w-full">
+          <div className="p-2 sm:p-3 md:p-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 rounded-b-lg shadow-inner fixed bottom-0 left-0 w-full z-30 sm:absolute sm:bottom-0 sm:w-full sm:max-w-full">
             <ChatInput onEnviar={handleEnviarMensagem} isCarregando={isCarregando} />
           </div>
         </div>
