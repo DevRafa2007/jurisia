@@ -232,55 +232,203 @@ export default function Home() {
     setMensagens((prev) => [...prev, novaMensagemUsuario]);
     setIsCarregando(true);
 
+    // IDs para controle de timeouts
+    let timeoutId: NodeJS.Timeout | null = null;
+    let apiTimeoutId: NodeJS.Timeout | null = null;
+
     try {
-      // Variável para armazenar o ID da conversa atual ou nova
-      let idConversaAtual: string | null = conversaAtual;
-      
-      // Se não houver conversa atual, cria uma nova
-      if (!idConversaAtual) {
-        // Usar o texto da mensagem do usuário como título (limitando a 50 caracteres)
-        const tituloConversa = texto.substring(0, 50) + (texto.length > 50 ? '...' : '');
-        const novaConversa = await criarConversa(user.id, tituloConversa);
-        
-        if (novaConversa && novaConversa.id) {
-          idConversaAtual = novaConversa.id;
-          setConversaAtual(idConversaAtual);
-          
-          // Salva a mensagem do usuário no banco
-          await adicionarMensagem(idConversaAtual, texto, 'usuario');
-        }
-      } else {
-        // Salva a mensagem do usuário no banco
-        await adicionarMensagem(idConversaAtual, texto, 'usuario');
-      }
-
-      // Prepara o histórico para enviar à API
-      const historico = converterParaHistorico();
-
-      // Envia a consulta para a API
-      const response = await axios.post('/api/juridica', {
-        consulta: texto,
-        historico: historico,
+      // Configurar um timeout para a operação completa (15 segundos)
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('Tempo limite excedido ao processar a consulta.'));
+        }, 15000);
       });
 
-      // Adiciona a resposta da IA ao chat
-      const novaMensagemIA: Mensagem = {
-        conteudo: response.data.conteudo,
-        isUsuario: false,
+      // Função para criar ou obter o ID da conversa
+      const obterIdConversa = async (): Promise<string | null> => {
+        try {
+          // Variável para armazenar o ID da conversa atual ou nova
+          let idConversaAtual: string | null = conversaAtual;
+          
+          // Se não houver conversa atual, cria uma nova
+          if (!idConversaAtual) {
+            console.log("[CHAT] Criando nova conversa");
+            // Usar o texto da mensagem do usuário como título (limitando a 50 caracteres)
+            const tituloConversa = texto.substring(0, 50) + (texto.length > 50 ? '...' : '');
+            const novaConversa = await criarConversa(user.id, tituloConversa);
+            
+            if (novaConversa && novaConversa.id) {
+              idConversaAtual = novaConversa.id;
+              setConversaAtual(idConversaAtual);
+              console.log("[CHAT] Nova conversa criada:", idConversaAtual);
+            } else {
+              console.error("[CHAT] Falha ao criar nova conversa");
+              throw new Error("Não foi possível criar uma nova conversa.");
+            }
+          }
+          
+          return idConversaAtual;
+        } catch (erro) {
+          console.error("[CHAT] Erro ao obter ID da conversa:", erro);
+          throw erro;
+        }
       };
 
-      setMensagens((prev) => [...prev, novaMensagemIA]);
+      // Função para salvar a mensagem no banco de dados
+      const salvarMensagem = async (conversaId: string, conteudo: string, tipo: 'usuario' | 'assistente'): Promise<void> => {
+        try {
+          console.log(`[CHAT] Salvando mensagem de ${tipo} para conversa:`, conversaId);
+          await adicionarMensagem(conversaId, conteudo, tipo);
+          console.log(`[CHAT] Mensagem de ${tipo} salva com sucesso`);
+        } catch (erro) {
+          console.error(`[CHAT] Erro ao salvar mensagem de ${tipo}:`, erro);
+          throw erro;
+        }
+      };
+
+      // Função para enviar consulta à API com retentativas
+      const enviarConsultaAPI = async (consultaTexto: string, historicoMensagens: any[], tentativas = 0): Promise<any> => {
+        const maxTentativas = 2; // Tentativas totais: inicial + 2 retentativas
+        
+        try {
+          console.log(`[CHAT] Enviando consulta para API (tentativa ${tentativas + 1}/${maxTentativas + 1})`);
+          
+          // Configurar um timeout específico para a chamada da API (10 segundos)
+          if (apiTimeoutId) {
+            clearTimeout(apiTimeoutId);
+          }
+          
+          const apiTimeoutPromise = new Promise<never>((_, reject) => {
+            apiTimeoutId = setTimeout(() => {
+              reject(new Error('Tempo limite excedido na comunicação com a API.'));
+            }, 10000);
+          });
+          
+          // Fazer a chamada à API com o timeout
+          const responsePromise = axios.post('/api/juridica', {
+            consulta: consultaTexto,
+            historico: historicoMensagens,
+          });
+          
+          // Aguardar o que acontecer primeiro: resposta ou timeout
+          const response = await Promise.race([responsePromise, apiTimeoutPromise]);
+          
+          // Limpar o timeout se a resposta chegar antes
+          if (apiTimeoutId) {
+            clearTimeout(apiTimeoutId);
+            apiTimeoutId = null;
+          }
+          
+          console.log(`[CHAT] Resposta da API recebida com sucesso`);
+          return response.data;
+        } catch (erro: any) {
+          // Limpar o timeout em caso de erro
+          if (apiTimeoutId) {
+            clearTimeout(apiTimeoutId);
+            apiTimeoutId = null;
+          }
+          
+          console.error(`[CHAT] Erro ao enviar consulta para API (tentativa ${tentativas + 1}):`, erro);
+          
+          // Se ainda temos tentativas disponíveis, tentamos novamente
+          if (tentativas < maxTentativas) {
+            console.log(`[CHAT] Tentando novamente em ${(tentativas + 1) * 2} segundos...`);
+            
+            // Exibir mensagem de retentativa para o usuário
+            const mensagemRetentativa: Mensagem = {
+              conteudo: `⚠️ Estamos com dificuldades para processar sua consulta. Tentando novamente... (${tentativas + 2}/${maxTentativas + 1})`,
+              isUsuario: false,
+            };
+            setMensagens((prev) => [...prev.slice(0, -1), mensagemRetentativa]);
+            
+            // Aguardar um tempo antes de tentar novamente (backoff exponencial)
+            await new Promise(resolve => setTimeout(resolve, (tentativas + 1) * 2000));
+            
+            // Remover a mensagem de retentativa
+            setMensagens((prev) => prev.filter(m => !m.conteudo.includes('⚠️ Estamos com dificuldades')));
+            
+            // Tentar novamente
+            return enviarConsultaAPI(consultaTexto, historicoMensagens, tentativas + 1);
+          }
+          
+          // Se esgotar as tentativas, propagar o erro
+          throw erro;
+        }
+      };
+
+      // Processamento principal - executar tudo com limite de tempo
+      const resultadoPromise = (async () => {
+        try {
+          // 1. Obter ID da conversa
+          const idConversaAtual = await obterIdConversa();
+          if (!idConversaAtual) {
+            throw new Error("Não foi possível obter o ID da conversa.");
+          }
+          
+          // 2. Salvar mensagem do usuário
+          await salvarMensagem(idConversaAtual, texto, 'usuario');
+          
+          // 3. Preparar o histórico para enviar à API
+          const historico = converterParaHistorico();
+          
+          // 4. Enviar a consulta para a API (com retentativas)
+          const resposta = await enviarConsultaAPI(texto, historico);
+          
+          // 5. Adicionar a resposta da IA ao chat
+          const novaMensagemIA: Mensagem = {
+            conteudo: resposta.conteudo,
+            isUsuario: false,
+          };
+          
+          setMensagens((prev) => [...prev, novaMensagemIA]);
+          
+          // 6. Salvar a resposta da IA no banco
+          await salvarMensagem(idConversaAtual, resposta.conteudo, 'assistente');
+          
+          return true;
+        } catch (erro) {
+          throw erro;
+        }
+      })();
       
-      // Salva a resposta da IA no banco
-      if (idConversaAtual) {
-        await adicionarMensagem(idConversaAtual, response.data.conteudo, 'assistente');
+      // Executar a operação principal ou falhar se exceder o tempo limite
+      await Promise.race([resultadoPromise, timeoutPromise]);
+      
+      // Limpar o timeout se a operação concluir com sucesso
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
       }
-    } catch (erro) {
-      console.error('Erro ao processar consulta:', erro);
+
+    } catch (erro: any) {
+      // Limpar os timeouts em caso de erro
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      if (apiTimeoutId) {
+        clearTimeout(apiTimeoutId);
+        apiTimeoutId = null;
+      }
+      
+      console.error('[CHAT] Erro ao processar consulta:', erro);
+      
+      // Determinar a mensagem de erro apropriada
+      let mensagemErroTexto = "Desculpe, ocorreu um erro ao processar sua consulta. Por favor, tente novamente mais tarde.";
+      
+      if (erro.message?.includes('tempo limite') || erro.message?.includes('timeout')) {
+        mensagemErroTexto = "A resposta está demorando mais que o esperado. Por favor, tente novamente ou faça uma consulta mais simples.";
+      } else if (erro.response?.status === 401 || erro.response?.status === 403) {
+        mensagemErroTexto = "Parece que a sua sessão expirou. Por favor, recarregue a página e faça login novamente.";
+      } else if (erro.response?.status === 429) {
+        mensagemErroTexto = "Muitas consultas em pouco tempo. Por favor, aguarde alguns minutos antes de tentar novamente.";
+      } else if (erro.message?.includes('network') || erro.message?.includes('Network Error') || erro.message?.includes('Failed to fetch')) {
+        mensagemErroTexto = "Problemas de conexão com o servidor. Verifique sua internet e tente novamente.";
+      }
       
       // Adiciona mensagem de erro ao chat
       const mensagemErro: Mensagem = {
-        conteudo: "Desculpe, ocorreu um erro ao processar sua consulta. Por favor, tente novamente mais tarde.",
+        conteudo: mensagemErroTexto,
         isUsuario: false,
       };
       

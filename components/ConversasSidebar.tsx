@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Conversa, carregarConversas, excluirConversa } from '../utils/supabase';
 
 interface ConversasSidebarProps {
@@ -21,26 +21,87 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
   const [conversas, setConversas] = useState<Conversa[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const [tentativas, setTentativas] = useState(0);
+  const maxTentativas = 3;
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    const carregarDados = async () => {
-      if (!usuarioId) return;
+  // Função de carregamento de dados separada para poder ser chamada de diferentes lugares
+  const carregarDados = useCallback(async (mostrarLoading = true, isRetry = false) => {
+    if (!usuarioId) return;
+    
+    if (mostrarLoading) {
+      setCarregando(true);
+    }
+    
+    try {
+      console.log(`[SIDEBAR] Carregando conversas para usuário: ${usuarioId} (tentativa: ${isRetry ? tentativas + 1 : 1})`);
+      const dados = await carregarConversas(usuarioId);
       
-      try {
-        setCarregando(true);
-        const dados = await carregarConversas(usuarioId);
+      if (dados && Array.isArray(dados)) {
+        console.log(`[SIDEBAR] Carregadas ${dados.length} conversas com sucesso`);
         setConversas(dados);
         setErro(null);
-      } catch (error) {
-        console.error('Erro ao carregar conversas:', error);
+        setTentativas(0); // Resetar contagem de tentativas ao ter sucesso
+      } else {
+        // Se dados for null ou não for um array, tratamos como erro
+        console.error('[SIDEBAR] Dados inválidos recebidos:', dados);
+        
+        if (isRetry) {
+          setTentativas(prev => prev + 1);
+        } else {
+          setTentativas(1);
+        }
+        
+        if (!isRetry || tentativas + 1 >= maxTentativas) {
+          setErro(`Falha ao carregar conversas. Dados inválidos recebidos.`);
+        }
+      }
+    } catch (error) {
+      console.error('[SIDEBAR] Erro ao carregar conversas:', error);
+      
+      if (isRetry) {
+        setTentativas(prev => prev + 1);
+      } else {
+        setTentativas(1);
+      }
+      
+      if (!isRetry || tentativas + 1 >= maxTentativas) {
         setErro('Falha ao carregar conversas. Tente novamente.');
-      } finally {
-        setCarregando(false);
+      }
+    } finally {
+      setCarregando(false);
+    }
+  }, [usuarioId, tentativas]);
+
+  // Tentativa automatizada quando há falha
+  useEffect(() => {
+    // Limpar qualquer intervalo existente
+    if (intervalRef.current) {
+      clearTimeout(intervalRef.current);
+      intervalRef.current = null;
+    }
+    
+    // Se tiver erro e ainda não excedeu o número máximo de tentativas
+    if (erro && tentativas > 0 && tentativas < maxTentativas) {
+      console.log(`[SIDEBAR] Agendando nova tentativa ${tentativas + 1}/${maxTentativas} em ${tentativas * 2}s`);
+      
+      // Tentar novamente com backoff exponencial
+      intervalRef.current = setTimeout(() => {
+        carregarDados(false, true);
+      }, tentativas * 2000); // 2s, 4s, 6s...
+    }
+    
+    return () => {
+      if (intervalRef.current) {
+        clearTimeout(intervalRef.current);
       }
     };
+  }, [erro, tentativas, carregarDados]);
 
+  // Carregamento inicial
+  useEffect(() => {
     carregarDados();
-  }, [usuarioId]);
+  }, [usuarioId, carregarDados]);
 
   const handleExcluirConversa = async (e: React.MouseEvent, conversaId: string | undefined) => {
     e.stopPropagation();
@@ -51,7 +112,7 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
       await excluirConversa(conversaId);
       setConversas(conversas.filter(c => c.id !== conversaId));
     } catch (error) {
-      console.error('Erro ao excluir conversa:', error);
+      console.error('[SIDEBAR] Erro ao excluir conversa:', error);
       setErro('Falha ao excluir conversa. Tente novamente.');
     }
   };
@@ -65,6 +126,13 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
       month: '2-digit',
       year: 'numeric',
     });
+  };
+
+  // Botão de tentar novamente manualmente
+  const handleTentarNovamente = () => {
+    setErro(null);
+    setTentativas(0);
+    carregarDados(true);
   };
 
   return (
@@ -111,8 +179,16 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
             <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-primary-600 dark:border-primary-400"></div>
           </div>
         ) : erro ? (
-          <div className="p-3 text-red-600 dark:text-red-400 text-xs sm:text-sm">
-            Erro ao carregar conversas.
+          <div className="p-3 flex flex-col items-center">
+            <div className="text-red-600 dark:text-red-400 text-xs sm:text-sm text-center mb-2">
+              {erro}
+            </div>
+            <button 
+              onClick={handleTentarNovamente}
+              className="mt-2 px-3 py-1 bg-primary-600 hover:bg-primary-700 dark:bg-primary-700 dark:hover:bg-primary-800 text-white text-xs rounded-md transition-colors"
+            >
+              Tentar Novamente
+            </button>
           </div>
         ) : conversas.length === 0 ? (
           <div className="p-3 text-gray-500 dark:text-gray-400 text-xs sm:text-sm text-center">

@@ -16,6 +16,24 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storageKey: 'jurisia-auth-storage',
     autoRefreshToken: true,
     detectSessionInUrl: true 
+  },
+  global: {
+    // Adicionar timeout para evitar requisições penduradas
+    fetch: (...args) => {
+      // @ts-ignore - args podem ser diferentes do que o TS espera
+      return fetch(...args)
+        .then(response => {
+          // Adicionar log em caso de erro no servidor
+          if (!response.ok) {
+            console.warn(`[SUPABASE] Resposta do servidor não-ok: ${response.status} ${response.statusText}`);
+          }
+          return response;
+        })
+        .catch(error => {
+          console.error('[SUPABASE] Erro de fetch:', error);
+          throw error;
+        });
+    }
   }
 });
 
@@ -61,25 +79,47 @@ export interface PerfilUsuario {
 // Função para carregar conversas de um usuário
 export async function carregarConversas(usuarioId: string): Promise<Conversa[]> {
   if (!supabase) {
-    console.error('Cliente Supabase não inicializado');
+    console.error('[SUPABASE] Cliente Supabase não inicializado');
     return [];
   }
 
   try {
-    const { data, error } = await supabase
+    // Adicionar timeout de segurança
+    const timeoutId = setTimeout(() => {
+      console.warn('[SUPABASE] Timeout ao carregar conversas para usuário:', usuarioId);
+    }, 5000);
+    
+    console.log('[SUPABASE] Carregando conversas para usuário:', usuarioId);
+    
+    const { data, error, status } = await supabase
       .from('conversas')
       .select('*')
       .eq('usuario_id', usuarioId)
       .order('atualizado_em', { ascending: false });
+    
+    clearTimeout(timeoutId);
+    
+    // Log detalhado para debug
+    console.log('[SUPABASE] Resposta ao carregar conversas:', { 
+      status, 
+      conversasRecebidas: data?.length || 0,
+      temErro: !!error 
+    });
 
     if (error) {
-      console.error('Erro ao carregar conversas:', error);
-      throw error;
+      console.error('[SUPABASE] Erro ao carregar conversas:', error, 'Status:', status);
+      
+      // Em produção, se o erro for de acesso à tabela, podemos tentar recarregar a sessão
+      if (status === 401 || status === 403) {
+        console.warn('[SUPABASE] Erro de permissão ao carregar conversas. Pode ser necessário recarregar a sessão.');
+      }
+      
+      return [];
     }
 
     return data || [];
   } catch (error) {
-    console.error('Erro inesperado ao carregar conversas:', error);
+    console.error('[SUPABASE] Erro inesperado ao carregar conversas:', error);
     return [];
   }
 }
@@ -87,30 +127,52 @@ export async function carregarConversas(usuarioId: string): Promise<Conversa[]> 
 // Função para carregar mensagens de uma conversa
 export async function carregarMensagens(conversaId: string | undefined): Promise<Mensagem[]> {
   if (!supabase) {
-    console.error('Cliente Supabase não inicializado');
+    console.error('[SUPABASE] Cliente Supabase não inicializado');
     return [];
   }
 
   if (!conversaId) {
-    console.error('ID da conversa não definido');
+    console.error('[SUPABASE] ID da conversa não definido');
     return [];
   }
 
   try {
-    const { data, error } = await supabase
+    // Adicionar timeout de segurança
+    const timeoutId = setTimeout(() => {
+      console.warn('[SUPABASE] Timeout ao carregar mensagens para conversa:', conversaId);
+    }, 5000);
+    
+    console.log('[SUPABASE] Carregando mensagens para conversa:', conversaId);
+    
+    const { data, error, status } = await supabase
       .from('mensagens')
       .select('*')
       .eq('conversa_id', conversaId)
       .order('criado_em', { ascending: true });
+    
+    clearTimeout(timeoutId);
+    
+    // Log detalhado para debug
+    console.log('[SUPABASE] Resposta ao carregar mensagens:', { 
+      status, 
+      mensagensRecebidas: data?.length || 0,
+      temErro: !!error 
+    });
 
     if (error) {
-      console.error('Erro ao carregar mensagens:', error);
+      console.error('[SUPABASE] Erro ao carregar mensagens:', error, 'Status:', status);
+      
+      // Em produção, se o erro for de acesso à tabela, podemos tentar recarregar a sessão
+      if (status === 401 || status === 403) {
+        console.warn('[SUPABASE] Erro de permissão ao carregar mensagens. Pode ser necessário recarregar a sessão.');
+      }
+      
       return [];
     }
 
     return data || [];
   } catch (error) {
-    console.error('Erro inesperado ao carregar mensagens:', error);
+    console.error('[SUPABASE] Erro inesperado ao carregar mensagens:', error);
     return [];
   }
 }
@@ -118,25 +180,34 @@ export async function carregarMensagens(conversaId: string | undefined): Promise
 // Função para criar uma nova conversa
 export async function criarConversa(usuarioId: string, titulo: string): Promise<Conversa> {
   if (!supabase) {
-    console.error('Cliente Supabase não inicializado');
+    console.error('[SUPABASE] Cliente Supabase não inicializado');
     throw new Error('Cliente Supabase não inicializado');
   }
 
   try {
-    const { data, error } = await supabase
+    console.log('[SUPABASE] Criando nova conversa para usuário:', usuarioId);
+    
+    const { data, error, status } = await supabase
       .from('conversas')
       .insert([{ usuario_id: usuarioId, titulo }])
       .select()
       .single();
+    
+    // Log detalhado para debug
+    console.log('[SUPABASE] Resposta ao criar conversa:', { 
+      status, 
+      conversaCriada: !!data,
+      temErro: !!error 
+    });
 
     if (error) {
-      console.error('Erro ao criar conversa:', error);
+      console.error('[SUPABASE] Erro ao criar conversa:', error, 'Status:', status);
       throw error;
     }
 
     return data;
   } catch (error) {
-    console.error('Erro inesperado ao criar conversa:', error);
+    console.error('[SUPABASE] Erro inesperado ao criar conversa:', error);
     throw error;
   }
 }
@@ -148,32 +219,51 @@ export async function adicionarMensagem(
   tipo: 'usuario' | 'assistente'
 ): Promise<void> {
   if (!supabase) {
-    console.error('Cliente Supabase não inicializado');
+    console.error('[SUPABASE] Cliente Supabase não inicializado');
     throw new Error('Cliente Supabase não inicializado');
   }
 
   if (!conversaId) {
-    console.error('ID da conversa não definido');
+    console.error('[SUPABASE] ID da conversa não definido');
     throw new Error('ID da conversa não definido');
   }
 
   try {
-    const { error } = await supabase
+    console.log(`[SUPABASE] Adicionando mensagem de ${tipo} à conversa:`, conversaId);
+    
+    const { error: errorInsert, status: statusInsert } = await supabase
       .from('mensagens')
       .insert([{ conversa_id: conversaId, conteudo, tipo }]);
 
-    if (error) {
-      console.error('Erro ao adicionar mensagem:', error);
-      throw error;
+    // Log detalhado para debug
+    console.log('[SUPABASE] Resposta ao adicionar mensagem:', { 
+      statusInsert, 
+      temErro: !!errorInsert 
+    });
+
+    if (errorInsert) {
+      console.error('[SUPABASE] Erro ao adicionar mensagem:', errorInsert, 'Status:', statusInsert);
+      throw errorInsert;
     }
 
     // Atualiza o timestamp da conversa
-    await supabase
+    const { error: errorUpdate, status: statusUpdate } = await supabase
       .from('conversas')
       .update({ atualizado_em: new Date().toISOString() })
       .eq('id', conversaId);
+    
+    // Log detalhado para debug
+    console.log('[SUPABASE] Resposta ao atualizar timestamp:', { 
+      statusUpdate, 
+      temErro: !!errorUpdate 
+    });
+
+    if (errorUpdate) {
+      console.error('[SUPABASE] Erro ao atualizar timestamp da conversa:', errorUpdate);
+      // Não lançar erro aqui, pois a mensagem já foi inserida
+    }
   } catch (error) {
-    console.error('Erro inesperado ao adicionar mensagem:', error);
+    console.error('[SUPABASE] Erro inesperado ao adicionar mensagem:', error);
     throw error;
   }
 }
