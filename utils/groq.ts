@@ -14,7 +14,7 @@ const GROQ_TIMEOUT_MS = 20000; // 20 segundos
 const MAX_RETRIES = 2; // Número máximo de retentativas
 const RETRY_DELAY_MS = 1000; // Tempo de espera entre retentativas (1 segundo inicial)
 
-// Inicializa o cliente Groq com configuração de timeout
+// Inicializa o cliente Groq
 const getGroqClient = () => {
   // Usar uma abordagem mais segura para acessar variáveis de ambiente
   const apiKey = typeof window === 'undefined' 
@@ -25,11 +25,8 @@ const getGroqClient = () => {
     throw new Error("A chave de API do Groq não está definida. Configure a variável de ambiente GROQ_API_KEY.");
   }
   
-  return new Groq({ 
-    apiKey,
-    // Adicionamos um timeout de 20 segundos para a API do Groq
-    timeout: GROQ_TIMEOUT_MS
-  });
+  // Criamos o cliente com a configuração básica - sem timeout como propriedade direta
+  return new Groq({ apiKey });
 };
 
 // Sistema para direcionar a IA a se comportar como especialista em leis brasileiras
@@ -73,14 +70,24 @@ export async function obterRespostaJuridica({ consulta, historico = [] }: Consul
         { role: "user", content: consulta }
       ];
       
-      // Envia a consulta para o modelo Llama-3 através do Groq
-      const resposta = await client.chat.completions.create({
+      // Implementamos o timeout manualmente com Promise.race
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error("Timeout ao conectar com a API Groq"));
+        }, GROQ_TIMEOUT_MS);
+      });
+      
+      // Criamos a promise de resposta da API
+      const responsePromise = client.chat.completions.create({
         messages: mensagens,
         model: "llama3-70b-8192",
         temperature: 0.2,
         max_tokens: 4096,
         top_p: 0.9,
       });
+      
+      // Corrida entre o timeout e a resposta da API
+      const resposta = await Promise.race([responsePromise, timeoutPromise]) as Awaited<typeof responsePromise>;
       
       const tempoTotal = Date.now() - startTime;
       console.log(`[GROQ] Resposta recebida com sucesso em ${tempoTotal}ms`);
@@ -109,6 +116,7 @@ export async function obterRespostaJuridica({ consulta, historico = [] }: Consul
         // Erros de timeout ou rede
         mensagemErro.includes('timeout') || 
         mensagemErro.includes('timed out') || 
+        mensagemErro.includes('Timeout') ||
         mensagemErro.includes('network') ||
         mensagemErro.includes('ETIMEDOUT') ||
         mensagemErro.includes('ECONNRESET')
@@ -120,7 +128,7 @@ export async function obterRespostaJuridica({ consulta, historico = [] }: Consul
         
         if (statusCode === 429) {
           mensagemFinal = "O serviço de IA está sobrecarregado no momento. Por favor, tente novamente em alguns minutos.";
-        } else if (mensagemErro.includes('timeout') || mensagemErro.includes('timed out')) {
+        } else if (mensagemErro.includes('timeout') || mensagemErro.includes('timed out') || mensagemErro.includes('Timeout')) {
           mensagemFinal = "Tempo limite excedido ao processar sua consulta. Por favor, tente uma consulta mais simples.";
         } else if (statusCode >= 500 && statusCode < 600) {
           mensagemFinal = "O serviço de IA está enfrentando problemas técnicos. Por favor, tente novamente mais tarde.";
