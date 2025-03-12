@@ -1,17 +1,23 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Garantir que as variáveis de ambiente estejam disponíveis apenas no cliente
-const supabaseUrl = typeof window !== 'undefined' 
-  ? process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-  : '';
-const supabaseAnonKey = typeof window !== 'undefined'
-  ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-  : '';
+// Garantir que as variáveis de ambiente estejam disponíveis
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 // Verificar se as chaves foram fornecidas
-if (typeof window !== 'undefined' && (!supabaseUrl || !supabaseAnonKey)) {
+if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Supabase URL ou chave anônima não definidas. Configure as variáveis de ambiente NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY.');
 }
+
+// Cria o cliente Supabase com opções persistentes para armazenamento de sessão
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    storageKey: 'jurisia-auth-storage',
+    autoRefreshToken: true,
+    detectSessionInUrl: true 
+  }
+});
 
 // Tipo para resposta da IA
 export interface RespostaIA {
@@ -51,11 +57,6 @@ export interface PerfilUsuario {
   criado_em?: string;
   atualizado_em?: string;
 }
-
-// Cria o cliente Supabase somente no cliente
-export const supabase = typeof window !== 'undefined' 
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
 
 // Função para carregar conversas de um usuário
 export async function carregarConversas(usuarioId: string): Promise<Conversa[]> {

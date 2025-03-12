@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, Session, SupabaseClient } from '@supabase/supabase-js';
+import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../utils/supabase';
 import { PerfilUsuario, obterPerfilUsuario, atualizarPerfilUsuario, uploadImagemPerfil } from '../utils/supabase';
 
@@ -8,6 +8,7 @@ interface AuthContextType {
   session: Session | null;
   perfil: PerfilUsuario | null;
   isLoading: boolean;
+  isInitialized: boolean;
   signOut: () => Promise<void>;
   atualizarNome: (nomeCompleto: string) => Promise<void>;
   uploadFotoPerfil: (arquivo: File) => Promise<string | null>;
@@ -20,6 +21,7 @@ const initialAuthContext: AuthContextType = {
   session: null,
   perfil: null,
   isLoading: true,
+  isInitialized: false,
   signOut: async () => {},
   atualizarNome: async () => {},
   uploadFotoPerfil: async () => null,
@@ -33,53 +35,70 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [perfil, setPerfil] = useState<PerfilUsuario | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [authError, setAuthError] = useState<Error | null>(null);
 
   // Função para carregar o perfil do usuário
   const carregarPerfil = async (userId: string) => {
     try {
+      console.log("[AUTH] Carregando perfil para usuário:", userId);
       const dadosPerfil = await obterPerfilUsuario(userId);
       setPerfil(dadosPerfil);
     } catch (error) {
-      console.error('Erro ao carregar perfil do usuário:', error);
+      console.error('[AUTH] Erro ao carregar perfil do usuário:', error);
     }
   };
 
   useEffect(() => {
-    // Verifica se o supabase está disponível (cliente)
-    if (!supabase) {
-      console.error('Supabase não está disponível no contexto atual');
-      setIsLoading(false);
-      return;
-    }
-
-    // Type assertion para evitar erros de TypeScript
-    const supabaseClient = supabase as SupabaseClient;
+    let mounted = true;
+    console.log("[AUTH] Inicializando contexto de autenticação");
 
     // Buscar sessão inicial
     const getInitialSession = async () => {
       try {
-        const { data } = await supabaseClient.auth.getSession();
-        setSession(data.session);
-        setUser(data.session?.user ?? null);
+        console.log("[AUTH] Buscando sessão inicial");
+        const { data, error } = await supabase.auth.getSession();
         
-        // Carregar perfil se o usuário estiver logado
-        if (data.session?.user) {
-          await carregarPerfil(data.session.user.id);
+        if (error) {
+          console.error('[AUTH] Erro ao buscar sessão:', error);
+          setAuthError(error);
+          throw error;
+        }
+        
+        if (mounted) {
+          console.log("[AUTH] Sessão encontrada:", !!data.session);
+          setSession(data.session);
+          setUser(data.session?.user ?? null);
+          
+          // Carregar perfil se o usuário estiver logado
+          if (data.session?.user) {
+            await carregarPerfil(data.session.user.id);
+          }
         }
       } catch (error) {
-        console.error('Erro ao buscar sessão inicial:', error);
+        console.error('[AUTH] Erro ao buscar sessão inicial:', error);
+        // Limpar localStorage para evitar loops em caso de erro
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.removeItem('jurisia-auth-storage');
+          } catch (e) {
+            console.error('[AUTH] Erro ao limpar localStorage:', e);
+          }
+        }
       } finally {
-        setIsLoading(false);
+        if (mounted) {
+          setIsLoading(false);
+          setIsInitialized(true);
+        }
       }
     };
 
     getInitialSession();
 
     // Configurar listener para mudanças de autenticação
-    let subscription: { unsubscribe: () => void } | null = null;
-    
-    try {
-      const { data } = supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log("[AUTH] Mudança de estado de autenticação:", _event);
+      if (mounted) {
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -91,40 +110,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         
         setIsLoading(false);
-      });
-      
-      subscription = data.subscription;
-    } catch (error) {
-      console.error('Erro ao configurar ouvinte de autenticação:', error);
-      setIsLoading(false);
-    }
+      }
+    });
 
     return () => {
-      if (subscription) {
-        subscription.unsubscribe();
-      }
+      mounted = false;
+      subscription.unsubscribe();
     };
   }, []);
 
   const signOut = async () => {
-    if (!supabase) {
-      console.error('Supabase não está disponível');
-      return;
-    }
-    
     try {
-      // Type assertion para evitar erros de TypeScript
-      const supabaseClient = supabase as SupabaseClient;
-      await supabaseClient.auth.signOut();
+      console.log("[AUTH] Iniciando processo de logout");
+      setIsLoading(true);
+      
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('[AUTH] Erro ao fazer logout:', error);
+        throw error;
+      }
+      
       setPerfil(null);
+      console.log("[AUTH] Logout concluído com sucesso");
+      
+      // Limpar dados locais após logout
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.removeItem('jurisia-auth-storage');
+        } catch (e) {
+          console.error('[AUTH] Erro ao limpar localStorage após logout:', e);
+        }
+      }
     } catch (error) {
-      console.error('Erro ao fazer logout:', error);
+      console.error('[AUTH] Erro ao fazer logout:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const atualizarNome = async (nomeCompleto: string) => {
     if (!user) {
-      console.error('Usuário não está logado');
+      console.error('[AUTH] Usuário não está logado');
       return;
     }
     
@@ -132,14 +158,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const perfilAtualizado = await atualizarPerfilUsuario(user.id, { nome_completo: nomeCompleto });
       setPerfil(perfilAtualizado);
     } catch (error) {
-      console.error('Erro ao atualizar nome do usuário:', error);
+      console.error('[AUTH] Erro ao atualizar nome do usuário:', error);
       throw error;
     }
   };
 
   const uploadFotoPerfil = async (arquivo: File): Promise<string | null> => {
     if (!user) {
-      console.error('Usuário não está logado');
+      console.error('[AUTH] Usuário não está logado');
       return null;
     }
     
@@ -151,14 +177,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return urlFoto;
     } catch (error) {
-      console.error('Erro ao fazer upload da foto de perfil:', error);
+      console.error('[AUTH] Erro ao fazer upload da foto de perfil:', error);
       throw error;
     }
   };
 
   const recarregarPerfil = async () => {
     if (!user) {
-      console.error('Usuário não está logado');
+      console.error('[AUTH] Usuário não está logado');
       return;
     }
     
@@ -170,6 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session,
     perfil,
     isLoading,
+    isInitialized,
     signOut,
     atualizarNome,
     uploadFotoPerfil,

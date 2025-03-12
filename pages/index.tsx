@@ -20,7 +20,7 @@ type Mensagem = {
 };
 
 export default function Home() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isInitialized } = useAuth();
   const router = useRouter();
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [isCarregando, setIsCarregando] = useState(false);
@@ -32,6 +32,7 @@ export default function Home() {
   const [hasOverflow, setHasOverflow] = useState(false);
   const [erroAudioGlobal, setErroAudioGlobal] = useState<string | null>(null);
   const [portalContainer, setPortalContainer] = useState<Element | null>(null);
+  const [inicializacaoCompleta, setInicializacaoCompleta] = useState(false);
 
   // Atualizar a largura da janela quando redimensionar
   useEffect(() => {
@@ -63,12 +64,22 @@ export default function Home() {
     }
   }, [windowWidth, sidebarAberta]);
 
-  // Redirecionar para login se não estiver autenticado
+  // Redirecionar para login apenas se a inicialização da autenticação estiver completa
   useEffect(() => {
-    if (!isLoading && !user) {
+    console.log("[HOME] Estado de autenticação:", { isInitialized, isLoading, user: !!user });
+    
+    // Só redirecionar quando temos certeza que a autenticação foi verificada
+    if (isInitialized && !isLoading && !user) {
+      console.log("[HOME] Redirecionando para login - usuário não autenticado");
       router.push('/login');
     }
-  }, [user, isLoading, router]);
+    
+    // Marcar inicialização como completa para evitar cálculos redundantes
+    if (isInitialized && !isLoading && user) {
+      console.log("[HOME] Inicialização completa - usuário autenticado");
+      setInicializacaoCompleta(true);
+    }
+  }, [user, isLoading, isInitialized, router]);
 
   // Hook para rolar para o final da conversa quando novas mensagens são adicionadas
   const scrollToBottomWithDelay = useCallback(() => {
@@ -340,12 +351,18 @@ export default function Home() {
     }
   };
 
-  // Se estiver carregando o estado de autenticação, mostra loader
-  if (isLoading) {
+  // Mostrar estado de carregamento enquanto verificamos autenticação
+  if (!isInitialized || isLoading) {
     return (
-      <Layout>
-        <div className="flex justify-center items-center h-screen">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-700 dark:border-primary-400"></div>
+      <Layout
+        title="Carregando | JurisIA - Assistente Jurídico com IA"
+        description="Carregando JurisIA, assistente jurídico inteligente para advogados brasileiros"
+      >
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-300">Inicializando aplicação...</p>
+          </div>
         </div>
       </Layout>
     );
