@@ -41,31 +41,31 @@ const PerfilPage = () => {
       description="Gerencie seu perfil no JurisIA, assistente jurídico inteligente para advogados brasileiros"
     >
       <div className="container-custom py-10">
-        <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="max-w-2xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
           <div className="p-6">
-            <h1 className="text-2xl font-bold text-primary-700 mb-6">Seu Perfil</h1>
+            <h1 className="text-2xl font-bold text-primary-700 dark:text-primary-400 mb-6">Seu Perfil</h1>
             
-            <div className="mb-8 p-6 bg-gray-50 rounded-lg">
+            <div className="mb-8 p-6 bg-gray-50 dark:bg-gray-700 rounded-lg">
               <div className="flex items-center mb-4">
-                <div className="w-16 h-16 rounded-full bg-primary-600 flex items-center justify-center text-white text-2xl mr-4">
+                <div className="w-16 h-16 rounded-full bg-primary-600 dark:bg-primary-700 flex items-center justify-center text-white text-2xl mr-4">
                   {user.email?.charAt(0).toUpperCase() || 'U'}
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-800">
+                  <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
                     {user.email?.split('@')[0]}
                   </h2>
-                  <p className="text-gray-600">{user.email}</p>
+                  <p className="text-gray-600 dark:text-gray-400">{user.email}</p>
                 </div>
               </div>
               
-              <div className="text-sm text-gray-600 mb-2">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                 <p><strong>ID da conta:</strong> {user.id}</p>
                 <p><strong>Último login:</strong> {new Date(user.last_sign_in_at || '').toLocaleString('pt-BR')}</p>
               </div>
             </div>
             
-            <div className="border-t border-gray-200 pt-6">
-              <h3 className="text-lg font-semibold mb-4">Ações da Conta</h3>
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+              <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">Ações da Conta</h3>
               
               <div className="space-y-4">
                 <div>
@@ -85,8 +85,8 @@ const PerfilPage = () => {
                 </div>
                 
                 {confirmacao && (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-red-700 mb-3">Tem certeza que deseja sair da sua conta?</p>
+                  <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
+                    <p className="text-red-700 dark:text-red-400 mb-3">Tem certeza que deseja sair da sua conta?</p>
                     <div className="flex space-x-3">
                       <button
                         onClick={handleSignOut}
@@ -96,7 +96,7 @@ const PerfilPage = () => {
                       </button>
                       <button
                         onClick={() => setConfirmacao(false)}
-                        className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+                        className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
                       >
                         Cancelar
                       </button>

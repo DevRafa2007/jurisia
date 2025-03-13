@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -12,6 +12,7 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
   const { user, signOut, isLoading } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   const handleSignOut = async () => {
     try {
@@ -21,8 +22,29 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
     }
   };
 
+  useEffect(() => {
+    const handleScroll = () => {
+      const isScrolled = window.scrollY > 10;
+      if (isScrolled !== scrolled) {
+        setScrolled(isScrolled);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [scrolled]);
+
   return (
-    <header className="bg-white dark:bg-gray-800 shadow-sm transition-colors duration-300">
+    <header 
+      className={`bg-white dark:bg-gray-800 transition-colors duration-300 fixed top-0 left-0 right-0 z-50 ${
+        scrolled 
+          ? 'shadow-lg' 
+          : 'shadow-md'
+      }`}
+    >
       <div className="w-full mx-auto px-2 sm:px-3 md:px-4 py-2 sm:py-3 md:py-4 max-w-[98%] xl:max-w-[95%] 2xl:max-w-[90%]">
         <div className="flex justify-between items-center">
           <div className="flex items-center">
@@ -60,6 +82,8 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
                   <button 
                     className="flex items-center space-x-1 sm:space-x-2 focus:outline-none"
                     onClick={() => setMenuOpen(!menuOpen)}
+                    aria-expanded={menuOpen}
+                    aria-haspopup="true"
                   >
                     <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary-600 dark:bg-primary-700 flex items-center justify-center text-white transition-colors duration-300">
                       {user.email?.charAt(0).toUpperCase() || 'U'}
@@ -95,29 +119,41 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
                     )}
                   </button>
                   
-                  {menuOpen && (
-                    <div className="absolute right-0 top-full mt-1 sm:mt-2 w-40 sm:w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-50 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
-                      <div className="px-3 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 transition-colors duration-300 break-all">
-                        {user.email}
-                      </div>
-                      <Link
-                        href="/perfil"
-                        className="block px-3 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
-                        onClick={() => setMenuOpen(false)}
-                      >
-                        Perfil
-                      </Link>
-                      <button
-                        onClick={() => {
-                          handleSignOut();
-                          setMenuOpen(false);
-                        }}
-                        className="block w-full text-left px-3 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
-                      >
-                        Sair
-                      </button>
+                  {/* Menu Dropdown do Perfil com animação */}
+                  <div 
+                    className={`absolute right-0 top-full mt-1 sm:mt-2 w-40 sm:w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-50 border border-gray-200 dark:border-gray-700 transition-all duration-300 transform origin-top-right ${
+                      menuOpen 
+                        ? 'opacity-100 scale-100 translate-y-0' 
+                        : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'
+                    }`}
+                  >
+                    <div className="px-3 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 transition-colors duration-300 break-all">
+                      {user.email}
                     </div>
-                  )}
+                    <Link
+                      href="/perfil"
+                      className="block px-3 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Perfil
+                    </Link>
+                    <Link
+                      href="/sobre"
+                      className="block px-3 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Sobre
+                    </Link>
+                    <button
+                      onClick={() => {
+                        handleSignOut();
+                        setMenuOpen(false);
+                      }}
+                      className="block w-full text-left px-3 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-300"
+                    >
+                      Sair
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="flex items-center">

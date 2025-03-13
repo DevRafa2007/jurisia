@@ -1,71 +1,64 @@
-import React from 'react';
 import Layout from '../components/Layout';
-import Link from 'next/link';
 
-const Sobre: React.FC = () => {
+const SobrePage = () => {
   return (
     <Layout
-      title="Sobre JurisIA | Assistente Jurídico com IA"
-      description="Conheça o JurisIA, um assistente jurídico inteligente para advogados brasileiros"
+      title="Sobre | JurisIA - Assistente Jurídico com IA"
+      description="Conheça mais sobre o JurisIA, assistente jurídico inteligente para advogados brasileiros"
+      disableScrollLock={true}
     >
-      <div className="container-custom py-8">
+      <div className="container-custom py-10 overflow-y-auto">
         <div className="max-w-3xl mx-auto">
-          <h1 className="text-3xl font-bold text-primary-700 mb-6">Sobre o JurisIA</h1>
+          <h1 className="text-3xl font-bold text-primary-700 dark:text-primary-400 mb-8 text-center">
+            Sobre o JurisIA
+          </h1>
           
-          <div className="bg-white shadow-md rounded-lg p-6 mb-8">
-            <h2 className="text-xl font-semibold text-primary-600 mb-4">O que é o JurisIA?</h2>
-            <p className="mb-4">
-              O JurisIA é um assistente jurídico alimentado por inteligência artificial, 
-              desenvolvido especificamente para advogados brasileiros. Utilizando 
-              a tecnologia avançada de IA do Groq, o JurisIA ajuda profissionais 
-              do direito a acessar rapidamente informações jurídicas relevantes.
+          <div className="mb-12 p-6 sm:p-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+            <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-6">Nossa Proposta</h2>
+            <p className="text-gray-700 dark:text-gray-300 mb-6 text-base sm:text-lg">
+              O JurisIA é um assistente jurídico inteligente desenvolvido para auxiliar advogados brasileiros em suas atividades diárias.
+              Utilizando tecnologia de inteligência artificial avançada, nosso objetivo é otimizar o trabalho jurídico, fornecendo
+              respostas rápidas e precisas para consultas relacionadas à legislação, jurisprudência e doutrina brasileira.
             </p>
-            <p className="mb-4">
-              Nosso sistema foi treinado com vasto conhecimento sobre legislação brasileira,
-              incluindo códigos, leis, jurisprudências e doutrinas jurídicas, permitindo
-              que advogados obtenham respostas precisas e atualizadas para suas consultas.
+            <p className="text-gray-700 dark:text-gray-300 mb-6 text-base sm:text-lg">
+              Nossa plataforma integra modelos de linguagem de última geração para análise de documentos jurídicos, elaboração de peças
+              e pesquisa jurídica, tudo isso com uma interface intuitiva e amigável que torna a tecnologia acessível a todos os profissionais do direito.
+            </p>
+            <p className="text-gray-700 dark:text-gray-300 text-base sm:text-lg">
+              Estamos constantemente aprimorando nossas funcionalidades para oferecer a melhor experiência possível, mantendo sempre o compromisso
+              com a ética, privacidade e segurança das informações.
             </p>
           </div>
           
-          <div className="bg-white shadow-md rounded-lg p-6 mb-8">
-            <h2 className="text-xl font-semibold text-primary-600 mb-4">Recursos</h2>
-            <ul className="list-disc pl-5 space-y-2">
-              <li>Respostas baseadas em legislação brasileira atualizada</li>
-              <li>Citações de leis, códigos e jurisprudências relevantes</li>
-              <li>Interpretação de textos legais e análise de casos</li>
-              <li>Interface amigável e fácil de usar</li>
-              <li>Histórico de conversas para referência futura</li>
-              <li>Respostas rápidas através da tecnologia Groq</li>
+          <div className="mb-8 p-6 sm:p-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+            <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-6">Tecnologias</h2>
+            <p className="text-gray-700 dark:text-gray-300 mb-6 text-base sm:text-lg">
+              O JurisIA foi construído utilizando tecnologias modernas para garantir desempenho, segurança e uma experiência de usuário excepcional:
+            </p>
+            <ul className="list-disc pl-6 text-gray-700 dark:text-gray-300 mb-6 text-base sm:text-lg space-y-2">
+              <li>Framework Next.js para renderização eficiente e experiência responsiva</li>
+              <li>Interface de usuário com Tailwind CSS para um design moderno e adaptável</li>
+              <li>Autenticação segura e armazenamento de dados com Supabase</li>
+              <li>Integração com modelos de linguagem avançados para processamento de linguagem natural</li>
+              <li>Tema claro/escuro para conforto visual em diferentes ambientes</li>
             </ul>
           </div>
           
-          <div className="bg-white shadow-md rounded-lg p-6 mb-8">
-            <h2 className="text-xl font-semibold text-primary-600 mb-4">Como usar</h2>
-            <p className="mb-4">
-              Simplesmente digite sua dúvida jurídica na caixa de texto e o JurisIA
-              processará sua consulta, fornecendo uma resposta baseada no conhecimento
-              jurídico brasileiro. Você pode fazer perguntas sobre legislação específica,
-              interpretação de leis, precedentes judiciais ou questões processuais.
-            </p>
-            <div className="mt-6">
-              <Link href="/" className="btn btn-primary inline-block">
-                Voltar para o chat
-              </Link>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 sm:p-8 text-center">
+            <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-6">Créditos</h2>
+            <div className="text-gray-700 dark:text-gray-300 text-base sm:text-lg">
+              <p className="mb-4">© {new Date().getFullYear()} JurisIA</p>
+              <p className="mb-4 font-medium">Desenvolvido por: Rafael Fonseca</p>
+              <p className="mb-4">Versão Beta</p>
+              <div className="mt-8">
+                <a 
+                  href="mailto:webdevrafaelf@gmail.com"
+                  className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors duration-300 text-base sm:text-lg"
+                >
+                  webdevrafaelf@gmail.com
+                </a>
+              </div>
             </div>
-          </div>
-          
-          <div className="bg-white shadow-md rounded-lg p-6">
-            <h2 className="text-xl font-semibold text-primary-600 mb-4">Limitações</h2>
-            <p className="mb-4">
-              O JurisIA é uma ferramenta de assistência e não substitui a opinião de um
-              advogado qualificado. As respostas fornecidas devem ser usadas como ponto
-              de partida para pesquisas mais aprofundadas. Sempre consulte as fontes
-              originais das leis e jurisprudências antes de tomar decisões jurídicas.
-            </p>
-            <p>
-              Este é um sistema em constante desenvolvimento e aprimoramento. Agradecemos
-              feedback sobre a precisão e utilidade das respostas fornecidas.
-            </p>
           </div>
         </div>
       </div>
@@ -73,4 +66,4 @@ const Sobre: React.FC = () => {
   );
 };
 
-export default Sobre; 
+export default SobrePage; 

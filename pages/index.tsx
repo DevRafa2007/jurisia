@@ -61,9 +61,22 @@ export default function Home() {
   }, [user, isLoading, router]);
 
   useEffect(() => {
-    // Rola para a última mensagem quando novas mensagens são adicionadas
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    // Rola para mostrar o início da última mensagem quando novas mensagens são adicionadas
+    if (chatContainerRef.current && mensagens.length > 0) {
+      const mensagensContainer = chatContainerRef.current;
+      const allMessages = mensagensContainer.querySelectorAll('.message'); // Assumindo que cada mensagem tem a classe 'message'
+      
+      if (allMessages.length > 0) {
+        const lastMessage = allMessages[allMessages.length - 1];
+        
+        // Se não for uma mensagem do usuário, posiciona no início da mensagem
+        if (mensagens[mensagens.length - 1] && !mensagens[mensagens.length - 1].isUsuario) {
+          lastMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          // Se for uma mensagem do usuário, rola para o final normalmente
+          mensagensContainer.scrollTop = mensagensContainer.scrollHeight;
+        }
+      }
     }
   }, [mensagens]);
 
@@ -245,7 +258,7 @@ export default function Home() {
       <div className="flex flex-col md:flex-row h-[calc(100vh-48px-32px)] sm:h-[calc(100vh-56px-36px)] md:h-[calc(100vh-64px-48px)]">
         {/* Sidebar com conversas - Responsiva */}
         <div 
-          className={`fixed inset-0 z-20 transition-opacity duration-300 ease-in-out md:relative md:block md:opacity-100 ${
+          className={`fixed inset-0 z-40 transition-opacity duration-300 ease-in-out md:relative md:block md:opacity-100 ${
             sidebarAberta 
               ? 'bg-gray-900 bg-opacity-50 opacity-100 pointer-events-auto' 
               : 'opacity-0 pointer-events-none'
@@ -312,7 +325,7 @@ export default function Home() {
           {/* Área de mensagens */}
           <div 
             ref={chatContainerRef}
-            className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 bg-white dark:bg-gray-900 relative"
+            className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 bg-white dark:bg-gray-900 relative z-10"
           >
             {/* Marca d'água do símbolo de Direito - Versão detalhada e realista */}
             <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.06] dark:opacity-[0.035] overflow-hidden">
@@ -397,7 +410,7 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-2 sm:space-y-4 relative z-10 mb-16 sm:mb-0">
+              <div className="space-y-2 sm:space-y-4 relative z-10 mb-20 sm:mb-0">
                 {mensagens.map((mensagem: Mensagem, index: number) => (
                   <ChatMessage
                     key={index}
