@@ -297,7 +297,7 @@ export default function Home() {
 
   return (
     <Layout sidebarAberta={sidebarAberta} toggleSidebar={() => setSidebarAberta(!sidebarAberta)}>
-      <div className="flex flex-col md:flex-row h-[calc(100vh-48px-32px)] sm:h-[calc(100vh-56px-36px)] md:h-[calc(100vh-64px-48px)]">
+      <div className="flex flex-col md:flex-row h-full">
         {/* Sidebar com conversas - Responsiva */}
         <div 
           className={`fixed inset-0 z-40 transition-opacity duration-300 ease-in-out md:relative md:block md:opacity-100 ${

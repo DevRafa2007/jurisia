@@ -74,7 +74,7 @@ const Layout: React.FC<LayoutProps> = ({
   }, [isHomePage]);
 
   return (
-    <div className="flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+    <div className="flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300 min-h-screen">
       <Head>
         <title>{title}</title>
         <meta name="description" content={description} />
@@ -85,7 +85,7 @@ const Layout: React.FC<LayoutProps> = ({
       <Header sidebarAberta={sidebarAberta} toggleSidebar={toggleSidebar} />
 
       <main 
-        className="w-full mx-auto px-1 sm:px-2 md:px-4 max-w-[98%] xl:max-w-[95%] 2xl:max-w-[90%]"
+        className="w-full mx-auto px-1 sm:px-2 md:px-4 max-w-[98%] xl:max-w-[95%] 2xl:max-w-[90%] flex-grow"
         style={{ 
           marginTop: `calc(${headerHeight}px + 0.75rem)`,
           paddingTop: '0.25rem',
@@ -96,7 +96,7 @@ const Layout: React.FC<LayoutProps> = ({
         {children}
       </main>
       
-      {/* Footer foi removido */}
+      <div className="bg-gray-50 dark:bg-gray-900 w-full h-1"></div>
     </div>
   );
 };

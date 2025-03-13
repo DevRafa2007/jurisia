@@ -3,19 +3,34 @@
 @tailwind utilities;
 
 @layer base {
-  body {
-    @apply bg-gray-50 text-gray-900;
+  :root {
+    color-scheme: light dark;
   }
   
-  /* Ajuste para garantir que o conteúdo não fique escondido atrás da barra de digitação fixa */
   html {
+    @apply min-h-full;
     height: -webkit-fill-available;
+    overflow-x: hidden;
   }
   
   body {
+    @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100;
     min-height: 100vh;
     min-height: -webkit-fill-available;
     position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Garante que não há gaps brancos em nenhum lugar */
+  html, body, #__next {
+    @apply min-h-screen;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+  }
+
+  .dark {
+    color-scheme: dark;
   }
 }
 
