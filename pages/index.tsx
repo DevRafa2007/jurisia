@@ -60,11 +60,24 @@ export default function Home() {
     }
   }, [user, isLoading, router]);
 
+  // Forçar scroll para o topo na carga inicial da página
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo(0, 0);
+      
+      // Para dispositivos móveis, também garantir que o body esteja no topo
+      document.body.scrollTop = 0;
+      // Para navegadores modernos
+      document.documentElement.scrollTop = 0;
+    }
+  }, []);
+
   useEffect(() => {
     // Rola para mostrar o início da última mensagem quando novas mensagens são adicionadas
-    if (chatContainerRef.current && mensagens.length > 0) {
+    // Não rolar automaticamente na carga inicial (quando mensagens não mudaram por ação do usuário)
+    if (chatContainerRef.current && mensagens.length > 0 && !isLoading) {
       const mensagensContainer = chatContainerRef.current;
-      const allMessages = mensagensContainer.querySelectorAll('.message'); // Assumindo que cada mensagem tem a classe 'message'
+      const allMessages = mensagensContainer.querySelectorAll('.message');
       
       if (allMessages.length > 0) {
         const lastMessage = allMessages[allMessages.length - 1];
@@ -78,7 +91,7 @@ export default function Home() {
         }
       }
     }
-  }, [mensagens]);
+  }, [mensagens, isLoading]);
 
   // Carregar mensagens de uma conversa existente
   useEffect(() => {
@@ -96,6 +109,12 @@ export default function Home() {
         }));
         
         setMensagens(mensagensUI);
+        
+        // Após carregar as mensagens, resetar o scroll da área de chat para o topo
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTop = 0;
+        }
+        
       } catch (erro) {
         console.error('Erro ao carregar conversa:', erro);
       } finally {
