@@ -9,7 +9,6 @@ type LayoutProps = {
   description?: string;
   sidebarAberta?: boolean;
   toggleSidebar?: () => void;
-  disableScrollLock?: boolean;
 };
 
 const Layout: React.FC<LayoutProps> = ({
@@ -17,20 +16,24 @@ const Layout: React.FC<LayoutProps> = ({
   title = 'JurisIA - Assistente Jurídico com IA',
   description = 'Assistente jurídico inteligente para advogados brasileiros, powered by Groq',
   sidebarAberta,
-  toggleSidebar,
-  disableScrollLock = false
+  toggleSidebar
 }) => {
   const [headerHeight, setHeaderHeight] = useState(0);
-  const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
   
   // Verificar se estamos na página principal
   const isHomePage = router.pathname === '/';
-  
-  // Determinar se o scroll deve ser travado (apenas na página principal e em celulares)
-  const shouldLockScroll = isMobile && isHomePage && !disableScrollLock;
 
   useEffect(() => {
+    // Garantir que a página comece no topo - tanto na montagem inicial quanto em atualizações
+    if (typeof window !== 'undefined') {
+      window.scrollTo(0, 0);
+      // Para navegadores modernos
+      document.documentElement.scrollTop = 0;
+      // Para dispositivos móveis
+      document.body.scrollTop = 0;
+    }
+    
     // Função para calcular a altura do header
     const calcHeaderHeight = () => {
       const headerElement = document.querySelector('header');
@@ -39,65 +42,36 @@ const Layout: React.FC<LayoutProps> = ({
       }
     };
 
-    // Função para verificar se é dispositivo móvel
-    const checkMobile = () => {
-      const mobileBreakpoint = 640; // sm breakpoint do Tailwind
-      setIsMobile(window.innerWidth < mobileBreakpoint);
-    };
-
-    // Calcular a altura inicial e verificar dispositivo
+    // Calcular a altura inicial
     calcHeaderHeight();
-    checkMobile();
 
     // Recalcular ao redimensionar a janela
     const handleResize = () => {
       calcHeaderHeight();
-      checkMobile();
     };
 
     window.addEventListener('resize', handleResize);
 
-    // Aplicar CSS para o modo móvel
-    const applyMobileStyles = () => {
-      if (shouldLockScroll) {
-        // Adicionar regra de estilo para permitir scroll apenas em elementos específicos
-        const styleElement = document.createElement('style');
-        styleElement.id = 'mobileScrollLock';
-        styleElement.innerHTML = `
-          body {
-            overflow: hidden;
-            position: fixed;
-            width: 100%;
-            height: 100%;
-          }
-          /* Permitir scroll nos elementos internos específicos */
-          .overflow-y-auto {
-            overflow-y: auto !important;
-            -webkit-overflow-scrolling: touch;
-          }
-        `;
-        document.head.appendChild(styleElement);
-      } else {
-        // Remover regras quando não estiver no modo móvel ou não for a página principal
-        const existingStyle = document.getElementById('mobileScrollLock');
-        if (existingStyle) {
-          existingStyle.remove();
-        }
+    // Prevenir rolagem na página inicial
+    const preventScrolling = () => {
+      if (isHomePage) {
+        window.scrollTo(0, 0);
       }
     };
 
-    applyMobileStyles();
+    // Adicione um evento para manter a página no topo
+    if (isHomePage) {
+      window.addEventListener('scroll', preventScrolling, { passive: false });
+    }
 
     // Limpar o evento ao desmontar o componente
     return () => {
       window.removeEventListener('resize', handleResize);
-      // Remover estilos ao desmontar
-      const existingStyle = document.getElementById('mobileScrollLock');
-      if (existingStyle) {
-        existingStyle.remove();
+      if (isHomePage) {
+        window.removeEventListener('scroll', preventScrolling);
       }
     };
-  }, [isMobile, shouldLockScroll]);
+  }, [isHomePage]);
 
   return (
     <div className="flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
@@ -115,35 +89,14 @@ const Layout: React.FC<LayoutProps> = ({
         style={{ 
           marginTop: `calc(${headerHeight}px + 0.75rem)`,
           paddingTop: '0.25rem',
-          paddingBottom: '3rem',
-          minHeight: `calc(100vh - ${headerHeight}px - 0.75rem)`,
-          height: shouldLockScroll ? '100vh' : 'auto'
+          paddingBottom: '1rem', // Reduzido para compensar a remoção do footer
+          minHeight: `calc(100vh - ${headerHeight}px - 1rem)`
         }}
       >
         {children}
       </main>
-
-      <footer className="hidden sm:block bg-white dark:bg-gray-800 py-1 sm:py-2 md:py-4 text-[10px] sm:text-xs md:text-sm text-gray-600 dark:text-gray-400 shadow-inner transition-colors duration-300">
-        <div className="w-full mx-auto px-1 sm:px-2 md:px-4 max-w-[98%] xl:max-w-[95%] 2xl:max-w-[90%]">
-          <div className="flex flex-col sm:flex-row justify-between items-center space-y-1 sm:space-y-0">
-            <div className="text-center sm:text-left">
-              © {new Date().getFullYear()} JurisIA
-            </div>
-            <div className="text-center text-[9px] sm:text-xs text-gray-500 dark:text-gray-500">
-              Desenvolvido por: Rafael Fonseca
-            </div>
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <span className="hidden sm:inline">Versão Beta</span>
-              <a
-                href="mailto:webdevrafaelf@gmail.com"
-                className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors duration-300"
-              >
-                Contato
-              </a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      
+      {/* Footer foi removido */}
     </div>
   );
 };
