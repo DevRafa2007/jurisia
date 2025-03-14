@@ -372,7 +372,7 @@ export default function Home() {
               className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 bg-white dark:bg-gray-900 relative z-10"
               style={{ 
                 height: 'auto',
-                paddingBottom: 'calc(40px + 0.5rem)' // Reduzido em aproximadamente 40% do valor anterior
+                paddingBottom: 'calc(60px + 0.75rem)' // Aumentado para dispositivos móveis
               }}
             >
               {/* Marca d'água do símbolo de Direito - Versão detalhada e realista */}
@@ -482,7 +482,7 @@ export default function Home() {
             </div>
 
             {/* Área de input - Fixa na parte inferior */}
-            <div className="p-2 sm:p-3 md:p-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 rounded-b-lg shadow-inner absolute bottom-0 left-0 right-0 z-30">
+            <div className="p-2 sm:p-3 md:p-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 rounded-b-lg shadow-inner fixed sm:absolute bottom-0 left-0 right-0 z-30 chat-input-mobile sm:chat-input-mobile-none fixed-bottom-safe">
               <ChatInput onEnviar={handleEnviarMensagem} isCarregando={isCarregando} />
             </div>
           </div>
