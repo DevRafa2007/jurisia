@@ -318,7 +318,6 @@ export default async function handler(
     }
 
     // Verificar se estamos em desenvolvimento ou se API key está configurada
-    const isDevMode = process.env.NODE_ENV === 'development';
     const apiKeyConfigured = !!process.env.GROQ_API_KEY;
     
     logDebug(`Ambiente: ${process.env.NODE_ENV}`);
