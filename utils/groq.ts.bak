@@ -1,0 +1,104 @@
+import { Groq } from "groq-sdk";
+
+// Tipagem para process.env usando módulos ES2015
+type ProcessEnv = {
+  GROQ_API_KEY?: string;
+}
+
+// Tipagem para o objeto global process
+declare const process: {
+  env: ProcessEnv;
+};
+
+// Inicializa o cliente Groq
+const getGroqClient = () => {
+  // Verificar o ambiente
+  const isServer = typeof window === 'undefined';
+  
+  // No cliente, não podemos acessar variáveis de ambiente do servidor
+  if (!isServer) {
+    throw new Error("O cliente Groq só pode ser inicializado no servidor.");
+  }
+  
+  const apiKey = process.env.GROQ_API_KEY;
+  
+  if (!apiKey) {
+    throw new Error("A chave de API do Groq não está definida. Configure a variável de ambiente GROQ_API_KEY.");
+  }
+  
+  return new Groq({ apiKey });
+};
+
+// Sistema para direcionar a IA a se comportar como especialista em leis brasileiras
+const SISTEMA_PROMPT = `Você é JurisIA, um assistente jurídico especializado em leis brasileiras.
+Você foi treinado com as leis, códigos, jurisprudências e doutrinas brasileiras atualizadas.
+Sempre cite as fontes legais específicas ao responder perguntas jurídicas.
+Organize suas respostas de maneira estruturada, começando com uma resposta direta e concisa,
+seguida dos detalhes legais, jurisprudência relevante e, quando apropriado, diferentes perspectivas doutrinárias.
+Mantenha-se atualizado sobre as leis brasileiras mais recentes e suas interpretações.
+Responda sempre em português do Brasil, usando terminologia jurídica adequada.
+Se não souber a resposta ou não tiver certeza, indique claramente, em vez de fornecer informações potencialmente incorretas.`;
+
+// Interface para consultas jurídicas
+export interface ConsultaJuridica {
+  consulta: string;
+  historico?: Array<{ role: "user" | "assistant"; content: string }>;
+}
+
+// Função para obter resposta da IA
+export async function obterRespostaJuridica({ consulta, historico = [] }: ConsultaJuridica) {
+  // Verificar se estamos no servidor
+  if (typeof window !== 'undefined') {
+    throw new Error("Esta função só pode ser chamada no servidor");
+  }
+
+  try {
+    const client = getGroqClient();
+    
+    // Limitar o histórico para evitar exceder o limite de tokens
+    const historicoCortado = historico.slice(-10); // Manter apenas as 10 mensagens mais recentes
+    
+    // Cria o contexto da conversa
+    const mensagens = [
+      { role: "system", content: SISTEMA_PROMPT },
+      ...historicoCortado,
+      { role: "user", content: consulta }
+    ];
+    
+    // Envia a consulta para o modelo Llama-3 através do Groq
+    const resposta = await client.chat.completions.create({
+      messages: mensagens,
+      model: "llama3-70b-8192",
+      temperature: 0.2,
+      max_tokens: 4096,
+      top_p: 0.9,
+    });
+    
+    // Verificar se temos uma resposta válida
+    if (!resposta.choices || resposta.choices.length === 0) {
+      throw new Error("Resposta vazia recebida do serviço de IA");
+    }
+    
+    return {
+      conteudo: resposta.choices[0]?.message?.content || "Não foi possível processar sua consulta.",
+      modeloUsado: resposta.model,
+      tokens: {
+        entrada: resposta.usage?.prompt_tokens || 0,
+        saida: resposta.usage?.completion_tokens || 0,
+        total: resposta.usage?.total_tokens || 0
+      }
+    };
+  } catch (erro: Error | unknown) {
+    console.error("Erro ao consultar a API do Groq:", erro);
+    
+    // Fornecer mensagem de erro mais específica quando possível
+    const mensagemErro = erro instanceof Error ? erro.message : "Falha ao processar sua consulta jurídica. Por favor, tente novamente mais tarde.";
+    
+    // Se for um erro relacionado à API key ou autenticação
+    if (mensagemErro.includes("API key") || mensagemErro.includes("authentication") || mensagemErro.includes("auth")) {
+      throw new Error("Erro de configuração no servidor. Entre em contato com o suporte.");
+    }
+    
+    throw new Error(mensagemErro);
+  }
+} 

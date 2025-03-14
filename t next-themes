@@ -1,0 +1,9 @@
+[33mcommit 86456822b457c2ad306f935bfdc443fea3c85413[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: Rafael <rafafaelloso2007@gmail.com>
+Date:   Fri Mar 14 17:40:04 2025 -0300
+
+    Correção da área de digitação em dispositivos móveis: 1) Posicionamento fixo para evitar que fique fora da tela 2) Adição de suporte para safe-area no iOS 3) Melhoria no padding para garantir melhor visualização
+
+ pages/index.tsx    |  4 [32m++[m[31m--[m
+ styles/globals.css | 23 [32m+++++++++++++++++++++++[m
+ 2 files changed, 25 insertions(+), 2 deletions(-)

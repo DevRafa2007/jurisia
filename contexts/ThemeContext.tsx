@@ -1,84 +1,56 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect, useState } from 'react';
+import { useTheme as useNextTheme } from 'next-themes';
 
-type ThemeType = 'light' | 'dark';
-
+// Interface para o contexto
 interface ThemeContextType {
-  theme: ThemeType;
+  theme: string;
+  resolvedTheme?: string;
   toggleTheme: () => void;
 }
 
-const initialThemeContext: ThemeContextType = {
+// Valor padrão para o contexto
+const defaultContext: ThemeContextType = {
   theme: 'light',
-  toggleTheme: () => {}
+  resolvedTheme: 'light',
+  toggleTheme: () => {},
 };
 
-const ThemeContext = createContext<ThemeContextType>(initialThemeContext);
+// Criar o contexto
+const ThemeContext = createContext<ThemeContextType>(defaultContext);
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<ThemeType>('light');
-  const [isTransitioning, setIsTransitioning] = useState(false);
+// Prop types para o provedor
+interface ThemeProviderProps {
+  children: ReactNode;
+}
 
-  // Inicializar com o tema salvo ou a preferência do sistema
+// Componente provedor que usa o next-themes sob o capô
+export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
+  const { theme, resolvedTheme, setTheme } = useNextTheme();
+  const [mounted, setMounted] = useState(false);
+
+  // Efeito para garantir renderização apenas no cliente
   useEffect(() => {
-    // Verificar se tem preferência salva
-    const savedTheme = localStorage.getItem('theme') as ThemeType | null;
-    
-    if (savedTheme) {
-      setTheme(savedTheme);
-    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      // Se não tiver preferência salva, usar a preferência do sistema
-      setTheme('dark');
-    }
+    setMounted(true);
   }, []);
 
-  // Aplicar classe dark ao HTML quando o tema mudar
-  useEffect(() => {
-    const root = window.document.documentElement;
-    
-    // Adicionar classe de transição global ao iniciar
-    if (!root.classList.contains('transition-colors')) {
-      root.classList.add('transition-colors');
-      root.classList.add('duration-300');
-    }
-    
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-    
-    // Salvar preferência
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  // Função para alternar o tema com transição suave
+  // Função para alternar entre temas
   const toggleTheme = () => {
-    setIsTransitioning(true);
-    
-    // Aplicar transição
-    const root = window.document.documentElement;
-    if (!root.classList.contains('transition-colors')) {
-      root.classList.add('transition-colors');
-      root.classList.add('duration-300');
-    }
-    
-    // Alternar tema
-    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
-    
-    // Remover classes de transição após um tempo
-    setTimeout(() => {
-      setIsTransitioning(false);
-    }, 300);
+    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
+  };
+
+  // Valor do contexto
+  const value = {
+    theme: theme || 'light',
+    resolvedTheme: mounted ? resolvedTheme : 'light',
+    toggleTheme
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );
-}
+};
 
-// Hook para usar o tema
-export function useTheme() {
-  return useContext(ThemeContext);
-} 
+// Hook personalizado para usar o contexto
+export const useTheme = () => useContext(ThemeContext); 

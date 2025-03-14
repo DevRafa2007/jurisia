@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Estilos globais */
+html,
+body {
+  padding: 0;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto,
+    Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue,
+    sans-serif;
+  scroll-behavior: smooth;
+}
+
+/* Estilos para o tema jurídico */
 @layer base {
   :root {
     color-scheme: light dark;
@@ -54,6 +66,26 @@
 
   .dark {
     color-scheme: dark;
+  }
+
+  /* Tipografia melhorada */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+  
+  /* Melhorias para elementos de formulário */
+  input, textarea, select {
+    @apply focus:outline-none;
+  }
+  
+  /* Melhor contraste para texto */
+  p, li, blockquote {
+    @apply leading-relaxed;
+  }
+  
+  /* Ajuste para código */
+  code {
+    @apply font-mono text-sm bg-law-100 dark:bg-law-800 py-0.5 px-1 rounded;
   }
 }
 
@@ -109,4 +141,177 @@
       transform: scale(1);
     }
   }
+
+  /* Estilo para o modo de foco */
+  body.focus-mode .distractions {
+    @apply opacity-0 pointer-events-none;
+  }
+  
+  /* Transição suave para elementos que desaparecem no modo de foco */
+  .distractions {
+    @apply transition-opacity duration-300 ease-in-out;
+  }
+  
+  /* Estilização dos cartões de mensagem */
+  .message {
+    @apply relative transition-transform duration-300 ease-in-out;
+  }
+  
+  .message:hover {
+    @apply shadow-elegant;
+  }
+  
+  /* Melhoria para blocos de código dentro do markdown */
+  .markdown pre {
+    @apply my-4 p-4 bg-law-100 dark:bg-law-800 rounded-lg overflow-x-auto text-sm;
+  }
+  
+  .markdown code {
+    @apply font-mono text-sm;
+  }
+  
+  .markdown h1, .markdown h2, .markdown h3 {
+    @apply font-serif font-medium mb-4 mt-6;
+  }
+  
+  .markdown h1 {
+    @apply text-2xl;
+  }
+  
+  .markdown h2 {
+    @apply text-xl;
+  }
+  
+  .markdown h3 {
+    @apply text-lg;
+  }
+  
+  .markdown p {
+    @apply mb-4;
+  }
+  
+  .markdown ul, .markdown ol {
+    @apply ml-6 mb-4;
+  }
+  
+  .markdown ul {
+    @apply list-disc;
+  }
+  
+  .markdown ol {
+    @apply list-decimal;
+  }
+  
+  .markdown a {
+    @apply text-primary-600 dark:text-primary-400 hover:underline;
+  }
+  
+  .markdown blockquote {
+    @apply border-l-4 border-law-300 dark:border-law-600 pl-4 py-2 my-4 bg-law-50 dark:bg-law-900 italic;
+  }
+  
+  /* Estilizações para tabelas em markdown */
+  .markdown table {
+    @apply min-w-full border border-law-300 dark:border-law-700 my-4;
+  }
+  
+  .markdown th {
+    @apply bg-law-100 dark:bg-law-800 font-medium p-2 text-left border-b border-law-300 dark:border-law-700;
+  }
+  
+  .markdown td {
+    @apply p-2 border-b border-law-200 dark:border-law-700;
+  }
+  
+  /* Melhoria para a área de digitação móvel */
+  .mobile-typing-area {
+    @apply fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 p-3 z-20;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0));
+  }
+  
+  .typing-container.with-fixed-input {
+    @apply mb-24 sm:mb-0;
+  }
+  
+  /* Efeito de transição para favoritos */
+  .favorite-btn.active svg {
+    @apply text-yellow-500 fill-current transform scale-110 transition-all duration-300;
+  }
+  
+  /* Badge para notificações */
+  .notification-badge {
+    @apply absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full;
+  }
+  
+  /* Estilização para o background de página juridico */
+  .law-bg-pattern {
+    background-image: url('/patterns/law-pattern.svg');
+    background-size: 200px;
+    background-repeat: repeat;
+    @apply bg-opacity-[0.03] dark:bg-opacity-[0.02];
+  }
+}
+
+/* Melhorias de acessibilidade */
+@layer utilities {
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+  
+  .focus-visible\:ring {
+    @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+  }
+  
+  /* Animações para feedback */
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in-out forwards;
+  }
+  
+  .animate-fade-out {
+    animation: fadeOut 0.3s ease-in-out forwards;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(5px);
+    }
+  }
+  
+  /* Esconde a barra de rolagem mas mantém a funcionalidade */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE e Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome, Safari e Opera */
+  }
+}
+
+* {
+  box-sizing: border-box;
 } 

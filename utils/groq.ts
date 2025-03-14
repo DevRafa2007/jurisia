@@ -1,34 +1,46 @@
 import { Groq } from "groq-sdk";
+import { logDebug, logError, logInfo, logWarning } from './logger';
 
-// Declaração de tipo para resolver o erro "Cannot find name 'process'"
-declare global {
-  namespace NodeJS {
-    interface ProcessEnv {
-      GROQ_API_KEY?: string;
-    }
-  }
+// Tipagem para process.env usando módulos ES2015
+type ProcessEnv = {
+  GROQ_API_KEY?: string;
 }
 
-// Inicializa o cliente Groq
-const getGroqClient = () => {
-  // Verificar o ambiente
-  const isServer = typeof window === 'undefined';
-  
-  // No cliente, não podemos acessar variáveis de ambiente do servidor
-  if (!isServer) {
-    throw new Error("O cliente Groq só pode ser inicializado no servidor.");
-  }
-  
-  const apiKey = process.env.GROQ_API_KEY;
-  
-  if (!apiKey) {
-    throw new Error("A chave de API do Groq não está definida. Configure a variável de ambiente GROQ_API_KEY.");
-  }
-  
-  return new Groq({ apiKey });
+// Tipagem para o objeto global process
+declare const process: {
+  env: ProcessEnv;
 };
 
-// Sistema para direcionar a IA a se comportar como especialista em leis brasileiras
+/**
+ * Interface para as mensagens enviadas para a API
+ */
+interface Mensagem {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+/**
+ * Interface para consultas jurídicas
+ */
+export interface ConsultaJuridica {
+  consulta: string;
+  historico?: Array<{ role: 'user' | 'assistant'; content: string }>;
+}
+
+/**
+ * Interface para a resposta da AI
+ */
+export interface RespostaIA {
+  conteudo: string;
+  modeloUsado: string;
+  tokens: {
+    entrada: number;
+    saida: number;
+    total: number;
+  };
+}
+
+// Prompt do sistema para direcionar o comportamento da IA
 const SISTEMA_PROMPT = `Você é JurisIA, um assistente jurídico especializado em leis brasileiras.
 Você foi treinado com as leis, códigos, jurisprudências e doutrinas brasileiras atualizadas.
 Sempre cite as fontes legais específicas ao responder perguntas jurídicas.
@@ -38,66 +50,134 @@ Mantenha-se atualizado sobre as leis brasileiras mais recentes e suas interpreta
 Responda sempre em português do Brasil, usando terminologia jurídica adequada.
 Se não souber a resposta ou não tiver certeza, indique claramente, em vez de fornecer informações potencialmente incorretas.`;
 
-// Interface para consultas jurídicas
-export interface ConsultaJuridica {
-  consulta: string;
-  historico?: Array<{ role: "user" | "assistant"; content: string }>;
-}
-
-// Função para obter resposta da IA
-export async function obterRespostaJuridica({ consulta, historico = [] }: ConsultaJuridica) {
-  // Verificar se estamos no servidor
+/**
+ * Obtém uma instância configurada do cliente Groq
+ * @returns Cliente Groq configurado
+ * @throws Error se não estiver no servidor ou se a chave API não estiver configurada
+ */
+function getGroqClient(): Groq {
+  // Verificar ambiente (servidor vs cliente)
   if (typeof window !== 'undefined') {
-    throw new Error("Esta função só pode ser chamada no servidor");
+    logError('Tentativa de inicializar cliente Groq no navegador');
+    throw new Error('Esta função só pode ser executada no servidor');
+  }
+
+  // Verificar existência da chave API
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    logError('GROQ_API_KEY não encontrada nas variáveis de ambiente');
+    throw new Error('Chave de API não configurada');
   }
 
   try {
+    // Criar e retornar instância do cliente
+    logDebug('Inicializando cliente Groq');
+    return new Groq({ apiKey });
+  } catch (error) {
+    logError('Erro ao inicializar cliente Groq', error instanceof Error ? error : new Error(String(error)));
+    throw new Error('Falha ao inicializar o serviço de IA');
+  }
+}
+
+/**
+ * Obtém uma resposta jurídica da IA
+ * @param param0 Objeto contendo a consulta e histórico opcional
+ * @returns Resposta formatada da IA
+ */
+export async function obterRespostaJuridica({ 
+  consulta, 
+  historico = [] 
+}: ConsultaJuridica): Promise<RespostaIA> {
+  // Verificar ambiente
+  if (typeof window !== 'undefined') {
+    logError('Tentativa de chamar obterRespostaJuridica no navegador');
+    throw new Error('Esta função só pode ser chamada no servidor');
+  }
+
+  // Validar entrada
+  if (!consulta || typeof consulta !== 'string') {
+    logError(`Consulta inválida: ${typeof consulta}`);
+    throw new Error('A consulta deve ser uma string não vazia');
+  }
+
+  try {
+    // Obter cliente
+    logInfo('Iniciando consulta jurídica');
     const client = getGroqClient();
     
-    // Limitar o histórico para evitar exceder o limite de tokens
-    const historicoCortado = historico.slice(-10); // Manter apenas as 10 mensagens mais recentes
+    // Limitar histórico para evitar exceder limites de tokens
+    const historicoLimitado = historico.slice(-10);
+    logDebug(`Histórico limitado a ${historicoLimitado.length} mensagens`);
     
-    // Cria o contexto da conversa
-    const mensagens = [
-      { role: "system", content: SISTEMA_PROMPT },
-      ...historicoCortado,
-      { role: "user", content: consulta }
+    // Preparar mensagens para a API
+    const mensagens: Mensagem[] = [
+      { role: 'system', content: SISTEMA_PROMPT },
+      ...historicoLimitado,
+      { role: 'user', content: consulta }
     ];
     
-    // Envia a consulta para o modelo Llama-3 através do Groq
+    logInfo('Enviando consulta para Groq API...');
+    
+    // Enviar para API
     const resposta = await client.chat.completions.create({
+      model: 'llama3-70b-8192',
       messages: mensagens,
-      model: "llama3-70b-8192",
       temperature: 0.2,
       max_tokens: 4096,
       top_p: 0.9,
     });
     
-    // Verificar se temos uma resposta válida
+    // Validar resposta
     if (!resposta.choices || resposta.choices.length === 0) {
-      throw new Error("Resposta vazia recebida do serviço de IA");
+      logError('Resposta vazia da API Groq');
+      throw new Error('Não foi possível obter uma resposta do serviço');
     }
     
+    // Extrair e formatar resposta
+    const conteudo = resposta.choices[0]?.message?.content;
+    if (!conteudo) {
+      logError('Conteúdo da resposta vazio ou inválido');
+      throw new Error('Conteúdo da resposta vazio ou inválido');
+    }
+    
+    logInfo('Resposta da Groq API recebida com sucesso');
+    logDebug(`Tokens utilizados: ${resposta.usage?.total_tokens || 0}`);
+    
+    // Retornar resposta formatada
     return {
-      conteudo: resposta.choices[0]?.message?.content || "Não foi possível processar sua consulta.",
-      modeloUsado: resposta.model,
+      conteudo,
+      modeloUsado: resposta.model || 'llama3-70b-8192',
       tokens: {
         entrada: resposta.usage?.prompt_tokens || 0,
         saida: resposta.usage?.completion_tokens || 0,
         total: resposta.usage?.total_tokens || 0
       }
     };
-  } catch (erro: any) {
-    console.error("Erro ao consultar a API do Groq:", erro);
+  } catch (error) {
+    // Tratar erros específicos
+    const mensagem = error instanceof Error ? error.message : 'Erro desconhecido';
+    logError('Erro ao processar consulta Groq', error instanceof Error ? error : new Error(String(error)));
     
-    // Fornecer mensagem de erro mais específica quando possível
-    const mensagemErro = erro.message || "Falha ao processar sua consulta jurídica. Por favor, tente novamente mais tarde.";
-    
-    // Se for um erro relacionado à API key ou autenticação
-    if (mensagemErro.includes("API key") || mensagemErro.includes("authentication") || mensagemErro.includes("auth")) {
-      throw new Error("Erro de configuração no servidor. Entre em contato com o suporte.");
+    // Identificar erros de autenticação
+    if (
+      mensagem.includes('API key') || 
+      mensagem.includes('authentication') || 
+      mensagem.includes('auth') ||
+      mensagem.includes('credential')
+    ) {
+      throw new Error('Falha na autenticação com o serviço de IA. Verifique a configuração da API key.');
     }
     
-    throw new Error(mensagemErro);
+    // Identificar erros de conexão
+    if (
+      mensagem.includes('network') || 
+      mensagem.includes('timeout') || 
+      mensagem.includes('connect')
+    ) {
+      throw new Error('Falha na conexão com o serviço de IA. Verifique sua conexão de internet.');
+    }
+    
+    // Erro genérico
+    throw new Error(`Erro ao processar sua consulta: ${mensagem}`);
   }
 } 
