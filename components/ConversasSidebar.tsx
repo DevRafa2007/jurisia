@@ -11,6 +11,14 @@ interface ConversasSidebarProps {
   isMobile?: boolean;
 }
 
+// Adicionando interface para dados exportados
+interface ExportData {
+  conversa: Conversa;
+  mensagens: Mensagem[];
+}
+
+type ExportDataCollection = { [key: string]: ExportData };
+
 const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
   usuarioId,
   conversaAtual,
@@ -139,7 +147,7 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
     try {
       setExportando(true);
       
-      let dadosExportados: any;
+      let dadosExportados: ExportData | ExportDataCollection;
       let nomeArquivo: string;
       
       // Determinar quais conversas exportar
@@ -237,11 +245,11 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
   };
   
   // Funções auxiliares para converter os dados exportados
-  const converterParaMarkdown = (dados: any): string => {
+  const converterParaMarkdown = (dados: ExportData | ExportDataCollection): string => {
     let markdown = '# Conversas Exportadas\n\n';
     
     // Processar uma única conversa
-    if (dados.conversa && dados.mensagens) {
+    if ('conversa' in dados && 'mensagens' in dados) {
       markdown += `## ${dados.conversa.titulo}\n\n`;
       markdown += `Data: ${formatarData(dados.conversa.criado_em)}\n\n`;
       
@@ -253,7 +261,7 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
     } 
     // Processar múltiplas conversas
     else {
-      Object.entries(dados).forEach(([id, data]: [string, any]) => {
+      Object.entries(dados).forEach(([_, data]) => {
         markdown += `## ${data.conversa.titulo}\n\n`;
         markdown += `Data: ${formatarData(data.conversa.criado_em)}\n\n`;
         
@@ -270,11 +278,11 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
     return markdown;
   };
   
-  const converterParaTexto = (dados: any): string => {
+  const converterParaTexto = (dados: ExportData | ExportDataCollection): string => {
     let texto = 'CONVERSAS EXPORTADAS\n\n';
     
     // Processar uma única conversa
-    if (dados.conversa && dados.mensagens) {
+    if ('conversa' in dados && 'mensagens' in dados) {
       texto += `CONVERSA: ${dados.conversa.titulo}\n`;
       texto += `Data: ${formatarData(dados.conversa.criado_em)}\n\n`;
       
@@ -286,7 +294,7 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
     } 
     // Processar múltiplas conversas
     else {
-      Object.entries(dados).forEach(([id, data]: [string, any]) => {
+      Object.entries(dados).forEach(([_, data]) => {
         texto += `CONVERSA: ${data.conversa.titulo}\n`;
         texto += `Data: ${formatarData(data.conversa.criado_em)}\n\n`;
         

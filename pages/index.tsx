@@ -13,8 +13,7 @@ import {
   criarConversa, 
   adicionarMensagem, 
   carregarMensagens, 
-  Mensagem as MensagemDB,
-  Conversa
+  Mensagem as MensagemDB
 } from '../utils/supabase';
 
 // Tipo de mensagem para uso local na interface

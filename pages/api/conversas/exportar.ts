@@ -54,7 +54,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       // Criar um objeto para armazenar os resultados
-      const resultado: { [key: string]: any } = {};
+      const resultado: { [key: string]: { conversa: Conversa, mensagens: Mensagem[] } } = {};
 
       // Para cada conversa, buscar suas mensagens
       for (const conversa of conversas) {
