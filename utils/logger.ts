@@ -21,19 +21,25 @@ const logger = winston.createLogger({
   ],
 });
 
-// Adiciona log de arquivo em ambiente de produção
-if (process.env.NODE_ENV === 'production') {
-  logger.add(
-    new winston.transports.File({ 
-      filename: 'logs/errors.log', 
-      level: 'error' 
-    })
-  );
-  logger.add(
-    new winston.transports.File({ 
-      filename: 'logs/combined.log' 
-    })
-  );
+// Adiciona log de arquivo apenas em ambiente de produção local (não no Vercel)
+// O Vercel tem sistema de arquivos somente leitura
+if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
+  try {
+    logger.add(
+      new winston.transports.File({ 
+        filename: 'logs/errors.log', 
+        level: 'error' 
+      })
+    );
+    logger.add(
+      new winston.transports.File({ 
+        filename: 'logs/combined.log' 
+      })
+    );
+  } catch (error) {
+    // Ignora erro de escrita em arquivo
+    console.error('Não foi possível configurar logs em arquivo:', error);
+  }
 }
 
 // Funções de utilidade
