@@ -1,6 +1,32 @@
 # Resumo das Alterações
 
-## Problemas Corrigidos
+## Últimas Atualizações (15/03/2025)
+
+1. **Correção na Exportação de Conversas**
+   - Corrigimos a inicialização do cliente Supabase no servidor
+   - Implementamos a função de exportação em diversos formatos (JSON, Markdown, Texto)
+   - Melhoramos a interface para seleção de conversas a serem exportadas
+
+2. **Simplificação da Interface**
+   - Removemos o botão de atalhos por ser pouco utilizado
+   - Centralizamos o botão de exportação para melhor visibilidade
+
+3. **Melhorias no Sistema de Logging**
+   - Implementamos um sistema robusto de logging com Winston
+   - Adicionamos logs de diferentes níveis (debug, info, warn, error)
+   - Configuramos logs em arquivos para ambiente de produção
+
+4. **Melhorias na UX**
+   - Adicionamos animações suaves com Framer Motion
+   - Implementamos notificações toast para feedback instantâneo
+   - Criamos indicadores de carregamento interativos
+
+5. **Perfil do Usuário**
+   - Adicionamos suporte para nome completo do usuário
+   - Implementamos funcionalidade para editar o perfil
+   - Exibimos o nome do usuário nos cabeçalhos e mensagens
+
+## Problemas Corrigidos Anteriormente
 
 1. **Problema com Envio de Múltiplas Mensagens**
    - Corrigimos o fluxo de comunicação com a API no arquivo `pages/index.tsx`
@@ -21,38 +47,32 @@
    - Criamos respostas simuladas para consultas jurídicas comuns
    - Adicionamos tratamento de erros mais robusto
 
-## Arquivos Modificados
+## Arquivos Recentemente Modificados
 
-1. **`pages/api/juridica.ts`**
-   - Adicionamos um sistema de mock para simular respostas da API
-   - Implementamos detecção automática de ambiente de desenvolvimento
-   - Adicionamos tratamento de erros mais detalhado
+1. **`pages/api/conversas/exportar.ts` e `pages/api/conversas/atalho.ts`**
+   - Implementamos APIs para manipular conversas
+   - Corrigimos a inicialização do cliente Supabase no servidor
+   - Adicionamos tratamento de erros e autenticação
 
-2. **`contexts/ThemeContext.tsx`**
-   - Melhoramos a integração com `next-themes`
-   - Adicionamos detecção de montagem no cliente
-   - Corrigimos a função de alternância de tema
+2. **`utils/auth.ts`**
+   - Criamos um módulo para gerenciamento de autenticação
+   - Implementamos funções para verificar usuários a partir de requisições da API
+   - Adicionamos compatibilidade com tokens de diferentes fontes
 
-3. **`pages/_app.tsx`**
-   - Simplificamos a estrutura de provedores
-   - Removemos a duplicação de contextos de tema
-   - Mantivemos a detecção de montagem no cliente
+3. **`components/ConversasSidebar.tsx`**
+   - Simplificamos a interface removendo o botão de atalhos
+   - Melhoramos a funcionalidade de exportação
+   - Implementamos visualização em diferentes formatos
 
-4. **`components/Header.tsx`**
-   - Atualizamos para usar a API de temas do `next-themes` diretamente
-   - Adicionamos detecção de montagem no cliente
-   - Corrigimos a exibição de ícones baseada no tema atual
+4. **`utils/supabase.ts`**
+   - Atualizamos a estrutura dos tipos (Conversa, Mensagem)
+   - Implementamos funções para exportar conversas
+   - Corrigimos a manipulação de favoritos
 
-5. **`pages/index.tsx`**
-   - Melhoramos o tratamento de erros
-   - Adicionamos feedback visual para erros
-   - Corrigimos o fluxo de envio de mensagens
-   - Garantimos que a barra lateral seja exibida corretamente
-
-6. **`components/ChatMessage.tsx`**
-   - Simplificamos o componente para garantir funcionamento básico
-   - Mantivemos a funcionalidade de copiar texto
-   - Garantimos que a classe 'message' esteja presente para o scroll automático
+5. **`utils/logger.ts`**
+   - Implementamos um sistema avançado de logging
+   - Configuramos diferentes níveis de log (debug, info, warn, error)
+   - Adicionamos rotação de logs para ambiente de produção
 
 ## Funcionalidades Mantidas
 
@@ -69,7 +89,7 @@
    - Mantivemos a adaptação para dispositivos móveis
    - Garantimos que a interface funcione bem em diferentes tamanhos de tela
 
-## Como Testar as Correções
+## Como Testar as Novas Funcionalidades
 
 1. Inicie o servidor de desenvolvimento:
    ```bash
@@ -80,10 +100,10 @@
 
 2. Acesse `http://localhost:3000` no seu navegador
 
-3. Teste o envio de múltiplas mensagens consecutivas
+3. Teste a exportação de conversas clicando no botão "Exportar" na barra lateral
 
-4. Verifique se a barra lateral é exibida corretamente em desktop e se pode ser aberta/fechada em dispositivos móveis
+4. Verifique se o sistema de notificações toast funciona durante as operações
 
-5. Teste a alternância entre modo claro e escuro
+5. Observe as animações ao navegar entre conversas e enviar mensagens
 
-6. Verifique se as respostas da API são exibidas corretamente, mesmo sem a chave do Groq configurada 
+6. Teste o perfil de usuário para verificar a edição de nome e exibição correta 

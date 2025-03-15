@@ -6,10 +6,12 @@ JurisIA é um assistente jurídico virtual desenvolvido para auxiliar advogados 
 
 - Interface moderna e intuitiva com tema jurídico
 - Modo claro/escuro
-- Histórico de conversas
+- Histórico de conversas com função de exportação
 - Suporte a formatação Markdown nas respostas
 - Sugestões de consultas e templates
 - Modo de foco para concentração
+- Sistema de logging avançado para melhor depuração
+- Sistema de animações e notificações
 - Responsivo para dispositivos móveis
 
 ## Configuração
@@ -36,14 +38,7 @@ npm install
 yarn install
 ```
 
-3. Instale os plugins do Tailwind necessários:
-```bash
-npm install -D @tailwindcss/typography next-themes
-# ou
-yarn add -D @tailwindcss/typography next-themes
-```
-
-4. Configure as variáveis de ambiente:
+3. Configure as variáveis de ambiente:
 Crie um arquivo `.env.local` na raiz do projeto com as seguintes variáveis:
 
 ```
@@ -52,14 +47,14 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_anonima_do_supabase
 GROQ_API_KEY=sua_chave_api_do_groq
 ```
 
-5. Inicie o servidor de desenvolvimento:
+4. Inicie o servidor de desenvolvimento:
 ```bash
 npm run dev
 # ou
 yarn dev
 ```
 
-6. Acesse `http://localhost:3000` no seu navegador.
+5. Acesse `http://localhost:3000` no seu navegador.
 
 ## Estrutura do Banco de Dados (Supabase)
 
@@ -70,6 +65,8 @@ O projeto utiliza o Supabase para autenticação e armazenamento. Você precisar
 - `usuario_id` (uuid, foreign key para auth.users)
 - `titulo` (text)
 - `criado_em` (timestamp with time zone, default: now())
+- `atualizado_em` (timestamp with time zone, default: now())
+- `favorito` (boolean, default: false)
 
 ### Tabela `mensagens`
 - `id` (uuid, primary key)
@@ -78,9 +75,50 @@ O projeto utiliza o Supabase para autenticação e armazenamento. Você precisar
 - `tipo` (text) - 'usuario' ou 'assistente'
 - `criado_em` (timestamp with time zone, default: now())
 
+### Tabela `perfis`
+- `id` (uuid, primary key)
+- `usuario_id` (uuid, foreign key para auth.users)
+- `nome` (text)
+- `criado_em` (timestamp with time zone, default: now())
+- `atualizado_em` (timestamp with time zone, default: now())
+
+## Funcionalidades Avançadas
+
+### Exportação de Conversas
+
+O sistema permite exportar conversas em diferentes formatos:
+- JSON: Para uso em outros sistemas ou backup
+- Markdown: Para documentação e leitura
+- Texto plano: Para simplicidade e compatibilidade
+
+Para usar esta funcionalidade, clique no botão "Exportar" no rodapé da barra lateral de conversas.
+
+### Sistema de Logging
+
+Foi implementado um sistema de logging robusto usando Winston:
+- Logs de diferentes níveis (debug, info, warn, error)
+- Logs em console durante desenvolvimento
+- Logs em arquivo em ambiente de produção
+- Rotação automática de logs
+
+### Tratamento de Requisições API
+
+O sistema inclui um tratamento avançado para requisições à API Groq:
+- Fallback para respostas simuladas quando a API não está disponível
+- Tratamento detalhado de erros e exibição de mensagens amigáveis
+- Contagem de tokens para controle de custos
+
 ## Modo de Desenvolvimento sem API Groq
 
 O sistema inclui um modo de desenvolvimento que não requer a API do Groq. Quando a variável `GROQ_API_KEY` não está definida ou quando o ambiente é de desenvolvimento, o sistema usa respostas simuladas para consultas jurídicas.
+
+## UX Aprimorada
+
+Implementamos melhorias significativas na experiência do usuário:
+- Animações suaves usando Framer Motion
+- Notificações toast para feedback instantâneo
+- Indicadores de carregamento interativos
+- Perfil de usuário personalizável com nome completo
 
 ## Licença
 
