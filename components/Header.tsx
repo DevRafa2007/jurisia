@@ -13,7 +13,6 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
   const { setTheme, resolvedTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [focusMode, setFocusMode] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   // Efeito para garantir renderização apenas no cliente
@@ -44,12 +43,6 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
     };
   }, [scrolled]);
 
-  const toggleFocusMode = () => {
-    setFocusMode(!focusMode);
-    // Aqui você pode adicionar lógica para esconder elementos da UI para um modo de foco
-    document.body.classList.toggle('focus-mode');
-  };
-
   // Função para alternar entre temas
   const toggleTheme = () => {
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
@@ -57,6 +50,21 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
 
   // O tema atual para exibir os ícones corretos
   const currentTheme = mounted ? resolvedTheme : 'light';
+
+  // Função para fechar menu quando clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (menuOpen && !target.closest('.user-menu-container')) {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [menuOpen]);
 
   return (
     <header 
@@ -69,10 +77,10 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
       <div className="w-full mx-auto px-2 sm:px-3 md:px-4 py-2 sm:py-3 md:py-4 max-w-[98%] xl:max-w-[95%] 2xl:max-w-[90%]">
         <div className="flex justify-between items-center">
           <div className="flex items-center">
-            {/* Botão de menu para dispositivos móveis */}
+            {/* Botão de menu para dispositivos móveis com feedback tátil */}
             {toggleSidebar && (
               <button
-                className="md:hidden mr-2 p-1.5 rounded-md hover:bg-law-200 dark:hover:bg-law-800 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50 transition-colors duration-300"
+                className="md:hidden mr-2 p-1.5 rounded-md hover:bg-law-200 dark:hover:bg-law-800 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50 transition-colors duration-300 active:scale-95"
                 onClick={toggleSidebar}
                 aria-label={sidebarAberta ? "Fechar menu de conversas" : "Abrir menu de conversas"}
               >
@@ -84,8 +92,8 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
               </button>
             )}
             
-            <Link href="/" className="flex items-center">
-              <span className="text-xl sm:text-2xl font-serif font-bold text-primary-800 dark:text-primary-300 transition-colors duration-300">
+            <Link href="/" className="flex items-center group">
+              <span className="text-xl sm:text-2xl font-serif font-bold text-primary-800 dark:text-primary-300 transition-colors duration-300 group-hover:text-primary-600 dark:group-hover:text-primary-200">
                 JurisIA
               </span>
               <span className="ml-1 sm:ml-2 text-xs sm:text-sm bg-secondary-100 dark:bg-secondary-800 text-secondary-800 dark:text-secondary-300 px-1 sm:px-2 py-0.5 sm:py-1 rounded-full font-medium transition-colors duration-300">
@@ -99,29 +107,16 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
               Assistente Jurídico Inteligente
             </div>
             
-            {/* Botão de modo foco */}
-            <button 
-              onClick={toggleFocusMode}
-              className="hidden sm:block mr-2 p-1.5 rounded-md hover:bg-law-200 dark:hover:bg-law-800 transition-colors duration-300"
-              title={focusMode ? "Sair do modo foco" : "Modo foco"}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-primary-600 dark:text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={focusMode 
-                  ? "M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" 
-                  : "M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5"} />
-              </svg>
-            </button>
-            
             {!isLoading && (
               user ? (
-                <div className="relative flex items-center">
+                <div className="relative flex items-center user-menu-container">
                   <button 
                     className="flex items-center space-x-1 sm:space-x-2 focus:outline-none"
                     onClick={() => setMenuOpen(!menuOpen)}
                     aria-expanded={menuOpen}
                     aria-haspopup="true"
                   >
-                    <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-primary-700 dark:bg-primary-800 flex items-center justify-center text-white transition-colors duration-300 shadow-sm">
+                    <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-primary-700 dark:bg-primary-800 flex items-center justify-center text-white transition-colors duration-300 shadow-sm hover:bg-primary-600 dark:hover:bg-primary-700">
                       {user.email?.charAt(0).toUpperCase() || 'U'}
                     </div>
                     <span className="hidden md:block text-xs sm:text-sm text-primary-800 dark:text-law-300 transition-colors duration-300 font-medium">
@@ -138,22 +133,27 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
                     </svg>
                   </button>
                   
-                  {/* Botão de Modo Escuro (agora posicionado após o nome do usuário) */}
-                  <button 
-                    onClick={toggleTheme}
-                    className="ml-2 sm:ml-4 p-1.5 rounded-md hover:bg-law-200 dark:hover:bg-law-800 transition-colors duration-300"
-                    aria-label={currentTheme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
-                  >
-                    {currentTheme === 'dark' ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-secondary-400 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                      </svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-primary-700 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                      </svg>
-                    )}
-                  </button>
+                  {/* Botão de Modo Escuro com tooltip */}
+                  <div className="relative">
+                    <button 
+                      onClick={toggleTheme}
+                      className="ml-2 sm:ml-4 p-1.5 rounded-md hover:bg-law-200 dark:hover:bg-law-800 transition-colors duration-300 active:scale-95"
+                      aria-label={currentTheme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+                    >
+                      {currentTheme === 'dark' ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-secondary-400 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-primary-700 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>
+                      )}
+                    </button>
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 text-xs bg-law-800 text-white rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+                      {currentTheme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+                    </div>
+                  </div>
                   
                   {/* Menu Dropdown do Perfil com animação */}
                   <div 
@@ -224,22 +224,27 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
                     Entrar
                   </Link>
                   
-                  {/* Botão de Modo Escuro (quando usuário não está logado) */}
-                  <button 
-                    onClick={toggleTheme}
-                    className="ml-2 sm:ml-4 p-1.5 rounded-md hover:bg-law-200 dark:hover:bg-law-800 transition-colors duration-300"
-                    aria-label={currentTheme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
-                  >
-                    {currentTheme === 'dark' ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-secondary-400 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                      </svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-primary-700 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                      </svg>
-                    )}
-                  </button>
+                  {/* Botão de Modo Escuro com tooltip */}
+                  <div className="relative group">
+                    <button 
+                      onClick={toggleTheme}
+                      className="ml-2 sm:ml-4 p-1.5 rounded-md hover:bg-law-200 dark:hover:bg-law-800 transition-colors duration-300 active:scale-95"
+                      aria-label={currentTheme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+                    >
+                      {currentTheme === 'dark' ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-secondary-400 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-primary-700 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>
+                      )}
+                    </button>
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 text-xs bg-law-800 text-white rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+                      {currentTheme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+                    </div>
+                  </div>
                 </div>
               )
             )}
