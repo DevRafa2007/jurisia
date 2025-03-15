@@ -20,7 +20,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ conteudo, isUsuario }) => {
     <div
       className={`message p-2 sm:p-3 md:p-4 rounded-lg mb-2 sm:mb-3 md:mb-4 relative group ${
         isUsuario
-          ? 'ml-auto bg-primary-600 dark:bg-secondary-700 text-white transition-colors duration-300 max-w-[90%] sm:max-w-[85%] md:max-w-[75%] shadow-sm'
+          ? 'ml-auto bg-primary-700 dark:bg-primary-800 text-white transition-colors duration-300 max-w-[90%] sm:max-w-[85%] md:max-w-[75%] shadow-sm'
           : 'mr-auto bg-white dark:bg-law-800 text-primary-900 dark:text-law-200 border border-law-200 dark:border-law-700 transition-colors duration-300 max-w-[90%] sm:max-w-[85%] md:max-w-[75%] shadow-elegant'
       }`}
       onMouseEnter={() => setShowActions(true)}
@@ -30,7 +30,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ conteudo, isUsuario }) => {
       <div className={`absolute ${isUsuario ? 'right-full' : 'left-full'} top-2 mx-2`}>
         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
           isUsuario 
-            ? 'bg-primary-600 dark:bg-secondary-700 text-white' 
+            ? 'bg-primary-700 dark:bg-primary-800 text-white' 
             : 'bg-secondary-100 dark:bg-secondary-900 text-secondary-800 dark:text-secondary-300 border border-secondary-200 dark:border-secondary-800'
           }`}
         >
