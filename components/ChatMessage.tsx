@@ -58,13 +58,15 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ conteudo, isUsuario }) => {
       </div>
 
       {/* Conteúdo da mensagem */}
-      <div className={`prose prose-sm sm:prose ${
-        isUsuario 
-          ? 'text-white prose-headings:text-white prose-strong:text-white prose-em:text-white prose-code:text-white' 
-          : 'dark:prose-invert prose-headings:font-serif prose-p:text-primary-900 dark:prose-p:text-law-200'
-        } max-w-none transition-colors duration-300 markdown ${showActions ? 'pt-6' : ''}`}>
-        <ReactMarkdown>{conteudo}</ReactMarkdown>
-      </div>
+      {isUsuario ? (
+        <div className="text-white max-w-none transition-colors duration-300 markdown [&>*]:text-white [&_a]:text-white [&_p]:text-white [&_h1]:text-white [&_h2]:text-white [&_h3]:text-white [&_h4]:text-white [&_h5]:text-white [&_h6]:text-white [&_ul]:text-white [&_ol]:text-white [&_li]:text-white [&_blockquote]:text-white [&_code]:text-white [&_pre]:text-white [&_strong]:text-white [&_em]:text-white [&_del]:text-white">
+          <ReactMarkdown>{conteudo}</ReactMarkdown>
+        </div>
+      ) : (
+        <div className="prose prose-sm sm:prose dark:prose-invert prose-headings:font-serif prose-p:text-primary-900 dark:prose-p:text-law-200 max-w-none transition-colors duration-300 markdown">
+          <ReactMarkdown>{conteudo}</ReactMarkdown>
+        </div>
+      )}
     </div>
   );
 };
