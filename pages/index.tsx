@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, MouseEvent } from 'react';
 import { useRouter } from 'next/router';
 import axios from 'axios';
 import Head from 'next/head';
+import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import Layout from '../components/Layout';
 import ChatMessage from '../components/ChatMessage';
 import ChatInput from '../components/ChatInput';
@@ -11,7 +13,8 @@ import {
   criarConversa, 
   adicionarMensagem, 
   carregarMensagens, 
-  Mensagem as MensagemDB 
+  Mensagem as MensagemDB,
+  Conversa
 } from '../utils/supabase';
 
 // Tipo de mensagem para uso local na interface
@@ -19,6 +22,18 @@ type Mensagem = {
   conteudo: string;
   isUsuario: boolean;
   id: string;
+};
+
+// Variantes de animação para o chat
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { 
+    opacity: 1,
+    transition: { 
+      staggerChildren: 0.05,
+      when: "beforeChildren"
+    }
+  }
 };
 
 export default function Home() {
@@ -199,97 +214,101 @@ Como posso auxiliar você hoje?`,
       return;
     }
     
-    // Limpa qualquer erro anterior
-    setErro(null);
-
-    // Adiciona a mensagem do usuário ao chat
-    const novaMensagemUsuario: Mensagem = {
+    // Adicionar mensagem do usuário na interface
+    const idMensagemUsuario = `msg-${Date.now()}-${Math.random()}`;
+    const novaMsgUsuario = {
       conteudo: texto,
       isUsuario: true,
-      id: 'user-' + Date.now(),
+      id: idMensagemUsuario,
     };
     
-    setMensagens((prev: Mensagem[]) => [...prev, novaMensagemUsuario]);
+    setMensagens((msgs) => [...msgs, novaMsgUsuario]);
+    
+    // Se for uma nova conversa, criar no banco
+    let idConversa = conversaAtual;
+    if (!conversaAtual) {
+      try {
+        const novaConversa = await criarConversa(user.id, texto);
+        if (novaConversa && novaConversa.id) {
+          idConversa = novaConversa.id;
+          setConversaAtual(novaConversa.id);
+        } else {
+          throw new Error('ID da conversa não disponível');
+        }
+      } catch (erro) {
+        console.error('Erro ao criar conversa:', erro);
+        setErro('Não foi possível criar uma nova conversa. Tente novamente.');
+        return;
+      }
+    }
+    
+    // Adicionar mensagem do usuário no banco
+    try {
+      if (idConversa) {
+        await adicionarMensagem(idConversa, texto, 'usuario');
+      } else {
+        throw new Error('ID da conversa não está disponível');
+      }
+    } catch (erro) {
+      console.error('Erro ao salvar mensagem:', erro);
+      // Continuar apesar do erro para não bloquear a interface
+    }
+    
+    // Preparar histórico para o contexto da consulta
+    const historico = converterParaHistorico();
+    
+    // Iniciar carregamento
     setIsCarregando(true);
+    setErro(null);
     
     try {
-      let conversaId = conversaAtual;
+      // Chamar a API para obter resposta da IA
+      const resposta = await axios.post('/api/juridica', {
+        consulta: texto,
+        historico: historico,
+      });
       
-      // Se não houver conversa atual, cria uma nova
-      if (!conversaId) {
+      if (resposta.data && resposta.data.resposta) {
+        // Adicionar resposta da IA na interface
+        const idMensagemIA = `msg-${Date.now()}-${Math.random()}`;
+        const novaMsgIA = {
+          conteudo: resposta.data.resposta,
+          isUsuario: false,
+          id: idMensagemIA,
+        };
+        
+        setMensagens((msgs) => [...msgs, novaMsgIA]);
+        
+        // Salvar resposta da IA no banco
         try {
-          const novaConversa = await criarConversa(user.id, texto.substring(0, 50) + (texto.length > 50 ? '...' : ''));
-          conversaId = novaConversa.id || null;
-          setConversaAtual(conversaId);
-          
-          // Salva a mensagem do usuário no banco
-          if (conversaId) {
-            await adicionarMensagem(conversaId, texto, 'usuario');
-          } else {
-            throw new Error('Não foi possível criar uma nova conversa');
+          if (idConversa) {
+            await adicionarMensagem(idConversa, resposta.data.resposta, 'assistente');
           }
-        } catch (erroConversa) {
-          console.error('Erro ao criar nova conversa:', erroConversa);
-          throw new Error('Não foi possível criar uma nova conversa. Verifique sua conexão.');
+        } catch (erro) {
+          console.error('Erro ao salvar resposta:', erro);
+          // Continuar apesar do erro
         }
       } else {
-        // Salva a mensagem do usuário no banco
-        try {
-          await adicionarMensagem(conversaId, texto, 'usuario');
-        } catch (erroMensagem) {
-          console.error('Erro ao salvar mensagem do usuário:', erroMensagem);
-          // Continuar mesmo com erro ao salvar
-        }
+        throw new Error('Resposta da API inválida ou incompleta');
       }
-
-      // Prepara o histórico para enviar à API
-      const historico = converterParaHistorico();
       
-      // Envia a consulta para a API
-      try {
-        const response = await axios.post('/api/juridica', {
-          consulta: texto,
-          historico: historico,
-        });
-
-        if (response.data && response.data.conteudo) {
-          // Adiciona a resposta da IA ao chat
-          const novaMensagemIA: Mensagem = {
-            conteudo: response.data.conteudo,
-            isUsuario: false,
-            id: 'ai-' + Date.now(),
-          };
-
-          setMensagens((prev: Mensagem[]) => [...prev, novaMensagemIA]);
-          
-          // Salva a resposta da IA no banco
-          if (conversaId) {
-            try {
-              await adicionarMensagem(conversaId, response.data.conteudo, 'assistente');
-            } catch (erroSalvar) {
-              console.error('Erro ao salvar resposta da IA:', erroSalvar);
-              // Continuar mesmo com erro ao salvar
-            }
-          }
-        } else {
-          throw new Error('Resposta inválida da API');
-        }
-      } catch (erroAPI) {
-        console.error('Erro na API:', erroAPI);
-        throw new Error('Erro ao processar sua consulta no servidor. Por favor, tente novamente.');
-      }
     } catch (erro) {
       console.error('Erro ao processar consulta:', erro);
       
-      // Adiciona mensagem de erro ao chat
-      const mensagemErro: Mensagem = {
-        conteudo: erro instanceof Error ? erro.message : "Desculpe, ocorreu um erro ao processar sua consulta. Por favor, tente novamente mais tarde.",
-        isUsuario: false,
-        id: 'error-' + Date.now(),
-      };
+      let mensagemErro = 'Houve um problema ao processar sua consulta. Tente novamente.';
       
-      setMensagens((prev: Mensagem[]) => [...prev, mensagemErro]);
-      setErro(erro instanceof Error ? erro.message : "Ocorreu um erro ao processar sua consulta");
+      if (axios.isAxiosError(erro) && erro.response) {
+        if (erro.response.status === 429) {
+          mensagemErro = 'Você enviou muitas consultas em um curto período. Aguarde um momento e tente novamente.';
+        } else if (erro.response.data && erro.response.data.error) {
+          mensagemErro = erro.response.data.error;
+        }
+      }
+      
+      setErro(mensagemErro);
+      toast.error(mensagemErro, {
+        duration: 5000,
+      });
     } finally {
       setIsCarregando(false);
     }
@@ -365,10 +384,13 @@ Como posso auxiliar você hoje?`,
             }}
           >
             {/* Conteúdo da barra lateral */}
-            <div 
+            <motion.div 
               className={`absolute h-full w-3/4 sm:w-96 md:w-full top-0 left-0 bg-white dark:bg-law-900 shadow-lg transform transition-transform duration-300 ease-in-out ${
                 sidebarAberta ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
               }`}
+              initial={{ x: isMobile ? -300 : 0 }}
+              animate={{ x: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
             >
               <ConversasSidebar
                 usuarioId={user.id}
@@ -384,20 +406,27 @@ Como posso auxiliar você hoje?`,
                 toggleSidebar={() => setSidebarAberta(false)}
                 isMobile={true}
               />
-            </div>
+            </motion.div>
           </div>
           
           {/* Área principal de chat - Responsiva */}
-          <div className="flex-1 flex flex-col overflow-hidden w-full h-full relative">
+          <motion.div 
+            className="flex-1 flex flex-col overflow-hidden w-full h-full relative"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
             {/* Cabeçalho da conversa */}
             <div className="border-b border-law-200 dark:border-law-700 bg-white dark:bg-law-900 p-4 shadow-sm rounded-t-lg">
               <div className="flex justify-between items-center">
                 <h1 className="text-lg font-serif font-medium text-law-900 dark:text-law-100">
                   {conversaAtual ? 'Consulta em andamento' : 'Nova Consulta Jurídica'}
                 </h1>
-                <button
+                <motion.button
                   onClick={handleNovaConversa}
                   className="px-3 py-1.5 text-xs sm:text-sm bg-primary-700 hover:bg-primary-600 dark:bg-primary-800 dark:hover:bg-primary-700 text-white rounded-lg transition-colors duration-300 flex items-center shadow-sm"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -410,7 +439,7 @@ Como posso auxiliar você hoje?`,
                   </svg>
                   <span className="hidden sm:inline">Nova Consulta</span>
                   <span className="sm:hidden">Nova</span>
-                </button>
+                </motion.button>
               </div>
             </div>
             
@@ -423,39 +452,59 @@ Como posso auxiliar você hoje?`,
                 paddingBottom: 'calc(60px + 0.75rem)' // Aumentado para dispositivos móveis
               }}
             >
-              <div className="max-w-2xl mx-auto space-y-6">
+              <motion.div 
+                className="max-w-2xl mx-auto space-y-6"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
                 {erro && (
-                  <div className="bg-red-100 dark:bg-red-900 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg mb-4">
+                  <motion.div 
+                    className="bg-red-100 dark:bg-red-900 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg mb-4"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
                     <div className="flex items-center">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       <span className="font-medium">{erro}</span>
                     </div>
-                  </div>
+                  </motion.div>
                 )}
                 
-                {mensagens.map((msg) => (
-                  <ChatMessage 
-                    key={msg.id} 
-                    conteudo={msg.conteudo} 
-                    isUsuario={msg.isUsuario} 
-                  />
-                ))}
+                <AnimatePresence initial={false}>
+                  {mensagens.map((msg) => (
+                    <ChatMessage 
+                      key={msg.id} 
+                      conteudo={msg.conteudo} 
+                      isUsuario={msg.isUsuario} 
+                    />
+                  ))}
+                </AnimatePresence>
                 <div ref={messagesEndRef} />
-              </div>
+              </motion.div>
               
               {/* Indicador de digitação */}
-              {isCarregando && (
-                <div className="flex items-center space-x-2 text-law-500 dark:text-law-400 text-sm mt-4 max-w-2xl mx-auto animate-fade-in">
-                  <svg className="h-5 w-5 animate-pulse" fill="currentColor" viewBox="0 0 24 24">
-                    <circle cx="4" cy="12" r="3" />
-                    <circle cx="12" cy="12" r="3" />
-                    <circle cx="20" cy="12" r="3" />
-                  </svg>
-                  <span>Assistente jurídico está digitando...</span>
-                </div>
-              )}
+              <AnimatePresence>
+                {isCarregando && (
+                  <motion.div 
+                    className="flex items-center space-x-2 text-law-500 dark:text-law-400 text-sm mt-4 max-w-2xl mx-auto"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <svg className="h-5 w-5 animate-pulse" fill="currentColor" viewBox="0 0 24 24">
+                      <circle cx="4" cy="12" r="3" />
+                      <circle cx="12" cy="12" r="3" />
+                      <circle cx="20" cy="12" r="3" />
+                    </svg>
+                    <span>Assistente jurídico está digitando...</span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
             
             {/* Área de input */}
@@ -467,7 +516,7 @@ Como posso auxiliar você hoje?`,
                 />
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </Layout>
     </>

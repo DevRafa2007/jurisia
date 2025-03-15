@@ -1,4 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
+import LoadingDots from './LoadingDots';
 
 type ChatInputProps = {
   onEnviar: (mensagem: string) => void;
@@ -65,12 +68,24 @@ const ChatInput: React.FC<ChatInputProps> = ({ onEnviar, isCarregando }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (mensagem.trim() && !isCarregando) {
+      // Mostrar toast para feedback ao usuário
+      toast.success('Mensagem enviada!', {
+        id: 'mensagem-enviada',
+        duration: 1000,
+        icon: '🚀',
+      });
+      
       onEnviar(mensagem);
       setMensagem('');
       // Resetar altura do textarea
       if (inputRef.current) {
         inputRef.current.style.height = 'auto';
       }
+    } else if (!mensagem.trim() && !isCarregando) {
+      // Notificar que a mensagem está vazia
+      toast.error('Digite uma mensagem antes de enviar', {
+        id: 'mensagem-vazia',
+      });
     }
   };
 
@@ -90,6 +105,12 @@ const ChatInput: React.FC<ChatInputProps> = ({ onEnviar, isCarregando }) => {
       const length = template.length;
       inputRef.current.setSelectionRange(length, length);
     }
+    
+    // Feedback visual para o usuário
+    toast.success('Template aplicado!', {
+      id: 'template-aplicado',
+      duration: 1500,
+    });
   };
 
   const aplicarSugestao = (sugestao: string) => {
@@ -99,14 +120,48 @@ const ChatInput: React.FC<ChatInputProps> = ({ onEnviar, isCarregando }) => {
     if (inputRef.current) {
       inputRef.current.focus();
     }
+    
+    // Feedback visual para o usuário
+    toast.success('Sugestão selecionada!', {
+      id: 'sugestao-aplicada',
+      duration: 1500,
+    });
+  };
+
+  // Variantes de animação
+  const dropdownVariants = {
+    hidden: { opacity: 0, y: -5, scale: 0.95 },
+    visible: { 
+      opacity: 1, 
+      y: 0, 
+      scale: 1,
+      transition: {
+        duration: 0.2,
+        ease: "easeOut"
+      }
+    },
+    exit: { 
+      opacity: 0,
+      y: -5,
+      scale: 0.95,
+      transition: {
+        duration: 0.15
+      }
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="w-full relative">
+    <motion.form 
+      onSubmit={handleSubmit} 
+      className="w-full relative"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       <div className="flex items-end gap-1 sm:gap-2 w-full">
         {/* Botão de templates */}
         <div className="relative" ref={templatesRef}>
-          <button
+          <motion.button
             type="button"
             onClick={() => {
               setMostrarTemplates(!mostrarTemplates);
@@ -114,31 +169,43 @@ const ChatInput: React.FC<ChatInputProps> = ({ onEnviar, isCarregando }) => {
             }}
             className="p-2 text-primary-600 dark:text-primary-400 hover:bg-law-100 dark:hover:bg-law-700 rounded-lg transition-colors duration-200 self-end"
             title="Templates de consulta"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
             </svg>
-          </button>
+          </motion.button>
           
-          {/* Menu dropdown de templates */}
-          {mostrarTemplates && (
-            <div className="absolute left-0 bottom-full mb-2 w-72 bg-white dark:bg-law-800 rounded-lg shadow-elegant border border-law-200 dark:border-law-700 py-2 z-20">
-              <div className="px-3 py-1 text-xs font-medium text-law-600 dark:text-law-400 border-b border-law-200 dark:border-law-700 mb-1">
-                Templates de consulta
-              </div>
-              {PROMPTS_TEMPLATES.map((template, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-law-100 dark:hover:bg-law-700 transition-colors duration-200"
-                  onClick={() => aplicarTemplate(template.texto)}
-                >
-                  <div className="font-medium text-primary-800 dark:text-law-200 mb-0.5">{template.titulo}</div>
-                  <div className="text-xs text-law-600 dark:text-law-400 line-clamp-1">{template.texto}</div>
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Menu dropdown de templates com animação */}
+          <AnimatePresence>
+            {mostrarTemplates && (
+              <motion.div 
+                className="absolute left-0 bottom-full mb-2 w-72 bg-white dark:bg-law-800 rounded-lg shadow-elegant border border-law-200 dark:border-law-700 py-2 z-20"
+                variants={dropdownVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+              >
+                <div className="px-3 py-1 text-xs font-medium text-law-600 dark:text-law-400 border-b border-law-200 dark:border-law-700 mb-1">
+                  Templates de consulta
+                </div>
+                {PROMPTS_TEMPLATES.map((template, index) => (
+                  <motion.button
+                    key={index}
+                    type="button"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-law-100 dark:hover:bg-law-700 transition-colors duration-200"
+                    onClick={() => aplicarTemplate(template.texto)}
+                    whileHover={{ backgroundColor: 'rgba(0,0,0,0.05)' }}
+                    transition={{ duration: 0.1 }}
+                  >
+                    <div className="font-medium text-primary-800 dark:text-law-200 mb-0.5">{template.titulo}</div>
+                    <div className="text-xs text-law-600 dark:text-law-400 line-clamp-1">{template.texto}</div>
+                  </motion.button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
         
         <div className="flex-grow relative">
@@ -163,55 +230,69 @@ const ChatInput: React.FC<ChatInputProps> = ({ onEnviar, isCarregando }) => {
             rows={1}
           />
           
-          {/* Sugestões de perguntas - aparecem quando o input está vazio */}
-          {mostrarSugestoes && mensagem === '' && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-law-800 rounded-lg shadow-elegant border border-law-200 dark:border-law-700 py-2 z-20">
-              <div className="px-3 py-1 text-xs font-medium text-law-600 dark:text-law-400 border-b border-law-200 dark:border-law-700 mb-1">
-                Sugestões de consulta
-              </div>
-              {sugestoes.map((sugestao, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-law-100 dark:hover:bg-law-700 transition-colors duration-200 text-primary-700 dark:text-law-300"
-                  onClick={() => aplicarSugestao(sugestao)}
-                >
-                  {sugestao}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Sugestões de perguntas com animação */}
+          <AnimatePresence>
+            {mostrarSugestoes && mensagem === '' && (
+              <motion.div 
+                className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-law-800 rounded-lg shadow-elegant border border-law-200 dark:border-law-700 py-2 z-20"
+                variants={dropdownVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+              >
+                <div className="px-3 py-1 text-xs font-medium text-law-600 dark:text-law-400 border-b border-law-200 dark:border-law-700 mb-1">
+                  Sugestões de consulta
+                </div>
+                {sugestoes.map((sugestao, index) => (
+                  <motion.button
+                    key={index}
+                    type="button"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-law-100 dark:hover:bg-law-700 transition-colors duration-200 text-primary-700 dark:text-law-300"
+                    onClick={() => aplicarSugestao(sugestao)}
+                    whileHover={{ backgroundColor: 'rgba(0,0,0,0.05)' }}
+                    transition={{ duration: 0.1 }}
+                  >
+                    {sugestao}
+                  </motion.button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
           
           {/* Contador de caracteres e atalhos */}
           <div className="absolute right-3 bottom-2 text-xs text-law-500 dark:text-law-500 flex items-center">
             {mensagem.length > 0 && (
-              <span className="mr-2 bg-law-100 dark:bg-law-700 px-1.5 py-0.5 rounded">
+              <motion.span 
+                className="mr-2 bg-law-100 dark:bg-law-700 px-1.5 py-0.5 rounded"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.2 }}
+              >
                 {mensagem.length}
-              </span>
+              </motion.span>
             )}
             <span className="hidden sm:inline-block">Ctrl+Enter para enviar</span>
           </div>
         </div>
         
-        <button
+        <motion.button
           type="submit"
-          className="px-3 sm:px-4 py-3 text-xs sm:text-sm bg-primary-700 hover:bg-primary-600 dark:bg-primary-800 dark:hover:bg-primary-700 text-white rounded-lg transition-colors duration-300 min-w-[44px] h-[44px] flex items-center justify-center shadow-sm"
+          className={`px-3 sm:px-4 py-3 text-xs sm:text-sm ${isCarregando || !mensagem.trim() ? 'bg-primary-300 dark:bg-primary-900 cursor-not-allowed' : 'bg-primary-700 hover:bg-primary-600 dark:bg-primary-800 dark:hover:bg-primary-700'} text-white rounded-lg transition-colors duration-300 min-w-[44px] h-[44px] flex items-center justify-center shadow-sm`}
           disabled={isCarregando || !mensagem.trim()}
           title="Enviar mensagem"
+          whileHover={!(isCarregando || !mensagem.trim()) ? { scale: 1.05 } : {}}
+          whileTap={!(isCarregando || !mensagem.trim()) ? { scale: 0.95 } : {}}
         >
           {isCarregando ? (
-            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
+            <LoadingDots color="bg-white/70" size={1.5} />
           ) : (
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
           )}
-        </button>
+        </motion.button>
       </div>
-    </form>
+    </motion.form>
   );
 };
 

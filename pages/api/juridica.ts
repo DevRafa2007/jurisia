@@ -9,19 +9,21 @@ type ErrorResponse = {
 
 // Função para simular respostas baseadas em palavras-chave no texto
 function gerarRespostaSimulada(consulta: string): RespostaIA {
-  const consultaLowerCase = consulta.toLowerCase();
-  let conteudo = '';
-  
-  // Array de palavras-chave para diversas áreas do direito
-  const palavrasChaveCivil = ['contrato', 'indenização', 'usucapião', 'herança', 'testamento', 'aluguel', 'compra e venda', 'condomínio', 'posse', 'propriedade', 'responsabilidade civil'];
-  const palavrasChaveTrabalhista = ['demissão', 'rescisão', 'férias', 'justa causa', 'processo trabalhista', 'horas extras', 'direitos trabalhistas', 'carteira assinada', 'fgts', 'ctps', 'acordo trabalhista', 'sindicato'];
-  const palavrasChavePenal = ['crime', 'pena', 'prisão', 'acusação', 'defesa criminal', 'audiência de custódia', 'fiança', 'prescrição penal', 'legítima defesa', 'flagrante', 'inquérito policial', 'júri'];
-  const palavrasChaveConsumidor = ['consumidor', 'produto defeituoso', 'garantia', 'procon', 'código de defesa do consumidor', 'reclamação', 'estorno', 'propaganda enganosa', 'vício do produto', 'cancelamento'];
-  const palavrasChaveFamilia = ['divórcio', 'pensão alimentícia', 'guarda dos filhos', 'união estável', 'separação', 'adoção', 'casamento', 'paternidade', 'maternidade', 'visitação'];
-  
-  // Verifica se a consulta contém palavras-chave específicas
-  if (consultaLowerCase.includes('usucapião') || (consultaLowerCase.includes('posse') && consultaLowerCase.includes('propriedade'))) {
-    conteudo = `# Sobre Usucapião
+  try {
+    logInfo("Gerando resposta simulada para: " + consulta.substring(0, 30) + "...");
+    const consultaLowerCase = consulta.toLowerCase();
+    let conteudo = '';
+    
+    // Array de palavras-chave para diversas áreas do direito
+    const palavrasChaveCivil = ['contrato', 'indenização', 'usucapião', 'herança', 'testamento', 'aluguel', 'compra e venda', 'condomínio', 'posse', 'propriedade', 'responsabilidade civil'];
+    const palavrasChaveTrabalhista = ['demissão', 'rescisão', 'férias', 'justa causa', 'processo trabalhista', 'horas extras', 'direitos trabalhistas', 'carteira assinada', 'fgts', 'ctps', 'acordo trabalhista', 'sindicato'];
+    const palavrasChavePenal = ['crime', 'pena', 'prisão', 'acusação', 'defesa criminal', 'audiência de custódia', 'fiança', 'prescrição penal', 'legítima defesa', 'flagrante', 'inquérito policial', 'júri'];
+    const palavrasChaveConsumidor = ['consumidor', 'produto defeituoso', 'garantia', 'procon', 'código de defesa do consumidor', 'reclamação', 'estorno', 'propaganda enganosa', 'vício do produto', 'cancelamento'];
+    const palavrasChaveFamilia = ['divórcio', 'pensão alimentícia', 'guarda dos filhos', 'união estável', 'separação', 'adoção', 'casamento', 'paternidade', 'maternidade', 'visitação'];
+    
+    // Verifica se a consulta contém palavras-chave específicas
+    if (consultaLowerCase.includes('usucapião') || (consultaLowerCase.includes('posse') && consultaLowerCase.includes('propriedade'))) {
+      conteudo = `# Sobre Usucapião
 
 A usucapião é um modo de aquisição da propriedade pelo exercício da posse com **animus domini**, de forma mansa, pacífica e ininterrupta, pelo prazo definido em lei.
 
@@ -53,9 +55,9 @@ A usucapião é um modo de aquisição da propriedade pelo exercício da posse c
    - Imóvel até 250m²
 
 O processo de usucapião pode ser judicial ou extrajudicial (cartório), este último introduzido pelo novo CPC e regulamentado pelo Provimento 65/2017 do CNJ.`;
-  } 
-  else if (palavrasChaveTrabalhista.some(palavra => consultaLowerCase.includes(palavra))) {
-    conteudo = `# Informações sobre Direito Trabalhista
+    } 
+    else if (palavrasChaveTrabalhista.some(palavra => consultaLowerCase.includes(palavra))) {
+      conteudo = `# Informações sobre Direito Trabalhista
 
 Com base na sua consulta sobre ${consulta}, posso fornecer as seguintes informações:
 
@@ -87,9 +89,9 @@ Com base na sua consulta sobre ${consulta}, posso fornecer as seguintes informa�
 - Descanso semanal remunerado
 
 Recomendo consultar um advogado especializado em Direito do Trabalho para análise específica do seu caso.`;
-  } 
-  else if (palavrasChaveCivil.some(palavra => consultaLowerCase.includes(palavra)) || consultaLowerCase.includes('dano moral') || consultaLowerCase.includes('dano material')) {
-    conteudo = `# Direito Civil - ${consulta}
+    } 
+    else if (palavrasChaveCivil.some(palavra => consultaLowerCase.includes(palavra)) || consultaLowerCase.includes('dano moral') || consultaLowerCase.includes('dano material')) {
+      conteudo = `# Direito Civil - ${consulta}
 
 ## Diferença entre Dano Moral e Dano Material
 
@@ -128,9 +130,9 @@ O dano moral refere-se à lesão de direitos da personalidade, causando dor, sof
 | Transmissibilidade | Transmissível aos herdeiros | Transmissível em certos casos (STJ) |
 
 É possível pleitear ambos os danos simultaneamente quando derivados do mesmo fato.`;
-  } 
-  else if (palavrasChavePenal.some(palavra => consultaLowerCase.includes(palavra))) {
-    conteudo = `# Direito Penal - ${consulta}
+    } 
+    else if (palavrasChavePenal.some(palavra => consultaLowerCase.includes(palavra))) {
+      conteudo = `# Direito Penal - ${consulta}
 
 ## Conceitos Básicos de Direito Penal
 
@@ -172,9 +174,9 @@ O dano moral refere-se à lesão de direitos da personalidade, causando dor, sof
 - Direito a um julgamento justo e imparcial
 
 Para orientação específica sobre seu caso, recomendo consultar um advogado criminalista.`;
-  }
-  else if (palavrasChaveConsumidor.some(palavra => consultaLowerCase.includes(palavra))) {
-    conteudo = `# Direito do Consumidor - ${consulta}
+    }
+    else if (palavrasChaveConsumidor.some(palavra => consultaLowerCase.includes(palavra))) {
+      conteudo = `# Direito do Consumidor - ${consulta}
 
 ## Direitos Básicos do Consumidor (CDC - Lei 8.078/90)
 
@@ -210,9 +212,9 @@ Para orientação específica sobre seu caso, recomendo consultar um advogado cr
 - JUECs (Juizados Especiais Cíveis)
 
 Se precisar de orientação específica para seu caso, recomendo procurar o PROCON ou um advogado especializado em Direito do Consumidor.`;
-  }
-  else if (palavrasChaveFamilia.some(palavra => consultaLowerCase.includes(palavra))) {
-    conteudo = `# Direito de Família - ${consulta}
+    }
+    else if (palavrasChaveFamilia.some(palavra => consultaLowerCase.includes(palavra))) {
+      conteudo = `# Direito de Família - ${consulta}
 
 ## Aspectos Jurídicos das Relações Familiares
 
@@ -245,20 +247,22 @@ Se precisar de orientação específica para seu caso, recomendo procurar o PROC
 - **Testamento**: Possibilidade de disposição de até 50% dos bens se houver herdeiros necessários
 
 Para orientação específica sobre seu caso, recomendo consultar um advogado especialista em Direito de Família.`;
-  }
-  else {
-    // Tenta extrair o tema principal da consulta
-    let temaDetectado = "jurídico geral";
-    
-    if (consultaLowerCase.includes('processo') || consultaLowerCase.includes('ação') || consultaLowerCase.includes('juiz') || consultaLowerCase.includes('audiência')) {
-      temaDetectado = "processo judicial";
-    } else if (consultaLowerCase.includes('lei') || consultaLowerCase.includes('código') || consultaLowerCase.includes('legislação')) {
-      temaDetectado = "legislação brasileira";
-    } else if (consultaLowerCase.includes('direito') || consultaLowerCase.includes('jurídico')) {
-      temaDetectado = consultaLowerCase.split('direito')[1]?.trim() || "área jurídica";
     }
-    
-    conteudo = `# Resposta à sua consulta sobre ${temaDetectado}
+    else {
+      // Tenta extrair o tema principal da consulta
+      let temaDetectado = "jurídico geral";
+      
+      if (consultaLowerCase.includes('processo') || consultaLowerCase.includes('ação') || consultaLowerCase.includes('juiz') || consultaLowerCase.includes('audiência')) {
+        temaDetectado = "processo judicial";
+      } else if (consultaLowerCase.includes('lei') || consultaLowerCase.includes('código') || consultaLowerCase.includes('legislação')) {
+        temaDetectado = "legislação brasileira";
+      } else if (consultaLowerCase.includes('direito') || consultaLowerCase.includes('jurídico')) {
+        temaDetectado = consultaLowerCase.split('direito')[1]?.trim() || "área jurídica";
+      }
+      
+      // Se nenhum padrão específico foi encontrado nas verificações anteriores, usar resposta genérica
+      if (!conteudo) {
+        conteudo = `# Resposta à sua consulta sobre ${temaDetectado}
 
 Obrigado pela sua consulta sobre "${consulta}". Com base na sua pergunta, posso oferecer as seguintes orientações jurídicas:
 
@@ -279,17 +283,34 @@ Obrigado pela sua consulta sobre "${consulta}". Com base na sua pergunta, posso 
 Para uma orientação mais específica sobre "${consulta}", seria importante fornecer detalhes adicionais sobre sua situação particular.
 
 Esta resposta tem caráter informativo e não substitui a consulta a um profissional jurídico qualificado.`;
-  }
-  
-  return {
-    conteudo,
-    modeloUsado: "mock-modelo-local",
-    tokens: {
-      entrada: 50,
-      saida: conteudo.length / 4, // Valor aproximado
-      total: 50 + (conteudo.length / 4)
+      }
     }
-  };
+    
+    logInfo("Resposta simulada gerada com sucesso");
+    
+    return {
+      conteudo,
+      modeloUsado: "mock-modelo-local",
+      tokens: {
+        entrada: 50,
+        saida: conteudo.length / 4, // Valor aproximado
+        total: 50 + (conteudo.length / 4)
+      }
+    };
+  } catch (error) {
+    logError("Erro ao gerar resposta simulada", error instanceof Error ? error : new Error(String(error)));
+    
+    // Fornecer uma resposta de fallback muito simples para garantir que algo seja retornado
+    return {
+      conteudo: "Não foi possível processar sua consulta no momento. Por favor, tente novamente mais tarde ou reformule sua pergunta.",
+      modeloUsado: "fallback-simples",
+      tokens: {
+        entrada: 10,
+        saida: 20,
+        total: 30
+      }
+    };
+  }
 }
 
 export default async function handler(
@@ -304,7 +325,7 @@ export default async function handler(
 
   try {
     const { consulta, historico } = req.body;
-    logInfo(`Nova consulta recebida: "${consulta.substring(0, 50)}${consulta.length > 50 ? '...' : ''}"`);
+    logInfo(`Nova consulta recebida: "${consulta?.substring(0, 50)}${consulta?.length > 50 ? '...' : ''}"`);
 
     // Validar entrada
     if (!consulta || typeof consulta !== 'string') {
@@ -323,20 +344,36 @@ export default async function handler(
     logDebug(`Ambiente: ${process.env.NODE_ENV}`);
     logDebug(`API Key configurada: ${apiKeyConfigured ? 'Sim' : 'Não'}`);
     
-    // Tentar usar API real, com fallback para simulação
-    try {
-      // Se não tiver API key ou explicitamente solicitar mock
-      if (!apiKeyConfigured || (req.query.mock === 'true')) {
-        logInfo('Usando resposta simulada (mock) para a API jurídica');
-        const resposta = gerarRespostaSimulada(consulta);
-        return res.status(200).json(resposta);
+    // Se não tiver API key ou explicitamente solicitar mock, usar simulação
+    if (!apiKeyConfigured || (req.query.mock === 'true')) {
+      logInfo('Usando resposta simulada (mock) para a API jurídica');
+      const resposta = gerarRespostaSimulada(consulta);
+      
+      // Garantir que temos uma resposta completa
+      if (!resposta || !resposta.conteudo) {
+        logError("Resposta simulada retornou vazia");
+        return res.status(500).json({ erro: "Falha ao gerar resposta simulada" });
       }
       
+      // Formatar a resposta para seguir o padrão do frontend
+      return res.status(200).json({ 
+        resposta: resposta.conteudo,
+        modeloUsado: resposta.modeloUsado,
+        tokens: resposta.tokens
+      });
+    }
+    
+    try {
       // Tentar usar a API real
       logInfo('Tentando usar a API Groq real...');
       const resposta = await obterRespostaJuridica({ consulta, historico });
       logInfo('Resposta obtida da API Groq com sucesso');
-      return res.status(200).json(resposta);
+      
+      return res.status(200).json({ 
+        resposta: resposta.conteudo,
+        modeloUsado: resposta.modeloUsado,
+        tokens: resposta.tokens
+      });
     } catch (erroApi) {
       // Log detalhado do erro
       const mensagemErro = erroApi instanceof Error ? erroApi.message : 'Erro desconhecido';
@@ -345,7 +382,12 @@ export default async function handler(
       // Em caso de falha na API real, usar mock como fallback
       logInfo('Usando resposta simulada como fallback...');
       const resposta = gerarRespostaSimulada(consulta);
-      return res.status(200).json(resposta);
+      
+      return res.status(200).json({ 
+        resposta: resposta.conteudo,
+        modeloUsado: resposta.modeloUsado,
+        tokens: resposta.tokens
+      });
     }
   } catch (erro) {
     // Tratamento de erro global

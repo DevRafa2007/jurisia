@@ -3,6 +3,8 @@ import type { AppProps } from 'next/app';
 import { useState, useEffect } from 'react';
 import { AuthProvider } from '../contexts/AuthContext';
 import { ThemeProvider } from 'next-themes';
+import { AnimatePresence } from 'framer-motion';
+import ToastManager from '../components/ToastManager';
 import Head from 'next/head';
 
 export default function App({ Component, pageProps }: AppProps) {
@@ -33,7 +35,12 @@ export default function App({ Component, pageProps }: AppProps) {
         <Head>
           <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
         </Head>
-        <Component {...pageProps} />
+        {/* AnimatePresence permite animar componentes quando entram/saem do DOM */}
+        <AnimatePresence mode="wait">
+          <Component {...pageProps} />
+        </AnimatePresence>
+        {/* Gerenciador de notificações toast */}
+        <ToastManager />
       </AuthProvider>
     </ThemeProvider>
   );

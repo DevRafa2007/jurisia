@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from 'next-themes';
+import { supabase } from '../utils/supabase';
 
 interface HeaderProps {
   sidebarAberta?: boolean;
@@ -14,11 +15,48 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [userName, setUserName] = useState<string | null>(null);
 
   // Efeito para garantir renderização apenas no cliente
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Efeito para buscar o nome do usuário
+  useEffect(() => {
+    const getUserName = async () => {
+      if (!user) return;
+      
+      try {
+        // Verificar primeiro se o nome está nos metadados do usuário
+        const userMetadata = user.user_metadata as { nome_completo?: string } | null;
+        if (userMetadata?.nome_completo) {
+          setUserName(userMetadata.nome_completo);
+          return;
+        }
+        
+        // Se não estiver nos metadados, tenta buscar na tabela de perfis
+        const { data, error } = await supabase
+          .from('perfis')
+          .select('nome_completo')
+          .eq('usuario_id', user.id)
+          .single();
+        
+        if (error) {
+          console.error('Erro ao buscar perfil:', error);
+          return;
+        }
+        
+        if (data?.nome_completo) {
+          setUserName(data.nome_completo);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar nome do usuário:', error);
+      }
+    };
+    
+    getUserName();
+  }, [user]);
 
   const handleSignOut = async () => {
     try {
@@ -65,6 +103,26 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [menuOpen]);
+
+  // Função para formatar o nome do usuário para exibição
+  const formatDisplayName = () => {
+    if (userName) {
+      // Se houver um nome, exibe apenas o primeiro nome
+      const firstName = userName.split(' ')[0];
+      return firstName;
+    }
+    
+    // Fallback para o email como antes
+    return user?.email?.split('@')[0] || '';
+  };
+
+  // Função para obter a inicial para o avatar
+  const getInitial = () => {
+    if (userName) {
+      return userName.charAt(0).toUpperCase();
+    }
+    return user?.email?.charAt(0).toUpperCase() || 'U';
+  };
 
   return (
     <header 
@@ -117,10 +175,10 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
                     aria-haspopup="true"
                   >
                     <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-primary-700 dark:bg-primary-800 flex items-center justify-center text-white transition-colors duration-300 shadow-sm hover:bg-primary-600 dark:hover:bg-primary-700">
-                      {user.email?.charAt(0).toUpperCase() || 'U'}
+                      {getInitial()}
                     </div>
                     <span className="hidden md:block text-xs sm:text-sm text-primary-800 dark:text-law-300 transition-colors duration-300 font-medium">
-                      {user.email?.split('@')[0]}
+                      {formatDisplayName()}
                     </span>
                     <svg 
                       xmlns="http://www.w3.org/2000/svg" 
@@ -164,7 +222,14 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
                     }`}
                   >
                     <div className="px-4 py-2 sm:py-3 text-xs sm:text-sm text-primary-800 dark:text-law-300 border-b border-law-200 dark:border-law-700 transition-colors duration-300 break-all font-medium">
-                      {user.email}
+                      {userName ? (
+                        <div>
+                          <div className="font-semibold text-primary-700 dark:text-primary-400">{userName}</div>
+                          <div className="text-xs mt-1 text-law-500 dark:text-law-400">{user.email}</div>
+                        </div>
+                      ) : (
+                        user.email
+                      )}
                     </div>
                     <Link
                       href="/perfil"
@@ -176,18 +241,6 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                         </svg>
                         Perfil
-                      </div>
-                    </Link>
-                    <Link
-                      href="/favoritos"
-                      className="block px-4 py-2 text-xs sm:text-sm text-primary-700 dark:text-law-300 hover:bg-law-100 dark:hover:bg-law-700 transition-colors duration-300"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      <div className="flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-secondary-600 dark:text-secondary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                        </svg>
-                        Favoritos
                       </div>
                     </Link>
                     <Link
