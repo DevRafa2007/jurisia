@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Conversa, carregarConversas, excluirConversa } from '../utils/supabase';
+import { useState, useEffect, useRef } from 'react';
+import { Conversa, carregarConversas, excluirConversa, marcarComoFavorito, exportarConversa, exportarTodasConversas, Mensagem } from '../utils/supabase';
+import toast from 'react-hot-toast';
 
 interface ConversasSidebarProps {
   usuarioId: string;
@@ -24,9 +25,12 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
   const [filtro, setFiltro] = useState('');
   const [visualizacao, setVisualizacao] = useState<'todas' | 'favoritas'>('todas');
   const [mostraOpcoes, setMostraOpcoes] = useState<string | null>(null);
-
-  // Estado fictício para ilustrar favoritos
-  const [favoritas, setFavoritas] = useState<Record<string, boolean>>({});
+  const [mostrarModalExportar, setMostrarModalExportar] = useState(false);
+  const [exportando, setExportando] = useState(false);
+  const [selecaoConversas, setSelecaoConversas] = useState<string[]>([]);
+  
+  // Referências para download
+  const downloadRef = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -62,13 +66,38 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
     }
   };
 
-  const toggleFavorito = (e: React.MouseEvent, conversaId: string) => {
+  const toggleFavorito = async (e: React.MouseEvent, conversaId: string) => {
     e.stopPropagation();
-    setFavoritas(prev => ({
-      ...prev,
-      [conversaId]: !prev[conversaId]
-    }));
-    setMostraOpcoes(null);
+    
+    try {
+      // Encontrar a conversa atual
+      const conversa = conversas.find(c => c.id === conversaId);
+      if (!conversa) return;
+      
+      // Novo estado de favorito (invertido)
+      const novoFavorito = !conversa.favorito;
+      
+      // Atualizar no banco de dados
+      await marcarComoFavorito(conversaId, novoFavorito);
+      
+      // Atualizar no estado local
+      setConversas(conversas.map(c => 
+        c.id === conversaId 
+          ? { ...c, favorito: novoFavorito } 
+          : c
+      ));
+      
+      // Feedback visual
+      toast.success(novoFavorito 
+        ? 'Conversa adicionada aos atalhos' 
+        : 'Conversa removida dos atalhos'
+      );
+      
+      setMostraOpcoes(null);
+    } catch (error) {
+      console.error('Erro ao atualizar favorito:', error);
+      toast.error('Falha ao atualizar atalho. Tente novamente.');
+    }
   };
 
   const formatarData = (dataString?: string) => {
@@ -88,7 +117,7 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
       const tituloMatch = conversa.titulo?.toLowerCase().includes(filtro.toLowerCase()) || false;
       
       // Filtro por favoritas
-      if (visualizacao === 'favoritas' && !favoritas[conversa.id]) {
+      if (visualizacao === 'favoritas' && !conversa.favorito) {
         return false;
       }
       
@@ -96,13 +125,192 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
     })
     .sort((a, b) => {
       // Ordenar por favoritas primeiro, depois por data
-      if (favoritas[a.id] && !favoritas[b.id]) return -1;
-      if (!favoritas[a.id] && favoritas[b.id]) return 1;
+      if (a.favorito && !b.favorito) return -1;
+      if (!a.favorito && b.favorito) return 1;
       
-      const dataA = a.criado_em ? new Date(a.criado_em).getTime() : 0;
-      const dataB = b.criado_em ? new Date(b.criado_em).getTime() : 0;
-      return dataB - dataA; // Mais recentes primeiro
+      // Se ambas são favoritas ou não, ordenar por data
+      const dataA = a.atualizado_em ? new Date(a.atualizado_em).getTime() : 0;
+      const dataB = b.atualizado_em ? new Date(b.atualizado_em).getTime() : 0;
+      return dataB - dataA;
     });
+
+  // Função para exportar conversa(s)
+  const handleExportar = async (formato: 'json' | 'markdown' | 'text', todas: boolean = false) => {
+    try {
+      setExportando(true);
+      
+      let dadosExportados: any;
+      let nomeArquivo: string;
+      
+      // Determinar quais conversas exportar
+      const conversasParaExportar = todas 
+        ? [] // Todas as conversas do usuário
+        : selecaoConversas.length > 0 
+          ? selecaoConversas // Conversas selecionadas
+          : conversaAtual 
+            ? [conversaAtual] // Conversa atual
+            : []; // Nenhuma selecionada
+      
+      // Se nenhuma conversa foi selecionada e estamos tentando exportar seleção
+      if (!todas && conversasParaExportar.length === 0) {
+        toast.error('Selecione pelo menos uma conversa para exportar');
+        setExportando(false);
+        return;
+      }
+      
+      // Exportar todas as conversas
+      if (todas) {
+        dadosExportados = await exportarTodasConversas(usuarioId);
+        nomeArquivo = `todas_conversas_${new Date().toISOString().split('T')[0]}`;
+      } 
+      // Exportar conversas selecionadas
+      else if (conversasParaExportar.length === 1) {
+        const { conversa, mensagens } = await exportarConversa(conversasParaExportar[0]);
+        dadosExportados = { conversa, mensagens };
+        nomeArquivo = `conversa_${conversa.titulo.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}`;
+      }
+      // Exportar múltiplas conversas selecionadas
+      else {
+        dadosExportados = {};
+        for (const id of conversasParaExportar) {
+          try {
+            const result = await exportarConversa(id);
+            dadosExportados[id] = result;
+          } catch (error) {
+            console.error(`Erro ao exportar conversa ${id}:`, error);
+          }
+        }
+        nomeArquivo = `conversas_selecionadas_${new Date().toISOString().split('T')[0]}`;
+      }
+      
+      // Converter para o formato desejado
+      let conteudoArquivo: string;
+      let tipoArquivo: string;
+      
+      switch (formato) {
+        case 'json':
+          conteudoArquivo = JSON.stringify(dadosExportados, null, 2);
+          tipoArquivo = 'application/json';
+          nomeArquivo += '.json';
+          break;
+        
+        case 'markdown':
+          conteudoArquivo = converterParaMarkdown(dadosExportados);
+          tipoArquivo = 'text/markdown';
+          nomeArquivo += '.md';
+          break;
+        
+        case 'text':
+          conteudoArquivo = converterParaTexto(dadosExportados);
+          tipoArquivo = 'text/plain';
+          nomeArquivo += '.txt';
+          break;
+          
+        default:
+          conteudoArquivo = JSON.stringify(dadosExportados, null, 2);
+          tipoArquivo = 'application/json';
+          nomeArquivo += '.json';
+      }
+      
+      // Criar blob e link para download
+      const blob = new Blob([conteudoArquivo], { type: tipoArquivo });
+      const url = URL.createObjectURL(blob);
+      
+      if (downloadRef.current) {
+        downloadRef.current.href = url;
+        downloadRef.current.download = nomeArquivo;
+        downloadRef.current.click();
+        
+        // Limpar URL após o download
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+      }
+      
+      toast.success('Exportação concluída com sucesso!');
+      setMostrarModalExportar(false);
+      setSelecaoConversas([]);
+    } catch (error) {
+      console.error('Erro ao exportar conversas:', error);
+      toast.error('Falha ao exportar conversas. Tente novamente.');
+    } finally {
+      setExportando(false);
+    }
+  };
+  
+  // Funções auxiliares para converter os dados exportados
+  const converterParaMarkdown = (dados: any): string => {
+    let markdown = '# Conversas Exportadas\n\n';
+    
+    // Processar uma única conversa
+    if (dados.conversa && dados.mensagens) {
+      markdown += `## ${dados.conversa.titulo}\n\n`;
+      markdown += `Data: ${formatarData(dados.conversa.criado_em)}\n\n`;
+      
+      dados.mensagens.forEach((msg: Mensagem) => {
+        const autor = msg.tipo === 'usuario' ? '👨‍💼 Você' : '🤖 JurisIA';
+        markdown += `### ${autor} - ${new Date(msg.criado_em || '').toLocaleString('pt-BR')}\n\n`;
+        markdown += `${msg.conteudo}\n\n`;
+      });
+    } 
+    // Processar múltiplas conversas
+    else {
+      Object.entries(dados).forEach(([id, data]: [string, any]) => {
+        markdown += `## ${data.conversa.titulo}\n\n`;
+        markdown += `Data: ${formatarData(data.conversa.criado_em)}\n\n`;
+        
+        data.mensagens.forEach((msg: Mensagem) => {
+          const autor = msg.tipo === 'usuario' ? '👨‍💼 Você' : '🤖 JurisIA';
+          markdown += `### ${autor} - ${new Date(msg.criado_em || '').toLocaleString('pt-BR')}\n\n`;
+          markdown += `${msg.conteudo}\n\n`;
+        });
+        
+        markdown += '---\n\n';
+      });
+    }
+    
+    return markdown;
+  };
+  
+  const converterParaTexto = (dados: any): string => {
+    let texto = 'CONVERSAS EXPORTADAS\n\n';
+    
+    // Processar uma única conversa
+    if (dados.conversa && dados.mensagens) {
+      texto += `CONVERSA: ${dados.conversa.titulo}\n`;
+      texto += `Data: ${formatarData(dados.conversa.criado_em)}\n\n`;
+      
+      dados.mensagens.forEach((msg: Mensagem) => {
+        const autor = msg.tipo === 'usuario' ? 'Você' : 'JurisIA';
+        texto += `[${autor} - ${new Date(msg.criado_em || '').toLocaleString('pt-BR')}]\n`;
+        texto += `${msg.conteudo}\n\n`;
+      });
+    } 
+    // Processar múltiplas conversas
+    else {
+      Object.entries(dados).forEach(([id, data]: [string, any]) => {
+        texto += `CONVERSA: ${data.conversa.titulo}\n`;
+        texto += `Data: ${formatarData(data.conversa.criado_em)}\n\n`;
+        
+        data.mensagens.forEach((msg: Mensagem) => {
+          const autor = msg.tipo === 'usuario' ? 'Você' : 'JurisIA';
+          texto += `[${autor} - ${new Date(msg.criado_em || '').toLocaleString('pt-BR')}]\n`;
+          texto += `${msg.conteudo}\n\n`;
+        });
+        
+        texto += '----------------------------------------\n\n';
+      });
+    }
+    
+    return texto;
+  };
+  
+  // Função para alternar seleção de uma conversa para exportação
+  const toggleSelecaoConversa = (conversaId: string) => {
+    setSelecaoConversas(prev => 
+      prev.includes(conversaId)
+        ? prev.filter(id => id !== conversaId)
+        : [...prev, conversaId]
+    );
+  };
 
   return (
     <div className="h-full w-full flex flex-col bg-white dark:bg-law-900 shadow-elegant rounded-r-lg overflow-hidden">
@@ -215,7 +423,7 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
                 <div className="flex items-start">
                   <div className="flex-grow truncate pr-10">
                     <div className="flex items-center mb-1">
-                      {favoritas[conversa.id] && (
+                      {conversa.favorito && (
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1 text-secondary-500 dark:text-secondary-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24" stroke="none">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                         </svg>
@@ -251,14 +459,14 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
                         className="flex items-center w-full text-left px-3 py-1.5 hover:bg-law-100 dark:hover:bg-law-700 text-primary-700 dark:text-law-300"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" 
-                          className={`h-4 w-4 mr-2 ${favoritas[conversa.id] ? 'text-secondary-500 dark:text-secondary-400' : 'text-law-500 dark:text-law-400'}`} 
-                          fill={favoritas[conversa.id] ? "currentColor" : "none"} 
+                          className={`h-4 w-4 mr-2 ${conversa.favorito ? 'text-secondary-500 dark:text-secondary-400' : 'text-law-500 dark:text-law-400'}`} 
+                          fill={conversa.favorito ? "currentColor" : "none"} 
                           viewBox="0 0 24 24" 
                           stroke="currentColor"
                         >
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                         </svg>
-                        {favoritas[conversa.id] ? 'Remover favorito' : 'Adicionar favorito'}
+                        {conversa.favorito ? 'Remover favorito' : 'Adicionar favorito'}
                       </button>
                       <button
                         onClick={(e) => handleExcluirConversa(e, conversa.id)}
@@ -278,25 +486,132 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
         )}
       </div>
       
-      {/* Rodapé da barra lateral com opções de exportação */}
-      <div className="p-3 border-t border-law-200 dark:border-law-700 flex justify-between items-center">
+      {/* Link oculto para download */}
+      <a ref={downloadRef} className="hidden"></a>
+      
+      {/* Modal de Exportação */}
+      {mostrarModalExportar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white dark:bg-law-800 rounded-lg shadow-elegant p-4 sm:p-6 max-w-md w-full mx-4 transition-colors duration-300">
+            <h3 className="text-lg font-semibold text-primary-700 dark:text-primary-400 mb-4">Exportar Conversas</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-primary-800 dark:text-law-300 mb-2">O que deseja exportar?</label>
+                <div className="space-y-2">
+                  <button 
+                    className={`w-full p-2 text-left rounded-md ${
+                      selecaoConversas.length === 0
+                        ? 'bg-primary-100 dark:bg-primary-900/30 border-2 border-primary-400 dark:border-primary-600'
+                        : 'bg-law-100 dark:bg-law-800 border border-law-300 dark:border-law-700 hover:bg-law-200 dark:hover:bg-law-700'
+                    } transition-colors duration-200`}
+                    onClick={() => setSelecaoConversas([])}
+                  >
+                    <div className="flex items-center">
+                      <span className="mr-2">
+                        {conversaAtual ? '📝' : '📚'}
+                      </span>
+                      <span>
+                        {conversaAtual 
+                          ? 'Conversa Atual' 
+                          : 'Todas as Conversas'}
+                      </span>
+                    </div>
+                  </button>
+                  
+                  <button 
+                    className={`w-full p-2 text-left rounded-md ${
+                      selecaoConversas.length > 0
+                        ? 'bg-primary-100 dark:bg-primary-900/30 border-2 border-primary-400 dark:border-primary-600'
+                        : 'bg-law-100 dark:bg-law-800 border border-law-300 dark:border-law-700 hover:bg-law-200 dark:hover:bg-law-700'
+                    } transition-colors duration-200`}
+                    onClick={() => setSelecaoConversas(conversas.map(c => c.id || ''))}
+                  >
+                    <div className="flex items-center">
+                      <span className="mr-2">📋</span>
+                      <span>Selecionar Conversas Específicas</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+              
+              {selecaoConversas.length > 0 && (
+                <div className="max-h-40 overflow-y-auto p-2 border border-law-200 dark:border-law-700 rounded-md">
+                  {conversas.map(conversa => (
+                    <div 
+                      key={conversa.id} 
+                      className="flex items-center mb-2 last:mb-0"
+                    >
+                      <input 
+                        type="checkbox" 
+                        id={`sel-${conversa.id}`}
+                        checked={selecaoConversas.includes(conversa.id || '')}
+                        onChange={() => toggleSelecaoConversa(conversa.id || '')}
+                        className="mr-2"
+                      />
+                      <label htmlFor={`sel-${conversa.id}`} className="text-sm text-primary-800 dark:text-law-300 truncate">
+                        {conversa.titulo}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <div>
+                <label className="block text-sm text-primary-800 dark:text-law-300 mb-2">Formato de Exportação:</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button 
+                    className="p-2 text-center bg-law-100 dark:bg-law-800 rounded-md border border-law-300 dark:border-law-700 hover:bg-law-200 dark:hover:bg-law-700 transition-colors duration-200"
+                    onClick={() => handleExportar('json', selecaoConversas.length === 0 && !conversaAtual)}
+                    disabled={exportando}
+                  >
+                    <span className="block text-xl mb-1">📄</span>
+                    <span className="text-xs">JSON</span>
+                  </button>
+                  <button 
+                    className="p-2 text-center bg-law-100 dark:bg-law-800 rounded-md border border-law-300 dark:border-law-700 hover:bg-law-200 dark:hover:bg-law-700 transition-colors duration-200"
+                    onClick={() => handleExportar('markdown', selecaoConversas.length === 0 && !conversaAtual)}
+                    disabled={exportando}
+                  >
+                    <span className="block text-xl mb-1">📝</span>
+                    <span className="text-xs">Markdown</span>
+                  </button>
+                  <button 
+                    className="p-2 text-center bg-law-100 dark:bg-law-800 rounded-md border border-law-300 dark:border-law-700 hover:bg-law-200 dark:hover:bg-law-700 transition-colors duration-200"
+                    onClick={() => handleExportar('text', selecaoConversas.length === 0 && !conversaAtual)}
+                    disabled={exportando}
+                  >
+                    <span className="block text-xl mb-1">📃</span>
+                    <span className="text-xs">Texto</span>
+                  </button>
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-2 mt-4 pt-4 border-t border-law-200 dark:border-law-700">
+                <button 
+                  className="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+                  onClick={() => setMostrarModalExportar(false)}
+                  disabled={exportando}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Rodapé da barra lateral apenas com opção de exportação */}
+      <div className="p-3 border-t border-law-200 dark:border-law-700 flex justify-center items-center">
         <button 
           className="text-xs sm:text-sm text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 flex items-center transition-colors duration-300"
           title="Exportar conversas"
+          onClick={() => setMostrarModalExportar(true)}
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
           </svg>
           Exportar
-        </button>
-        <button 
-          className="text-xs sm:text-sm text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 flex items-center transition-colors duration-300"
-          title="Acessar atalhos"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-          Atalhos
         </button>
       </div>
     </div>

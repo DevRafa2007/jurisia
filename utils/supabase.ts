@@ -48,6 +48,7 @@ export interface Conversa {
   titulo: string;
   criado_em?: string;
   atualizado_em?: string;
+  favorito?: boolean;
 }
 
 // Tipo para mensagem
@@ -234,6 +235,83 @@ export async function excluirConversa(conversaId: string): Promise<void> {
     }
   } catch (error) {
     console.error('Erro inesperado ao excluir conversa:', error);
+    throw error;
+  }
+}
+
+// Função para marcar/desmarcar conversa como favorita (atalho)
+export async function marcarComoFavorito(conversaId: string, favorito: boolean): Promise<void> {
+  if (!conversaId) {
+    throw new Error('ID da conversa não especificado');
+  }
+
+  try {
+    const response = await fetch('/api/conversas/atalho', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ conversaId, favorito }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Erro ao atualizar status de favorito');
+    }
+  } catch (error) {
+    console.error('Erro ao atualizar status de favorito:', error);
+    throw error;
+  }
+}
+
+// Função para exportar uma conversa específica
+export async function exportarConversa(conversaId: string): Promise<{ conversa: Conversa, mensagens: Mensagem[] }> {
+  if (!conversaId) {
+    throw new Error('ID da conversa não especificado');
+  }
+
+  try {
+    const response = await fetch(`/api/conversas/exportar?conversaId=${conversaId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Erro ao exportar conversa');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Erro ao exportar conversa:', error);
+    throw error;
+  }
+}
+
+// Função para exportar todas as conversas de um usuário
+export async function exportarTodasConversas(usuarioId: string): Promise<{ [conversaId: string]: { conversa: Conversa, mensagens: Mensagem[] } }> {
+  if (!usuarioId) {
+    throw new Error('ID do usuário não especificado');
+  }
+
+  try {
+    const response = await fetch('/api/conversas/exportar', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Erro ao exportar conversas');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Erro ao exportar todas as conversas:', error);
     throw error;
   }
 } 
