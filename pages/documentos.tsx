@@ -864,8 +864,33 @@ ${camposDoc.map(campo => {
 
   // Função para editar o documento diretamente no editor
   const handleDocumentoChange = (e: React.FormEvent<HTMLDivElement>) => {
+    // Armazenar o ponto de seleção atual
+    const selection = window.getSelection();
+    const range = selection?.getRangeAt(0);
+    const startOffset = range?.startOffset;
+    const startContainer = range?.startContainer;
+    
+    // Atualizar o conteúdo
     const novoConteudo = e.currentTarget.innerHTML;
     setDocumentoGerado(novoConteudo);
+    
+    // Restaurar o ponto de seleção após a atualização do estado
+    // Utilizamos um setTimeout para garantir que o DOM foi atualizado
+    setTimeout(() => {
+      if (selection && range && startContainer && startOffset !== undefined) {
+        try {
+          // Tentar restaurar a posição anterior
+          const newRange = document.createRange();
+          newRange.setStart(startContainer, startOffset);
+          newRange.setEnd(startContainer, startOffset);
+          
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+        } catch (error) {
+          console.error("Erro ao restaurar posição do cursor:", error);
+        }
+      }
+    }, 0);
   };
 
   // Função para alterar o título do documento
