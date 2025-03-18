@@ -82,6 +82,29 @@ O projeto utiliza o Supabase para autenticação e armazenamento. Você precisar
 - `criado_em` (timestamp with time zone, default: now())
 - `atualizado_em` (timestamp with time zone, default: now())
 
+## Funcionalidades
+
+- **Chat com IA**: Assistente jurídico inteligente para consultas.
+- **Histórico de Conversas**: Todas as consultas são salvas automaticamente.
+- **Gerador de Documentos**: Crie documentos jurídicos automaticamente com base em formulários específicos.
+- **Modo Escuro**: Interface adaptativa para uso diurno e noturno.
+- **Autenticação Segura**: Login com email/senha e autenticação social.
+
+## Gerador de Documentos
+
+O JurisIA inclui um gerador de documentos jurídicos que permite aos advogados criar rapidamente:
+
+- Petições Iniciais
+- Contestações
+- Recursos
+- Pareceres Jurídicos
+- Contratos
+- Procurações
+- Notificações Extrajudiciais
+- Acordos
+
+Cada tipo de documento possui um formulário específico que coleta as informações necessárias. Após preencher o formulário, a IA gera automaticamente o documento completo que pode ser editado em um editor estilo A4, impresso ou copiado.
+
 ## Funcionalidades Avançadas
 
 ### Exportação de Conversas

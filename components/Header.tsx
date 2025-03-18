@@ -168,6 +168,18 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
             {!isLoading && (
               user ? (
                 <div className="relative flex items-center user-menu-container">
+                  {/* Botão de Criar Documento */}
+                  <Link
+                    href="/documentos"
+                    className="mr-2 sm:mr-4 p-1.5 rounded-md hover:bg-law-200 dark:hover:bg-law-800 transition-colors duration-300 flex items-center text-primary-700 dark:text-primary-400"
+                    title="Criar Documento"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span className="ml-1 hidden md:inline text-xs sm:text-sm">Documento</span>
+                  </Link>
+
                   <button 
                     className="flex items-center space-x-1 sm:space-x-2 focus:outline-none"
                     onClick={() => setMenuOpen(!menuOpen)}
@@ -241,6 +253,18 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                         </svg>
                         Perfil
+                      </div>
+                    </Link>
+                    <Link
+                      href="/documentos"
+                      className="block px-4 py-2 text-xs sm:text-sm text-primary-700 dark:text-law-300 hover:bg-law-100 dark:hover:bg-law-700 transition-colors duration-300"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <div className="flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-primary-600 dark:text-law-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Documentos
                       </div>
                     </Link>
                     <Link

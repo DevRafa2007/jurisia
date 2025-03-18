@@ -15,6 +15,7 @@ import {
   carregarMensagens, 
   Mensagem as MensagemDB
 } from '../utils/supabase';
+import Link from 'next/link';
 
 // Tipo de mensagem para uso local na interface
 type Mensagem = {
@@ -366,155 +367,142 @@ Como posso auxiliar você hoje?`,
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <Layout sidebarAberta={sidebarAberta} toggleSidebar={() => setSidebarAberta(!sidebarAberta)}>
-        <div className="flex flex-col md:flex-row h-full">
-          {/* Sidebar com conversas - Responsiva */}
-          <div 
-            className={`fixed inset-0 z-40 transition-opacity duration-300 ease-in-out md:relative md:block md:opacity-100 ${
-              sidebarAberta 
-                ? 'bg-gray-900 bg-opacity-50 opacity-100 pointer-events-auto' 
-                : 'opacity-0 pointer-events-none'
-            } md:w-96 lg:w-1/4 xl:w-1/5 h-full md:bg-transparent`}
-            onClick={(e: MouseEvent<HTMLDivElement>) => {
-              // Fechar o sidebar quando clicar fora dele em dispositivos móveis
-              if (window.innerWidth < 768 && e.target === e.currentTarget) {
-                setSidebarAberta(false);
-              }
-            }}
-          >
-            {/* Conteúdo da barra lateral */}
-            <motion.div 
-              className={`absolute h-full w-3/4 sm:w-96 md:w-full top-0 left-0 bg-white dark:bg-law-900 shadow-lg transform transition-transform duration-300 ease-in-out ${
-                sidebarAberta ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-              }`}
-              initial={{ x: isMobile ? -300 : 0 }}
-              animate={{ x: 0 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            >
-              <ConversasSidebar
-                usuarioId={user.id}
-                conversaAtual={conversaAtual}
-                onSelecionarConversa={(id: string) => {
-                  handleSelecionarConversa(id);
-                  if (window.innerWidth < 768) setSidebarAberta(false);
-                }}
-                onNovaConversa={() => {
-                  handleNovaConversa();
-                  if (window.innerWidth < 768) setSidebarAberta(false);
-                }}
-                toggleSidebar={() => setSidebarAberta(false)}
-                isMobile={true}
-              />
-            </motion.div>
-          </div>
-          
-          {/* Área principal de chat - Responsiva */}
-          <motion.div 
-            className="flex-1 flex flex-col overflow-hidden w-full h-full relative"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            {/* Cabeçalho da conversa */}
-            <div className="border-b border-law-200 dark:border-law-700 bg-white dark:bg-law-900 p-4 shadow-sm rounded-t-lg">
-              <div className="flex justify-between items-center">
-                <h1 className="text-lg font-serif font-medium text-law-900 dark:text-law-100">
-                  {conversaAtual ? 'Consulta em andamento' : 'Nova Consulta Jurídica'}
-                </h1>
-                <motion.button
-                  onClick={handleNovaConversa}
-                  className="px-3 py-1.5 text-xs sm:text-sm bg-primary-700 hover:bg-primary-600 dark:bg-primary-800 dark:hover:bg-primary-700 text-white rounded-lg transition-colors duration-300 flex items-center shadow-sm"
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  <span className="hidden sm:inline">Nova Consulta</span>
-                  <span className="sm:hidden">Nova</span>
-                </motion.button>
-              </div>
-            </div>
-            
-            {/* Área de mensagens com fundo estilizado */}
-            <div 
-              ref={chatContainerRef}
-              className="flex-grow overflow-y-auto px-4 py-6 sm:px-6 law-bg-pattern bg-law-50 dark:bg-law-900"
-              style={{ 
-                height: 'auto',
-                paddingBottom: 'calc(60px + 0.75rem)' // Aumentado para dispositivos móveis
-              }}
-            >
-              <motion.div 
-                className="max-w-2xl mx-auto space-y-6"
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
+      <Layout title="JurisIA - Assistente Jurídico com IA" sidebarAberta={sidebarAberta} toggleSidebar={() => setSidebarAberta(!sidebarAberta)}>
+        <div className="h-full flex flex-col sm:flex-row">
+          {/* Sidebar de conversas para mobile e versão desktop */}
+          <AnimatePresence>
+            {sidebarAberta && (
+              <motion.div
+                key="sidebar"
+                initial={{ x: "-100%", opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: "-100%", opacity: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="fixed inset-0 z-40 bg-white dark:bg-law-900 overflow-hidden sm:relative sm:w-full sm:max-w-[280px] border-r border-gray-200 dark:border-law-700"
               >
-                {erro && (
-                  <motion.div 
-                    className="bg-red-100 dark:bg-red-900 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg mb-4"
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <div className="flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span className="font-medium">{erro}</span>
-                    </div>
-                  </motion.div>
-                )}
-                
-                <AnimatePresence initial={false}>
-                  {mensagens.map((msg) => (
-                    <ChatMessage 
-                      key={msg.id} 
-                      conteudo={msg.conteudo} 
-                      isUsuario={msg.isUsuario} 
-                    />
-                  ))}
-                </AnimatePresence>
-                <div ref={messagesEndRef} />
-              </motion.div>
-              
-              {/* Indicador de digitação */}
-              <AnimatePresence>
-                {isCarregando && (
-                  <motion.div 
-                    className="flex items-center space-x-2 text-law-500 dark:text-law-400 text-sm mt-4 max-w-2xl mx-auto"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <svg className="h-5 w-5 animate-pulse" fill="currentColor" viewBox="0 0 24 24">
-                      <circle cx="4" cy="12" r="3" />
-                      <circle cx="12" cy="12" r="3" />
-                      <circle cx="20" cy="12" r="3" />
-                    </svg>
-                    <span>Assistente jurídico está digitando...</span>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-            
-            {/* Área de input */}
-            <div className={`border-t border-law-200 dark:border-law-700 bg-white dark:bg-law-800 p-4 ${isMobile ? 'mobile-typing-area' : ''} rounded-b-lg`}>
-              <div className="max-w-2xl mx-auto">
-                <ChatInput 
-                  onEnviar={handleEnviarMensagem} 
-                  isCarregando={isCarregando} 
+                <ConversasSidebar 
+                  conversaAtual={conversaAtual}
+                  onSelecionarConversa={handleSelecionarConversa}
+                  onNovaConversa={handleNovaConversa}
+                  onFecharSidebar={() => setSidebarAberta(false)}
                 />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Área principal de chat */}
+          <motion.div 
+            className="flex-grow h-full overflow-hidden flex flex-col relative"
+            animate={{ 
+              marginLeft: isMobile ? 0 : sidebarAberta ? "0" : "-280px",
+              width: isMobile ? "100%" : sidebarAberta ? "calc(100% - 280px)" : "100%"
+            }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          >
+            {!user && !isLoading && (
+              <div className="flex-grow flex flex-col justify-center items-center p-4 text-center">
+                <h1 className="text-2xl sm:text-4xl font-serif text-primary-700 dark:text-primary-300 mb-4">
+                  Bem-vindo à JurisIA
+                </h1>
+                <p className="text-law-600 dark:text-law-300 mb-8 max-w-md">
+                  Faça login para começar a usar o assistente jurídico inteligente para advogados brasileiros
+                </p>
+                <Link 
+                  href="/login"
+                  className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors duration-300 font-medium shadow-md hover:shadow-lg"
+                >
+                  Entrar na plataforma
+                </Link>
               </div>
-            </div>
+            )}
+
+            {user && (
+              <>
+                {/* Botões de acesso rápido */}
+                <div className="flex justify-center space-x-4 my-4 px-4">
+                  <Link
+                    href="/documentos"
+                    className="flex items-center px-4 py-2 bg-primary-50 dark:bg-law-800 text-primary-700 dark:text-primary-300 rounded-lg hover:bg-primary-100 dark:hover:bg-law-700 transition-colors duration-300 border border-primary-200 dark:border-law-600"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Criar Documentos
+                  </Link>
+                </div>
+                
+                {/* Chat existente */}
+                <div 
+                  ref={chatContainerRef}
+                  className="flex-grow overflow-y-auto scrollbar-custom pb-32 pt-4 px-2 sm:px-4"
+                  id="chat-messages"
+                >
+                  <motion.div 
+                    className="max-w-2xl mx-auto space-y-6"
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                  >
+                    {erro && (
+                      <motion.div 
+                        className="bg-red-100 dark:bg-red-900 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg mb-4"
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <div className="flex items-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="font-medium">{erro}</span>
+                        </div>
+                      </motion.div>
+                    )}
+                    
+                    <AnimatePresence initial={false}>
+                      {mensagens.map((msg) => (
+                        <ChatMessage 
+                          key={msg.id} 
+                          conteudo={msg.conteudo} 
+                          isUsuario={msg.isUsuario} 
+                        />
+                      ))}
+                    </AnimatePresence>
+                    <div ref={messagesEndRef} />
+                  </motion.div>
+                  
+                  {/* Indicador de digitação */}
+                  <AnimatePresence>
+                    {isCarregando && (
+                      <motion.div 
+                        className="flex items-center space-x-2 text-law-500 dark:text-law-400 text-sm mt-4 max-w-2xl mx-auto"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <svg className="h-5 w-5 animate-pulse" fill="currentColor" viewBox="0 0 24 24">
+                          <circle cx="4" cy="12" r="3" />
+                          <circle cx="12" cy="12" r="3" />
+                          <circle cx="20" cy="12" r="3" />
+                        </svg>
+                        <span>Assistente jurídico está digitando...</span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+                
+                {/* Área de input */}
+                <div className={`border-t border-law-200 dark:border-law-700 bg-white dark:bg-law-800 p-4 ${isMobile ? 'mobile-typing-area' : ''} rounded-b-lg`}>
+                  <div className="max-w-2xl mx-auto">
+                    <ChatInput 
+                      onEnviar={handleEnviarMensagem} 
+                      isCarregando={isCarregando} 
+                    />
+                  </div>
+                </div>
+              </>
+            )}
           </motion.div>
         </div>
       </Layout>

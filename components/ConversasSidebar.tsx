@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { Conversa, carregarConversas, excluirConversa, marcarComoFavorito, exportarConversa, exportarTodasConversas, Mensagem } from '../utils/supabase';
 import toast from 'react-hot-toast';
+import { useAuth } from '../contexts/AuthContext';
 
 interface ConversasSidebarProps {
-  usuarioId: string;
+  usuarioId?: string;
   conversaAtual: string | null;
   onSelecionarConversa: (conversaId: string) => void;
   onNovaConversa: () => void;
   toggleSidebar?: () => void;
   isMobile?: boolean;
+  onFecharSidebar?: () => void;
 }
 
 // Adicionando interface para dados exportados
@@ -25,8 +27,10 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
   onSelecionarConversa,
   onNovaConversa,
   toggleSidebar,
-  isMobile = false
+  isMobile = false,
+  onFecharSidebar
 }) => {
+  const { user } = useAuth();
   const [conversas, setConversas] = useState<Conversa[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -41,16 +45,26 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
   const downloadRef = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
-    const carregarDados = async () => {
-      if (!usuarioId) return;
+    const carregarDados = async (tentativa = 0) => {
+      // Usar o ID do usuário do contexto se não for fornecido como prop
+      const userId = usuarioId || (user?.id);
+      if (!userId) return;
       
       try {
         setCarregando(true);
-        const dados = await carregarConversas(usuarioId);
+        const dados = await carregarConversas(userId);
         setConversas(dados);
         setErro(null);
       } catch (error) {
-        console.error('Erro ao carregar conversas:', error);
+        console.error(`Erro ao carregar conversas (tentativa ${tentativa + 1}):`, error);
+        
+        // Tentar novamente até 3 vezes com delay progressivo
+        if (tentativa < 2) {
+          const delay = (tentativa + 1) * 1000; // 1s, 2s
+          setTimeout(() => carregarDados(tentativa + 1), delay);
+          return;
+        }
+        
         setErro('Falha ao carregar conversas. Tente novamente.');
       } finally {
         setCarregando(false);
@@ -58,7 +72,7 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
     };
 
     carregarDados();
-  }, [usuarioId]);
+  }, [usuarioId, user]);
 
   const handleExcluirConversa = async (e: React.MouseEvent, conversaId: string) => {
     e.stopPropagation();
@@ -166,9 +180,17 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
         return;
       }
       
+      // Usar o ID do usuário do contexto se não for fornecido como prop
+      const userId = usuarioId || (user?.id);
+      if (!userId) {
+        toast.error('Usuário não identificado');
+        setExportando(false);
+        return;
+      }
+      
       // Exportar todas as conversas
       if (todas) {
-        dadosExportados = await exportarTodasConversas(usuarioId);
+        dadosExportados = await exportarTodasConversas(userId);
         nomeArquivo = `todas_conversas_${new Date().toISOString().split('T')[0]}`;
       } 
       // Exportar conversas selecionadas
@@ -320,14 +342,41 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
     );
   };
 
+  // Função para atualizar manualmente as conversas
+  const atualizarConversas = async () => {
+    const userId = usuarioId || (user?.id);
+    if (!userId) return;
+    
+    try {
+      setCarregando(true);
+      
+      // Força o carregamento ignorando o cache
+      if (typeof window !== 'undefined') {
+        // Adicionar um parâmetro de tempo para forçar o recarregamento
+        const timestamp = Date.now();
+        const dados = await carregarConversas(userId + `?nocache=${timestamp}`);
+        setConversas(dados);
+        setErro(null);
+        toast.success('Conversas atualizadas com sucesso!');
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar conversas:', error);
+      setErro('Falha ao atualizar conversas. Tente novamente.');
+      toast.error('Falha ao atualizar conversas.');
+    } finally {
+      setCarregando(false);
+    }
+  };
+
   return (
     <div className="h-full w-full flex flex-col bg-white dark:bg-law-900 shadow-elegant rounded-r-lg overflow-hidden">
+      {/* Cabeçalho */}
       <div className="p-3 sm:p-4 border-b border-law-200 dark:border-law-700 flex items-center justify-between">
         <div className="flex items-center">
           {/* Botão para fechar o menu em dispositivos móveis */}
-          {isMobile && toggleSidebar && (
+          {isMobile && onFecharSidebar && (
             <button 
-              onClick={toggleSidebar}
+              onClick={onFecharSidebar}
               className="md:hidden mr-2 p-1.5 rounded-md bg-law-100 hover:bg-law-200 dark:bg-law-800 dark:hover:bg-law-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50 transition-colors duration-300"
               aria-label="Fechar menu de conversas"
             >
@@ -347,30 +396,47 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
             Conversas
           </h2>
         </div>
-        <div className="flex items-center space-x-2">
-          <button 
-            onClick={() => setVisualizacao(visualizacao === 'todas' ? 'favoritas' : 'todas')}
-            className={`p-1.5 rounded-md transition-colors duration-300 ${
-              visualizacao === 'favoritas' 
-                ? 'bg-secondary-100 text-secondary-700 dark:bg-secondary-900 dark:text-secondary-300' 
-                : 'bg-law-100 hover:bg-law-200 text-primary-700 dark:bg-law-800 dark:hover:bg-law-700 dark:text-law-300'
-            }`}
-            title={visualizacao === 'favoritas' ? 'Mostrar todas' : 'Mostrar favoritas'}
+        
+        <div className="flex items-center">
+          {/* Botão de atualizar conversas */}
+          <button
+            onClick={atualizarConversas}
+            disabled={carregando}
+            className="p-1.5 rounded-md bg-law-100 hover:bg-law-200 dark:bg-law-800 dark:hover:bg-law-700 focus:outline-none transition-colors duration-300"
+            aria-label="Atualizar conversas"
+            title="Atualizar conversas"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" fill={visualizacao === 'favoritas' ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-            </svg>
-          </button>
-          <button 
-            onClick={onNovaConversa}
-            className="p-1.5 rounded-md bg-primary-50 hover:bg-primary-100 dark:bg-primary-900 dark:hover:bg-primary-800 text-primary-700 dark:text-primary-300 transition-colors duration-300"
-            title="Nova Conversa"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              className={`h-4 w-4 text-primary-600 dark:text-primary-400 ${carregando ? 'animate-spin' : ''}`}
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           </button>
         </div>
+      </div>
+
+      {/* Botão Nova Conversa */}
+      <div className="px-3 py-2 border-b border-law-200 dark:border-law-700">
+        <button
+          onClick={onNovaConversa}
+          className="w-full flex items-center justify-center px-3 py-2 rounded-md bg-primary-600 hover:bg-primary-700 text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50 transition-colors duration-300"
+          aria-label="Nova conversa"
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            className="h-4 w-4 mr-2" 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          <span className="font-medium text-sm">Nova Conversa</span>
+        </button>
       </div>
       
       {/* Campo de busca */}

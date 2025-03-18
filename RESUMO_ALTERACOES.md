@@ -106,4 +106,15 @@
 
 5. Observe as animações ao navegar entre conversas e enviar mensagens
 
-6. Teste o perfil de usuário para verificar a edição de nome e exibição correta 
+6. Teste o perfil de usuário para verificar a edição de nome e exibição correta
+
+## Histórico de Alterações
+
+### [Data Atual]
+- Adicionada funcionalidade de Gerador de Documentos Jurídicos
+  - Nova página dedicada para criação de documentos (`/documentos`)
+  - Suporte para 8 tipos de documentos jurídicos
+  - Interface de 3 etapas: seleção, formulário e editor
+  - Editor em formato A4 para visualização e edição
+  - Opções para imprimir, copiar e salvar documentos
+  - Integração com a mesma API de IA do chat 
