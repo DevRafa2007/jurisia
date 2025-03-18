@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Documento, carregarDocumentos, excluirDocumento, marcarDocumentoComoFavorito } from '../utils/supabase';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
-import { useRouter } from 'next/router';
 
 interface DocumentosSidebarProps {
   documentoAtual: string | null;
@@ -18,7 +17,6 @@ const DocumentosSidebar: React.FC<DocumentosSidebarProps> = ({
   onFecharSidebar
 }) => {
   const { user } = useAuth();
-  const router = useRouter();
   const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);

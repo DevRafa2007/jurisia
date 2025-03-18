@@ -8,7 +8,6 @@ interface ConversasSidebarProps {
   conversaAtual: string | null;
   onSelecionarConversa: (conversaId: string) => void;
   onNovaConversa: () => void;
-  toggleSidebar?: () => void;
   isMobile?: boolean;
   onFecharSidebar?: () => void;
 }
@@ -26,7 +25,6 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
   conversaAtual,
   onSelecionarConversa,
   onNovaConversa,
-  toggleSidebar,
   isMobile = false,
   onFecharSidebar
 }) => {
@@ -35,7 +33,7 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [filtro, setFiltro] = useState('');
-  const [visualizacao, setVisualizacao] = useState<'todas' | 'favoritas'>('todas');
+  const [visualizacao] = useState<'todas' | 'favoritas'>('todas');
   const [mostraOpcoes, setMostraOpcoes] = useState<string | null>(null);
   const [mostrarModalExportar, setMostrarModalExportar] = useState(false);
   const [exportando, setExportando] = useState(false);

@@ -7,15 +7,12 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import Head from 'next/head';
 import DocumentosSidebar from '../components/DocumentosSidebar';
-import { Document, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel } from 'docx';
+import { Document, Packer, Paragraph, AlignmentType } from 'docx';
 import { saveAs } from 'file-saver';
 import { 
-  Documento, 
   carregarDocumento as fetchDocumento, 
-  carregarDocumentos, 
   criarDocumento, 
-  atualizarDocumento, 
-  excluirDocumento
+  atualizarDocumento
 } from '../utils/supabase';
 
 // Tipos de documentos suportados
@@ -291,12 +288,9 @@ ${camposDoc.map(campo => {
       });
       
       if (response.data && response.data.resposta) {
-        // Processar o texto para formatar corretamente
-        let texto = response.data.resposta;
-        
         // Converter texto para HTML com formatação adequada
         // 1. Quebrar o texto em linhas
-        const linhas = texto.split('\n');
+        const linhas = response.data.resposta.split('\n');
         
         // 2. Verificar se a primeira linha é um título
         let processado = '';
@@ -321,8 +315,7 @@ ${camposDoc.map(campo => {
           }
           
           // Substituir asteriscos por tags de negrito
-          let linhaProcessada = linha.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-          linhaProcessada = linhaProcessada.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
+          const linhaProcessada = linha.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<strong>$1</strong>');
           
           // Adicionar como parágrafo
           processado += `<p>${linhaProcessada}</p>`;
