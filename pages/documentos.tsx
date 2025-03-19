@@ -533,11 +533,7 @@ ${camposDoc.map(campo => {
       // Mostrar que o download está sendo processado
       toast.loading('Preparando documento para download...', { id: 'docx-loading' });
       
-      // Criar uma versão temporária em HTML para processamento
-      const tempElement = document.createElement('div');
-      tempElement.innerHTML = documentoGerado;
-      
-      // Iniciar a criação do documento DOCX com parágrafos
+      // Configurações para a conversão
       const docxParagrafos = [];
       
       // Adicionar o título como um parágrafo centralizado em negrito
@@ -546,35 +542,34 @@ ${camposDoc.map(campo => {
           text: tituloDocumento || 'Documento Jurídico',
           alignment: AlignmentType.CENTER,
           spacing: {
-            after: 400,
             before: 400,
+            after: 400,
           },
           bold: true,
         })
       );
       
-      // Processar corretamente cada parágrafo convertendo HTML em estilos DOCX
+      // Criar uma versão temporária em HTML para processamento
+      const tempElement = document.createElement('div');
+      tempElement.innerHTML = documentoGerado;
+      
+      // Processar cada parágrafo do documento
       const paragrafos = Array.from(tempElement.querySelectorAll('p'));
       
+      // Se não houver parágrafos, processar o texto bruto
       if (paragrafos.length === 0) {
-        // Se não encontrar parágrafos, tratar o texto como um único parágrafo
-        const textoCompleto = tempElement.textContent || '';
         docxParagrafos.push(
           new Paragraph({
-            text: textoCompleto,
+            text: tempElement.textContent || '',
             alignment: AlignmentType.JUSTIFIED,
           })
         );
       } else {
-        // Processar cada parágrafo corretamente
+        // Processar cada parágrafo, preservando formatação
         for (let i = 0; i < paragrafos.length; i++) {
           const paragrafo = paragrafos[i];
           
-          // Determinar se é um título
-          const ehTitulo = paragrafo.textContent === paragrafo.textContent?.toUpperCase() && 
-                           paragrafo.textContent.trim().length > 3;
-          
-          // Verificar o alinhamento
+          // Determinar alinhamento
           let alinhamento = AlignmentType.JUSTIFIED;
           if (paragrafo.style.textAlign === 'center' || paragrafo.classList.contains('titulo-centralizado')) {
             alinhamento = AlignmentType.CENTER;
@@ -584,91 +579,114 @@ ${camposDoc.map(campo => {
             alinhamento = AlignmentType.LEFT;
           }
           
-          // Processar o conteúdo do parágrafo incluindo formatação
-          if (paragrafo.innerHTML.includes('<strong>') || 
-              paragrafo.innerHTML.includes('<b>') || 
-              paragrafo.innerHTML.includes('<em>') || 
-              paragrafo.innerHTML.includes('<u>')) {
-            
-            // Parágrafo com formatação interna (negrito, itálico, etc.)
+          // Verificar se é um título
+          const ehTitulo = paragrafo.textContent === paragrafo.textContent?.toUpperCase() && 
+                           paragrafo.textContent.trim().length > 3;
+          
+          // Verificar se o parágrafo tem formatação interna
+          if (paragrafo.querySelector('strong, b, em, i, u, span[style]')) {
+            // Processar parágrafo com formatação
             const textRuns = [];
             
-            // Converter o HTML para um formato que possamos processar
-            const tempSpan = document.createElement('span');
-            tempSpan.innerHTML = paragrafo.innerHTML;
-            
-            // Processar cada nó filho
-            Array.from(tempSpan.childNodes).forEach(child => {
-              if (child.nodeType === Node.TEXT_NODE) {
-                // Texto simples
-                textRuns.push({
-                  text: child.textContent || '',
-                  bold: ehTitulo,
-                });
-              } else if (child.nodeType === Node.ELEMENT_NODE) {
-                const elemento = child as HTMLElement;
+            // Função para processar nós de texto e elementos com formatação
+            function processarNos(node) {
+              if (node.nodeType === Node.TEXT_NODE) {
+                // Texto simples sem formatação específica
+                if (node.textContent && node.textContent.trim()) {
+                  textRuns.push(new TextRun({
+                    text: node.textContent,
+                    bold: ehTitulo,
+                  }));
+                }
+              } else if (node.nodeType === Node.ELEMENT_NODE) {
+                const elemento = node;
                 
-                // Extrair o texto
-                const texto = elemento.textContent || '';
-                
-                // Determinar a formatação
-                const ehNegrito = elemento.tagName === 'STRONG' || 
-                                  elemento.tagName === 'B' || 
-                                  elemento.style.fontWeight === 'bold' ||
-                                  ehTitulo;
-                                  
-                const ehItalico = elemento.tagName === 'EM' || 
-                                  elemento.tagName === 'I' || 
-                                  elemento.style.fontStyle === 'italic';
-                                  
-                const ehSublinhado = elemento.tagName === 'U' || 
-                                    elemento.style.textDecoration === 'underline';
-                
-                // Adicionar o texto com a formatação correta
-                textRuns.push({
-                  text: texto,
-                  bold: ehNegrito,
-                  italic: ehItalico,
-                  underline: ehSublinhado,
-                });
+                if (elemento.nodeName === 'BR') {
+                  // Quebra de linha
+                  textRuns.push(new TextRun({ text: '\n' }));
+                } else if (['STRONG', 'B', 'EM', 'I', 'U', 'SPAN'].includes(elemento.nodeName)) {
+                  // Elemento com possível formatação
+                  
+                  // Verificar formatações
+                  const ehNegrito = elemento.nodeName === 'STRONG' || 
+                                   elemento.nodeName === 'B' || 
+                                   elemento.style.fontWeight === 'bold' || 
+                                   elemento.style.fontWeight >= '600' ||
+                                   ehTitulo;
+                                   
+                  const ehItalico = elemento.nodeName === 'EM' || 
+                                   elemento.nodeName === 'I' || 
+                                   elemento.style.fontStyle === 'italic';
+                                   
+                  const ehSublinhado = elemento.nodeName === 'U' || 
+                                     elemento.style.textDecoration === 'underline' ||
+                                     elemento.style.textDecoration.includes('underline');
+                  
+                  // Verificar se tem conteúdo aninhado
+                  if (elemento.childNodes.length > 0) {
+                    // Processar nós filhos com a formatação do pai
+                    for (const filho of Array.from(elemento.childNodes)) {
+                      if (filho.nodeType === Node.TEXT_NODE) {
+                        if (filho.textContent && filho.textContent.trim()) {
+                          textRuns.push(new TextRun({
+                            text: filho.textContent,
+                            bold: ehNegrito,
+                            italic: ehItalico,
+                            underline: ehSublinhado,
+                          }));
+                        }
+                      } else {
+                        // Processar elementos aninhados recursivamente
+                        processarNos(filho);
+                      }
+                    }
+                  } else if (elemento.textContent && elemento.textContent.trim()) {
+                    // Elemento sem filhos, apenas texto
+                    textRuns.push(new TextRun({
+                      text: elemento.textContent,
+                      bold: ehNegrito,
+                      italic: ehItalico,
+                      underline: ehSublinhado,
+                    }));
+                  }
+                } else {
+                  // Outros elementos, processar os filhos
+                  for (const filho of Array.from(elemento.childNodes)) {
+                    processarNos(filho);
+                  }
+                }
               }
-            });
+            }
             
-            // Criar o parágrafo com os Text Runs
+            // Processar todos os nós filhos do parágrafo
+            for (const node of Array.from(paragrafo.childNodes)) {
+              processarNos(node);
+            }
+            
+            // Adicionar o parágrafo com todas as formatações
             docxParagrafos.push(
               new Paragraph({
-                children: textRuns.map(run => new TextRun(run)),
+                children: textRuns,
                 alignment: alinhamento,
                 spacing: {
-                  after: 240,
-                  before: ehTitulo ? 400 : 0,
-                }
+                  before: ehTitulo ? 400 : 120,
+                  after: ehTitulo ? 400 : 240,
+                },
               })
             );
           } else {
-            // Parágrafo simples sem formatação interna
+            // Parágrafo sem formatação interna
             docxParagrafos.push(
               new Paragraph({
                 text: paragrafo.textContent || '',
                 alignment: alinhamento,
                 bold: ehTitulo,
                 spacing: {
-                  after: 240,
-                  before: ehTitulo ? 400 : 0,
-                }
+                  before: ehTitulo ? 400 : 120,
+                  after: ehTitulo ? 400 : 240,
+                },
               })
             );
-          }
-          
-          // Adicionar espaçamento extra entre parágrafos
-          if (i < paragrafos.length - 1) {
-            // Se o próximo parágrafo for um título, adicionar mais espaço
-            const proximoEhTitulo = paragrafos[i+1].textContent === paragrafos[i+1].textContent?.toUpperCase() && 
-                                  paragrafos[i+1].textContent.trim().length > 3;
-                                  
-            if (proximoEhTitulo) {
-              docxParagrafos.push(new Paragraph({ text: '', spacing: { before: 240, after: 240 } }));
-            }
           }
         }
       }
@@ -679,14 +697,14 @@ ${camposDoc.map(campo => {
           properties: {
             page: {
               margin: {
-                top: 1440,    // Margem superior: 1 polegada (1440 twips)
-                right: 1440,  // Margem direita: 1 polegada
-                bottom: 1440, // Margem inferior: 1 polegada
-                left: 1440,   // Margem esquerda: 1 polegada
+                top: 1440,
+                right: 1440,
+                bottom: 1440,
+                left: 1440,
               },
               size: {
-                width: 11906, // Largura A4: 8.27" (8.27 * 1440 = 11906 twips)
-                height: 16838, // Altura A4: 11.69" (11.69 * 1440 = 16838 twips)
+                width: 11906,  // A4 width in twips
+                height: 16838, // A4 height in twips
               },
             },
           },
