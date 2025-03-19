@@ -864,33 +864,93 @@ ${camposDoc.map(campo => {
 
   // Função para editar o documento diretamente no editor
   const handleDocumentoChange = (e: React.FormEvent<HTMLDivElement>) => {
-    // Armazenar o ponto de seleção atual
-    const selection = window.getSelection();
-    const range = selection?.getRangeAt(0);
-    const startOffset = range?.startOffset;
-    const startContainer = range?.startContainer;
+    // Obter a div do editor
+    const editorDiv = e.currentTarget;
     
-    // Atualizar o conteúdo
-    const novoConteudo = e.currentTarget.innerHTML;
+    // Salvar a posição atual de forma mais robusta
+    const selection = window.getSelection();
+    
+    // Obter offsets relativos ao elemento editável
+    let cursorPosition = 0;
+    let anchorNode = selection?.anchorNode;
+    let anchorOffset = selection?.anchorOffset || 0;
+    
+    // Obter o novo conteúdo antes de qualquer atualização de estado
+    const novoConteudo = editorDiv.innerHTML;
+    
+    // Ignorar atualizações desnecessárias (otimização)
+    if (documentoGerado === novoConteudo) return;
+    
+    // Atualizar o estado
     setDocumentoGerado(novoConteudo);
     
-    // Restaurar o ponto de seleção após a atualização do estado
-    // Utilizamos um setTimeout para garantir que o DOM foi atualizado
+    // Usar um timeout maior para garantir que o React atualizou o DOM
     setTimeout(() => {
-      if (selection && range && startContainer && startOffset !== undefined) {
+      // Usar o ref para acessar o elemento atual do DOM
+      if (editorRef.current) {
         try {
-          // Tentar restaurar a posição anterior
-          const newRange = document.createRange();
-          newRange.setStart(startContainer, startOffset);
-          newRange.setEnd(startContainer, startOffset);
+          // Tentar restaurar o foco primeiro
+          editorRef.current.focus();
           
-          selection.removeAllRanges();
-          selection.addRange(newRange);
+          // Agora tente restaurar a seleção
+          const selection = window.getSelection();
+          
+          // Encontrar o texto e posição para restaurar cursor
+          function encontrarPosicaoTexto(node: Node, offset: number): { node: Node, offset: number } | null {
+            // Se o nó for um nó de texto, este é o destino
+            if (node.nodeType === Node.TEXT_NODE) {
+              return { node, offset };
+            }
+            
+            // Se for um elemento, procurar pelos filhos
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const elem = node as Element;
+              // Se o elemento for do tipo de entrada, não percorrer
+              if (elem.tagName === 'INPUT' || elem.tagName === 'TEXTAREA') {
+                return null;
+              }
+              
+              // Percorrer nós filhos
+              for (let i = 0; i < elem.childNodes.length; i++) {
+                const resultado = encontrarPosicaoTexto(elem.childNodes[i], offset);
+                if (resultado) return resultado;
+              }
+            }
+            
+            return null;
+          }
+          
+          // Se tivermos o nó âncora, tente restaurar naquele nó específico ou encontre
+          // um nó de texto adequado
+          if (anchorNode) {
+            // Ver se o nó âncora anterior ainda está no DOM
+            let novoAnchorNode = anchorNode;
+            let novoAnchorOffset = anchorOffset;
+            
+            // Se o nó não estiver mais no DOM ou for o próprio editor
+            if (!document.contains(anchorNode) || anchorNode === editorRef.current) {
+              // Procurar um nó de texto adequado no editor
+              const resultado = encontrarPosicaoTexto(editorRef.current, 0);
+              if (resultado) {
+                novoAnchorNode = resultado.node;
+                novoAnchorOffset = Math.min(anchorOffset, novoAnchorNode.textContent?.length || 0);
+              }
+            }
+            
+            // Criar e aplicar a nova seleção
+            if (selection) {
+              selection.removeAllRanges();
+              const range = document.createRange();
+              range.setStart(novoAnchorNode, novoAnchorOffset);
+              range.setEnd(novoAnchorNode, novoAnchorOffset);
+              selection.addRange(range);
+            }
+          }
         } catch (error) {
-          console.error("Erro ao restaurar posição do cursor:", error);
+          console.error("Erro ao restaurar o cursor:", error);
         }
       }
-    }, 0);
+    }, 10); // Um timeout ligeiramente maior
   };
 
   // Função para alterar o título do documento
