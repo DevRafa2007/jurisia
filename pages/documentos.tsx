@@ -952,6 +952,102 @@ ${camposDoc.map(campo => {
     setTituloDocumento(e.target.value);
   };
 
+  // Adicionar funções de formatação de texto
+  const executarComando = (comando: string, valor: string = '') => {
+    document.execCommand(comando, false, valor);
+    if (editorRef.current) {
+      editorRef.current.focus();
+    }
+  };
+
+  const formatarTexto = (estilo: string) => {
+    switch (estilo) {
+      case 'negrito':
+        executarComando('bold');
+        break;
+      case 'italico':
+        executarComando('italic');
+        break;
+      case 'sublinhado':
+        executarComando('underline');
+        break;
+      case 'tachado':
+        executarComando('strikeThrough');
+        break;
+      case 'justificar':
+        executarComando('justifyFull');
+        break;
+      case 'alinhar-esquerda':
+        executarComando('justifyLeft');
+        break;
+      case 'alinhar-centro':
+        executarComando('justifyCenter');
+        break;
+      case 'alinhar-direita':
+        executarComando('justifyRight');
+        break;
+      case 'lista-ordenada':
+        executarComando('insertOrderedList');
+        break;
+      case 'lista-nao-ordenada':
+        executarComando('insertUnorderedList');
+        break;
+      case 'recuo':
+        executarComando('indent');
+        break;
+      case 'reduzir-recuo':
+        executarComando('outdent');
+        break;
+      default:
+        break;
+    }
+    // Atualizar o estado documentoGerado após a formatação
+    if (editorRef.current) {
+      setDocumentoGerado(editorRef.current.innerHTML);
+    }
+  };
+
+  const alterarFonte = (evento: React.ChangeEvent<HTMLSelectElement>) => {
+    executarComando('fontName', evento.target.value);
+    if (editorRef.current) {
+      setDocumentoGerado(editorRef.current.innerHTML);
+    }
+  };
+
+  const alterarTamanhoFonte = (evento: React.ChangeEvent<HTMLSelectElement>) => {
+    executarComando('fontSize', evento.target.value);
+    if (editorRef.current) {
+      setDocumentoGerado(editorRef.current.innerHTML);
+    }
+  };
+
+  const alterarCorTexto = (evento: React.ChangeEvent<HTMLInputElement>) => {
+    executarComando('foreColor', evento.target.value);
+    if (editorRef.current) {
+      setDocumentoGerado(editorRef.current.innerHTML);
+    }
+  };
+
+  const inserirLink = () => {
+    const url = prompt('Digite o URL do link:');
+    if (url) {
+      executarComando('createLink', url);
+      if (editorRef.current) {
+        setDocumentoGerado(editorRef.current.innerHTML);
+      }
+    }
+  };
+
+  const inserirImagem = () => {
+    const url = prompt('Digite o URL da imagem:');
+    if (url) {
+      executarComando('insertImage', url);
+      if (editorRef.current) {
+        setDocumentoGerado(editorRef.current.innerHTML);
+      }
+    }
+  };
+
   // Renderiza o seletor de tipo de documento
   const renderSeletorTipoDocumento = () => (
     <motion.div 
@@ -1191,6 +1287,229 @@ ${camposDoc.map(campo => {
               </>
             )}
           </button>
+        </div>
+      </div>
+
+      {/* Barra de ferramentas de formatação */}
+      <div className="mb-4 p-2 bg-gray-100 dark:bg-law-800 rounded-lg border border-gray-300 dark:border-law-700 overflow-x-auto no-print">
+        <div className="flex flex-wrap items-center gap-1 min-w-max">
+          {/* Grupo de estilo de texto */}
+          <div className="flex border-r border-gray-300 dark:border-law-700 pr-2 gap-1">
+            <button 
+              onClick={() => formatarTexto('negrito')} 
+              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
+              title="Negrito"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path>
+                <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path>
+              </svg>
+            </button>
+            <button 
+              onClick={() => formatarTexto('italico')} 
+              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
+              title="Itálico"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="19" y1="4" x2="10" y2="4"></line>
+                <line x1="14" y1="20" x2="5" y2="20"></line>
+                <line x1="15" y1="4" x2="9" y2="20"></line>
+              </svg>
+            </button>
+            <button 
+              onClick={() => formatarTexto('sublinhado')} 
+              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
+              title="Sublinhado"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"></path>
+                <line x1="4" y1="21" x2="20" y2="21"></line>
+              </svg>
+            </button>
+            <button 
+              onClick={() => formatarTexto('tachado')} 
+              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
+              title="Tachado"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17 9V5H7v4"></path>
+                <path d="M7 15v4h10v-4"></path>
+                <line x1="4" y1="12" x2="20" y2="12"></line>
+              </svg>
+            </button>
+          </div>
+
+          {/* Grupo de alinhamento */}
+          <div className="flex border-r border-gray-300 dark:border-law-700 pr-2 gap-1">
+            <button 
+              onClick={() => formatarTexto('alinhar-esquerda')} 
+              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
+              title="Alinhar à esquerda"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="17" y1="10" x2="3" y2="10"></line>
+                <line x1="21" y1="6" x2="3" y2="6"></line>
+                <line x1="21" y1="14" x2="3" y2="14"></line>
+                <line x1="17" y1="18" x2="3" y2="18"></line>
+              </svg>
+            </button>
+            <button 
+              onClick={() => formatarTexto('alinhar-centro')} 
+              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
+              title="Centralizar"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="10" x2="6" y2="10"></line>
+                <line x1="21" y1="6" x2="3" y2="6"></line>
+                <line x1="21" y1="14" x2="3" y2="14"></line>
+                <line x1="18" y1="18" x2="6" y2="18"></line>
+              </svg>
+            </button>
+            <button 
+              onClick={() => formatarTexto('alinhar-direita')} 
+              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
+              title="Alinhar à direita"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="21" y1="10" x2="7" y2="10"></line>
+                <line x1="21" y1="6" x2="3" y2="6"></line>
+                <line x1="21" y1="14" x2="3" y2="14"></line>
+                <line x1="21" y1="18" x2="7" y2="18"></line>
+              </svg>
+            </button>
+            <button 
+              onClick={() => formatarTexto('justificar')} 
+              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
+              title="Justificar"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="21" y1="10" x2="3" y2="10"></line>
+                <line x1="21" y1="6" x2="3" y2="6"></line>
+                <line x1="21" y1="14" x2="3" y2="14"></line>
+                <line x1="21" y1="18" x2="3" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+
+          {/* Grupo de listas */}
+          <div className="flex border-r border-gray-300 dark:border-law-700 pr-2 gap-1">
+            <button 
+              onClick={() => formatarTexto('lista-ordenada')} 
+              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
+              title="Lista numerada"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="9" y1="6" x2="20" y2="6"></line>
+                <line x1="9" y1="12" x2="20" y2="12"></line>
+                <line x1="9" y1="18" x2="20" y2="18"></line>
+                <line x1="5" y1="6" x2="5" y2="6"></line>
+                <line x1="5" y1="12" x2="5" y2="12"></line>
+                <line x1="5" y1="18" x2="5" y2="18"></line>
+              </svg>
+            </button>
+            <button 
+              onClick={() => formatarTexto('lista-nao-ordenada')} 
+              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
+              title="Lista com marcadores"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="9" y1="6" x2="20" y2="6"></line>
+                <line x1="9" y1="12" x2="20" y2="12"></line>
+                <line x1="9" y1="18" x2="20" y2="18"></line>
+                <circle cx="5" cy="6" r="1"></circle>
+                <circle cx="5" cy="12" r="1"></circle>
+                <circle cx="5" cy="18" r="1"></circle>
+              </svg>
+            </button>
+            <button 
+              onClick={() => formatarTexto('recuo')} 
+              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
+              title="Aumentar recuo"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="20" y1="6" x2="9" y2="6"></line>
+                <line x1="20" y1="12" x2="9" y2="12"></line>
+                <line x1="20" y1="18" x2="9" y2="18"></line>
+                <polyline points="5 8 1 12 5 16"></polyline>
+              </svg>
+            </button>
+            <button 
+              onClick={() => formatarTexto('reduzir-recuo')} 
+              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
+              title="Diminuir recuo"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="20" y1="6" x2="9" y2="6"></line>
+                <line x1="20" y1="12" x2="9" y2="12"></line>
+                <line x1="20" y1="18" x2="9" y2="18"></line>
+                <polyline points="1 8 5 12 1 16"></polyline>
+              </svg>
+            </button>
+          </div>
+
+          {/* Seletor de fonte */}
+          <div className="flex border-r border-gray-300 dark:border-law-700 pr-2 gap-1">
+            <select 
+              onChange={alterarFonte} 
+              className="p-1 text-xs rounded border border-gray-300 dark:border-law-700 bg-white dark:bg-law-900 text-gray-800 dark:text-gray-300"
+              title="Tipo de fonte"
+            >
+              <option value="">Fonte</option>
+              <option value="Arial">Arial</option>
+              <option value="Times New Roman">Times New Roman</option>
+              <option value="Calibri">Calibri</option>
+              <option value="Georgia">Georgia</option>
+              <option value="Verdana">Verdana</option>
+              <option value="Tahoma">Tahoma</option>
+              <option value="Courier New">Courier New</option>
+            </select>
+            
+            <select 
+              onChange={alterarTamanhoFonte} 
+              className="p-1 text-xs rounded border border-gray-300 dark:border-law-700 bg-white dark:bg-law-900 text-gray-800 dark:text-gray-300"
+              title="Tamanho da fonte"
+            >
+              <option value="">Tamanho</option>
+              <option value="1">Pequeno</option>
+              <option value="3">Normal</option>
+              <option value="5">Grande</option>
+              <option value="7">Muito grande</option>
+            </select>
+
+            <div className="flex items-center">
+              <input 
+                type="color" 
+                onChange={alterarCorTexto} 
+                className="w-6 h-6 rounded cursor-pointer"
+                title="Cor do texto"
+              />
+            </div>
+          </div>
+
+          {/* Inserir elementos */}
+          <div className="flex gap-1">
+            <button 
+              onClick={inserirLink} 
+              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
+              title="Inserir link"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+              </svg>
+            </button>
+            <button 
+              onClick={inserirImagem} 
+              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
+              title="Inserir imagem"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
       
