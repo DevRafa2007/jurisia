@@ -351,78 +351,6 @@ ${camposDoc.map(campo => {
     // Preparar o conteúdo para impressão
     const conteudoParaImprimir = documentoGerado;
     
-    // Verificar se estamos em um dispositivo móvel
-    if (isMobile) {
-      toast.loading('Preparando documento para impressão...', { id: 'print-loading' });
-      
-      // Em dispositivos móveis, muitas vezes o método de janela de impressão não funciona bem
-      // Vamos tentar um método alternativo primeiro
-      try {
-        // Usar window.print() com preparação específica
-        const estiloOriginal = document.body.style.cssText;
-        const conteudoOriginal = document.body.innerHTML;
-        
-        // Substituir temporariamente o conteúdo da página
-        document.body.innerHTML = `
-          <style>
-            @page {
-              size: A4;
-              margin: 0;
-            }
-            body {
-              margin: 0;
-              padding: 0;
-              font-family: 'Times New Roman', Times, serif;
-              font-size: 12pt;
-              line-height: 1.5;
-              background-color: white;
-              color: black;
-            }
-            .pagina-a4 {
-              width: 100%;
-              padding: 1.5cm;
-              box-sizing: border-box;
-              background-color: white;
-            }
-            p {
-              margin: 0 0 0.5em 0;
-              text-align: justify;
-            }
-            .titulo-centralizado, p:first-child {
-              text-align: center;
-              font-weight: bold;
-              font-size: 14pt;
-              margin-bottom: 2em;
-            }
-            strong {
-              font-weight: bold;
-            }
-          </style>
-          <div class="pagina-a4">
-            ${conteudoParaImprimir}
-          </div>
-        `;
-        
-        // Permitir que o DOM seja atualizado
-        setTimeout(() => {
-          window.print();
-          
-          // Restaurar o conteúdo após a impressão
-          document.body.innerHTML = conteudoOriginal;
-          document.body.style.cssText = estiloOriginal;
-          
-          toast.dismiss('print-loading');
-        }, 300);
-        
-        return;
-      } catch (mobileError) {
-        console.error('Erro ao imprimir em dispositivo móvel:', mobileError);
-        toast.dismiss('print-loading');
-        // Continuar com o método padrão abaixo
-      }
-    }
-    
-    // Método padrão para desktop: abrir nova janela
     // Criar um novo documento para impressão
     const janelaImpressao = window.open('', '_blank');
     
@@ -461,26 +389,76 @@ ${camposDoc.map(campo => {
               overflow: visible;
             }
             p {
-              margin: 0 0 0.5em 0;
+              margin: 0 0 0.8em 0;
               text-align: justify;
             }
-            p:first-child {
+            /* Estilos para títulos */
+            h1, h2, h3, .titulo-centralizado, p.titulo, p:first-child {
               text-align: center;
               font-weight: bold;
+              margin: 1.2em 0;
+            }
+            h1, .titulo-principal {
               font-size: 14pt;
-              margin-bottom: 2em;
+              margin-top: 2em;
+              margin-bottom: 2.5em;
             }
-            strong {
-              font-weight: bold;
-            }
+            /* Garantir que elementos com a classe de título centralizado mantenham a formatação */
             .titulo-centralizado {
-              text-align: center;
+              text-align: center !important;
               font-weight: bold;
-              font-size: 14pt;
-              margin-bottom: 2em;
+              margin: 1.5em 0;
             }
+            /* Estilos para texto em negrito */
+            strong, b {
+              font-weight: bold;
+            }
+            /* Estilos para texto em itálico */
+            em, i {
+              font-style: italic;
+            }
+            /* Estilos para texto sublinhado */
+            u {
+              text-decoration: underline;
+            }
+            /* Alinhamentos específicos */
+            .text-center, [align="center"] {
+              text-align: center;
+            }
+            .text-right, [align="right"] {
+              text-align: right;
+            }
+            .text-left, [align="left"] {
+              text-align: left;
+            }
+            .text-justify, [align="justify"] {
+              text-align: justify;
+            }
+            /* Espaçamento entre parágrafos */
+            p + p {
+              margin-top: 0.5em;
+            }
+            /* Preservar quebras de linha */
+            br {
+              line-height: 150%;
+            }
+            /* Estilo para parágrafo com assinatura */
+            p.assinatura {
+              text-align: center;
+              margin-top: 3em;
+              margin-bottom: 1em;
+            }
+            /* Quebra de página */
             .quebra-pagina {
               page-break-before: always;
+            }
+            /* Listas */
+            ul, ol {
+              margin: 0.5em 0;
+              padding-left: 2em;
+            }
+            li {
+              margin-bottom: 0.3em;
             }
           </style>
         </head>
@@ -489,13 +467,42 @@ ${camposDoc.map(campo => {
             ${conteudoParaImprimir}
           </div>
           <script>
-            // Garantir que o conteúdo está correto antes de imprimir
+            // Aplicar formatações adicionais após o carregamento
             document.addEventListener('DOMContentLoaded', function() {
+              // Identificar e formatar elementos especiais
+              const paragrafos = document.querySelectorAll('p');
+              
+              // Verificar se o primeiro parágrafo é um título
+              if (paragrafos.length > 0) {
+                const primeiroParagrafo = paragrafos[0];
+                const texto = primeiroParagrafo.textContent || '';
+                
+                // Se o texto está todo em maiúsculas, provavelmente é um título
+                if (texto === texto.toUpperCase() && texto.length > 3) {
+                  primeiroParagrafo.classList.add('titulo-principal');
+                }
+              }
+              
+              // Formatar parágrafos com texto todo em maiúsculas como títulos
+              paragrafos.forEach(p => {
+                const texto = p.textContent || '';
+                if (texto === texto.toUpperCase() && texto.length > 3) {
+                  p.classList.add('titulo-centralizado');
+                }
+                
+                // Verificar se é um parágrafo de assinatura
+                if (texto.includes('__________________') || 
+                    texto.toLowerCase().includes('assinatura') ||
+                    texto.match(/[a-zA-Z ]+,\\s+\\d{1,2}\\s+de\\s+[a-zA-Z]+\\s+de\\s+\\d{4}/)) {
+                  p.classList.add('assinatura');
+                }
+              });
+              
               // Permitir que o conteúdo seja renderizado
               setTimeout(function() {
                 window.print();
                 setTimeout(function() { window.close(); }, 750);
-              }, 250);
+              }, 300);
             });
           </script>
         </body>
@@ -505,7 +512,7 @@ ${camposDoc.map(campo => {
       janelaImpressao.document.close();
     } else {
       // Fallback se não conseguir abrir uma nova janela
-      window.print();
+      toast.error('Não foi possível abrir a janela de impressão. Verifique as configurações do seu navegador.');
     }
   };
 
