@@ -526,148 +526,95 @@ ${camposDoc.map(campo => {
       // Mostrar que o download está sendo processado
       toast.loading('Preparando documento para download...', { id: 'docx-loading' });
       
-      // Verificar se é dispositivo móvel para tratamento específico
-      const ajustarParaDispositivo = () => {
-        // Em dispositivos móveis, algumas configurações podem precisar ser ajustadas
-        if (isMobile) {
-          return {
-            // Ajustes específicos para mobile se necessário
-            usarMetodoSimples: true
-          };
+      // Criar um elemento temporário para analisar o HTML
+      const parser = new DOMParser();
+      const htmlDoc = parser.parseFromString(documentoGerado, 'text/html');
+      
+      // Obter todos os parágrafos do documento
+      const paragrafos = Array.from(htmlDoc.querySelectorAll('p'));
+      
+      // Iniciar a criação do documento DOCX
+      const docxParagrafos = [];
+      
+      // Adicionar o título como um parágrafo centralizado em negrito
+      docxParagrafos.push(
+        new Paragraph({
+          text: tituloDocumento || 'Documento Jurídico',
+          alignment: AlignmentType.CENTER,
+          spacing: {
+            after: 400,
+            before: 400,
+          },
+          bold: true,
+        })
+      );
+      
+      // Processar cada parágrafo mantendo sua formatação
+      for (let i = 0; i < paragrafos.length; i++) {
+        const p = paragrafos[i];
+        
+        // Determinar o alinhamento do parágrafo
+        let alignment = AlignmentType.JUSTIFIED;
+        
+        if (p.style.textAlign === 'center' || p.classList.contains('titulo-centralizado')) {
+          alignment = AlignmentType.CENTER;
+        } else if (p.style.textAlign === 'right') {
+          alignment = AlignmentType.RIGHT;
+        } else if (p.style.textAlign === 'left') {
+          alignment = AlignmentType.LEFT;
         }
-        return {
-          usarMetodoSimples: false
-        };
-      };
+        
+        // Determinar se o parágrafo deve estar em negrito
+        const isBold = p.classList.contains('titulo-centralizado') || 
+                      (i === 0 && !p.classList.contains('titulo-centralizado')) ||
+                      p.style.fontWeight === 'bold';
+        
+        // Criar o parágrafo no formato DOCX
+        const docxParagrafo = new Paragraph({
+          text: p.textContent || '',
+          alignment: alignment,
+          spacing: {
+            after: 200,
+            // Adicionar espaço extra antes dos parágrafos de título
+            before: isBold ? 400 : 0,
+          },
+          // Aplicar negrito se necessário
+          bold: isBold,
+        });
+        
+        docxParagrafos.push(docxParagrafo);
+      }
       
-      const { usarMetodoSimples } = ajustarParaDispositivo();
-      
-      // Em dispositivos móveis, pode ser melhor usar a abordagem simplificada diretamente
-      if (usarMetodoSimples) {
-        // Método simplificado que funciona melhor em mobile
+      // Se não encontrou parágrafos, crie um documento com o conteúdo completo
+      if (paragrafos.length === 0) {
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = documentoGerado;
         const textoCompleto = tempDiv.textContent || '';
         
-        const doc = new Document({
-          sections: [{
-            properties: {
-              page: {
-                margin: {
-                  top: 1440,
-                  right: 1440,
-                  bottom: 1440,
-                  left: 1440,
-                },
-              },
-            },
-            children: [
-              new Paragraph({
-                text: tituloDocumento || 'Documento Jurídico',
-                alignment: AlignmentType.CENTER,
-                spacing: {
-                  after: 400,
-                },
-                bold: true,
-              }),
-              new Paragraph({
-                text: textoCompleto,
-                alignment: AlignmentType.JUSTIFIED,
-              }),
-            ],
-          }],
-        });
-        
-        const buffer = await Packer.toBlob(doc);
-        saveAs(buffer, `${tituloDocumento || 'Documento Jurídico'}.docx`);
-        
-        toast.dismiss('docx-loading');
-        toast.success('Documento DOCX baixado com sucesso!');
-        return;
+        docxParagrafos.push(
+          new Paragraph({
+            text: textoCompleto,
+            alignment: AlignmentType.JUSTIFIED,
+          })
+        );
       }
       
-      // Continuar com o método normal para dispositivos desktop
-      // Extrair o conteúdo a partir do HTML
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = documentoGerado;
-      
-      // Encontrar o título e parágrafos
-      const paragrafos = Array.from(tempDiv.querySelectorAll('p'));
-      
-      // Se não encontrou parágrafos, cria um parágrafo com o conteúdo completo
-      if (paragrafos.length === 0) {
-        const p = document.createElement('p');
-        p.innerHTML = documentoGerado;
-        paragrafos.push(p);
-      }
-      
-      console.log(`Processando ${paragrafos.length} parágrafos`);
-      
-      // Criar um novo documento
+      // Criar o documento final
       const doc = new Document({
-        sections: [
-          {
-            properties: {
-              page: {
-                margin: {
-                  top: 1440, // 1 polegada = 1440 twips
-                  right: 1440,
-                  bottom: 1440,
-                  left: 1440,
-                },
+        sections: [{
+          properties: {
+            page: {
+              margin: {
+                top: 1440, // 1 polegada = 1440 twips
+                right: 1440,
+                bottom: 1440,
+                left: 1440,
               },
             },
-            children: [
-              // Processar cada parágrafo do documento
-              ...paragrafos.map((p, index) => {
-                // Se for o primeiro parágrafo (título do conteúdo)
-                if (index === 0 && (p.classList.contains('titulo-centralizado') || p === paragrafos[0])) {
-                  return new Paragraph({
-                    text: p.textContent || '',
-                    alignment: AlignmentType.CENTER,
-                    spacing: {
-                      after: 400,
-                    },
-                    bold: true,
-                  });
-                }
-                
-                // Para parágrafos normais, processar o texto
-                return new Paragraph({
-                  text: p.textContent || '',
-                  alignment: AlignmentType.JUSTIFIED,
-                  spacing: {
-                    after: 200,
-                  },
-                });
-              }),
-            ],
           },
-        ],
+          children: docxParagrafos,
+        }],
       });
-      
-      // Método alternativo se o documento estiver vazio
-      if (paragrafos.length <= 1) {
-        // Criar um documento simples com o conteúdo bruto
-        const textoCompleto = tempDiv.textContent || '';
-        
-        doc.addSection({
-          children: [
-            new Paragraph({
-              text: tituloDocumento || 'Documento Jurídico',
-              alignment: AlignmentType.CENTER,
-              spacing: {
-                after: 400,
-              },
-              bold: true,
-            }),
-            new Paragraph({
-              text: textoCompleto,
-              alignment: AlignmentType.JUSTIFIED,
-            }),
-          ],
-        });
-      }
       
       // Gerar o blob do documento
       const buffer = await Packer.toBlob(doc);
@@ -684,42 +631,9 @@ ${camposDoc.map(campo => {
       toast.error('Erro ao baixar documento. Tentando método alternativo...');
       
       try {
-        // Método alternativo mais simples usando o texto bruto
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = documentoGerado;
-        const textoCompleto = tempDiv.textContent || '';
-        
-        const doc = new Document({
-          sections: [{
-            properties: {},
-            children: [
-              new Paragraph({
-                text: tituloDocumento || 'Documento Jurídico',
-                alignment: AlignmentType.CENTER,
-                spacing: {
-                  after: 400,
-                },
-                bold: true,
-              }),
-              new Paragraph({
-                text: textoCompleto,
-                alignment: AlignmentType.JUSTIFIED,
-              }),
-            ],
-          }],
-        });
-        
-        const buffer = await Packer.toBlob(doc);
-        saveAs(buffer, `${tituloDocumento || 'Documento Jurídico'}.docx`);
-        
-        toast.success('Documento DOCX baixado com sucesso!');
-      } catch (docxError) {
-        console.error('Erro ao usar método alternativo DOCX:', docxError);
-        
-        // Se falhar, tentar o HTML
-        try {
-          // Método alternativo mais simples: baixar como HTML
-          const htmlContent = `<!DOCTYPE html>
+        // Método alternativo usando o HTML diretamente
+        const htmlBlob = new Blob([`
+          <!DOCTYPE html>
           <html>
           <head>
             <meta charset="utf-8">
@@ -750,16 +664,14 @@ ${camposDoc.map(campo => {
           <body>
             ${documentoGerado}
           </body>
-          </html>`;
-          
-          const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
-          saveAs(htmlBlob, `${tituloDocumento || 'Documento Jurídico'}.html`);
-          
-          toast.success('Documento HTML baixado com sucesso. Você pode abri-lo no Word.');
-        } catch (htmlError) {
-          console.error('Erro ao baixar como HTML:', htmlError);
-          toast.error('Não foi possível baixar o documento. Tente novamente ou use a opção de imprimir.');
-        }
+          </html>
+        `], { type: 'text/html' });
+        
+        saveAs(htmlBlob, `${tituloDocumento || 'Documento Jurídico'}.html`);
+        toast.success('Documento salvo como HTML. Você pode abrir este arquivo no Word.');
+      } catch (htmlError) {
+        console.error('Erro ao salvar como HTML:', htmlError);
+        toast.error('Não foi possível baixar o documento. Por favor, tente usar a opção de imprimir.');
       }
     }
   };
