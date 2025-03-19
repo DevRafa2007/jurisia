@@ -7,7 +7,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import Head from 'next/head';
 import DocumentosSidebar from '../components/DocumentosSidebar';
-import { Document, Packer, Paragraph, AlignmentType } from 'docx';
+import { Document, Packer, Paragraph, AlignmentType, TextRun } from 'docx';
 import { saveAs } from 'file-saver';
 import { 
   carregarDocumento as fetchDocumento, 
@@ -533,17 +533,11 @@ ${camposDoc.map(campo => {
       // Mostrar que o download está sendo processado
       toast.loading('Preparando documento para download...', { id: 'docx-loading' });
       
-      // Para preservar a estrutura exata do documento, precisamos manter
-      // cada parágrafo e sua formatação original
+      // Criar uma versão temporária em HTML para processamento
+      const tempElement = document.createElement('div');
+      tempElement.innerHTML = documentoGerado;
       
-      // Primeiro, criar uma cópia do elemento do editor
-      const editorClone = document.createElement('div');
-      editorClone.innerHTML = documentoGerado;
-      
-      // Obter todos os parágrafos e quebras do documento
-      const elementos = Array.from(editorClone.childNodes);
-      
-      // Iniciar a criação do documento DOCX com parágrafos mantendo exatamente a mesma estrutura
+      // Iniciar a criação do documento DOCX com parágrafos
       const docxParagrafos = [];
       
       // Adicionar o título como um parágrafo centralizado em negrito
@@ -559,128 +553,127 @@ ${camposDoc.map(campo => {
         })
       );
       
-      // Adicionar uma função para verificar se um elemento é um título
-      const ehTitulo = (elemento) => {
-        if (!elemento.textContent) return false;
-        
-        // Verificar se o texto está em formato de título (todo em maiúsculas e com **)
-        const texto = elemento.textContent.trim();
-        return (
-          (texto.startsWith('**') && texto.endsWith('**')) || 
-          (texto === texto.toUpperCase() && texto.length > 3) ||
-          elemento.classList.contains('titulo-centralizado')
-        );
-      };
-      
-      // Processar o HTML diretamente, preservando a estrutura e formatação
-      let htmlParaDocx = documentoGerado;
-      
-      // Criar uma versão temporária em HTML
-      const tempElement = document.createElement('div');
-      tempElement.innerHTML = htmlParaDocx;
-      
-      // Processar cada elemento no HTML
+      // Processar corretamente cada parágrafo convertendo HTML em estilos DOCX
       const paragrafos = Array.from(tempElement.querySelectorAll('p'));
       
-      // Se não encontrou parágrafos, vamos tentar analisar o texto como texto puro
       if (paragrafos.length === 0) {
-        // Dividir o texto por quebras de linha e criar um parágrafo para cada linha
-        const linhas = tempElement.innerText.split('\n').filter(linha => linha.trim() !== '');
-        
-        for (const linha of linhas) {
-          const estilo = linha.trim().toUpperCase() === linha.trim() && linha.trim().length > 3 ? 
-            { alignment: AlignmentType.CENTER, bold: true, spacing: { before: 400, after: 400 } } : 
-            { alignment: AlignmentType.JUSTIFIED, spacing: { after: 240 } };
-          
-          docxParagrafos.push(
-            new Paragraph({
-              text: linha.trim(),
-              ...estilo
-            })
-          );
-        }
-      } else {
-        // Processar cada parágrafo do HTML
-        for (let i = 0; i < paragrafos.length; i++) {
-          const p = paragrafos[i];
-          const texto = p.textContent || '';
-          
-          // Determinar o alinhamento e estilo do parágrafo
-          let estilo = {
+        // Se não encontrar parágrafos, tratar o texto como um único parágrafo
+        const textoCompleto = tempElement.textContent || '';
+        docxParagrafos.push(
+          new Paragraph({
+            text: textoCompleto,
             alignment: AlignmentType.JUSTIFIED,
-            spacing: { after: 240 }
-          };
+          })
+        );
+      } else {
+        // Processar cada parágrafo corretamente
+        for (let i = 0; i < paragrafos.length; i++) {
+          const paragrafo = paragrafos[i];
           
-          // Verificar se é um título
-          if (ehTitulo(p) || (i === 0 && texto.toUpperCase() === texto)) {
-            estilo = {
-              alignment: AlignmentType.CENTER,
-              bold: true,
-              spacing: { before: 400, after: 400 }
-            };
+          // Determinar se é um título
+          const ehTitulo = paragrafo.textContent === paragrafo.textContent?.toUpperCase() && 
+                           paragrafo.textContent.trim().length > 3;
+          
+          // Verificar o alinhamento
+          let alinhamento = AlignmentType.JUSTIFIED;
+          if (paragrafo.style.textAlign === 'center' || paragrafo.classList.contains('titulo-centralizado')) {
+            alinhamento = AlignmentType.CENTER;
+          } else if (paragrafo.style.textAlign === 'right') {
+            alinhamento = AlignmentType.RIGHT;
+          } else if (paragrafo.style.textAlign === 'left') {
+            alinhamento = AlignmentType.LEFT;
           }
           
-          // Adicionar quebras de linha extras entre seções
-          if (i > 0 && ehTitulo(p) && ehTitulo(paragrafos[i-1])) {
-            docxParagrafos.push(new Paragraph({ text: '', spacing: { before: 240, after: 240 } }));
-          }
-          
-          // Preservar quebras de linha dentro do parágrafo
-          if (texto.includes('\n')) {
-            const linhas = texto.split('\n');
-            for (const linha of linhas) {
-              if (linha.trim() !== '') {
-                docxParagrafos.push(
-                  new Paragraph({
-                    text: linha.trim(),
-                    ...estilo
-                  })
-                );
-              } else {
-                // Adicionar um parágrafo vazio para quebras de linha
-                docxParagrafos.push(new Paragraph({ text: '', spacing: { before: 120, after: 120 } }));
+          // Processar o conteúdo do parágrafo incluindo formatação
+          if (paragrafo.innerHTML.includes('<strong>') || 
+              paragrafo.innerHTML.includes('<b>') || 
+              paragrafo.innerHTML.includes('<em>') || 
+              paragrafo.innerHTML.includes('<u>')) {
+            
+            // Parágrafo com formatação interna (negrito, itálico, etc.)
+            const textRuns = [];
+            
+            // Converter o HTML para um formato que possamos processar
+            const tempSpan = document.createElement('span');
+            tempSpan.innerHTML = paragrafo.innerHTML;
+            
+            // Processar cada nó filho
+            Array.from(tempSpan.childNodes).forEach(child => {
+              if (child.nodeType === Node.TEXT_NODE) {
+                // Texto simples
+                textRuns.push({
+                  text: child.textContent || '',
+                  bold: ehTitulo,
+                });
+              } else if (child.nodeType === Node.ELEMENT_NODE) {
+                const elemento = child as HTMLElement;
+                
+                // Extrair o texto
+                const texto = elemento.textContent || '';
+                
+                // Determinar a formatação
+                const ehNegrito = elemento.tagName === 'STRONG' || 
+                                  elemento.tagName === 'B' || 
+                                  elemento.style.fontWeight === 'bold' ||
+                                  ehTitulo;
+                                  
+                const ehItalico = elemento.tagName === 'EM' || 
+                                  elemento.tagName === 'I' || 
+                                  elemento.style.fontStyle === 'italic';
+                                  
+                const ehSublinhado = elemento.tagName === 'U' || 
+                                    elemento.style.textDecoration === 'underline';
+                
+                // Adicionar o texto com a formatação correta
+                textRuns.push({
+                  text: texto,
+                  bold: ehNegrito,
+                  italic: ehItalico,
+                  underline: ehSublinhado,
+                });
               }
-            }
-          } else {
-            // Adicionar o parágrafo normalmente
+            });
+            
+            // Criar o parágrafo com os Text Runs
             docxParagrafos.push(
               new Paragraph({
-                text: texto,
-                ...estilo
+                children: textRuns.map(run => new TextRun(run)),
+                alignment: alinhamento,
+                spacing: {
+                  after: 240,
+                  before: ehTitulo ? 400 : 0,
+                }
+              })
+            );
+          } else {
+            // Parágrafo simples sem formatação interna
+            docxParagrafos.push(
+              new Paragraph({
+                text: paragrafo.textContent || '',
+                alignment: alinhamento,
+                bold: ehTitulo,
+                spacing: {
+                  after: 240,
+                  before: ehTitulo ? 400 : 0,
+                }
               })
             );
           }
           
-          // Adicionar um espaçamento extra após cada parágrafo
+          // Adicionar espaçamento extra entre parágrafos
           if (i < paragrafos.length - 1) {
-            docxParagrafos.push(new Paragraph({ text: '', spacing: { before: 120, after: 120 } }));
+            // Se o próximo parágrafo for um título, adicionar mais espaço
+            const proximoEhTitulo = paragrafos[i+1].textContent === paragrafos[i+1].textContent?.toUpperCase() && 
+                                  paragrafos[i+1].textContent.trim().length > 3;
+                                  
+            if (proximoEhTitulo) {
+              docxParagrafos.push(new Paragraph({ text: '', spacing: { before: 240, after: 240 } }));
+            }
           }
         }
       }
       
-      // Se não conseguimos extrair nenhum conteúdo, usar uma abordagem mais simples
-      if (docxParagrafos.length <= 1) {
-        const textoCompleto = documentoGerado.replace(/<[^>]+>/g, '\n').replace(/\n+/g, '\n');
-        const linhas = textoCompleto.split('\n').filter(l => l.trim() !== '');
-        
-        for (const linha of linhas) {
-          const ehTituloLinha = linha.trim().toUpperCase() === linha.trim() && linha.trim().length > 3;
-          
-          docxParagrafos.push(
-            new Paragraph({
-              text: linha.trim(),
-              alignment: ehTituloLinha ? AlignmentType.CENTER : AlignmentType.JUSTIFIED,
-              bold: ehTituloLinha,
-              spacing: { 
-                before: ehTituloLinha ? 400 : 0, 
-                after: ehTituloLinha ? 400 : 240 
-              }
-            })
-          );
-        }
-      }
-      
-      // Criar o documento final com margens adequadas para A4
+      // Criar o documento final
       const doc = new Document({
         sections: [{
           properties: {
@@ -745,8 +738,14 @@ ${camposDoc.map(campo => {
                 font-size: 12pt;
                 margin-bottom: 12pt;
               }
-              strong {
+              strong, b {
                 font-weight: bold;
+              }
+              em, i {
+                font-style: italic;
+              }
+              u {
+                text-decoration: underline;
               }
             </style>
           </head>
@@ -868,13 +867,21 @@ ${camposDoc.map(campo => {
     // Obter a div do editor
     const editorDiv = e.currentTarget;
     
-    // Salvar a posição atual de forma mais robusta
+    // Capturar o estado atual da seleção antes de qualquer atualização
     const selection = window.getSelection();
     
-    // Obter offsets relativos ao elemento editável
-    let cursorPosition = 0;
-    let anchorNode = selection?.anchorNode;
-    let anchorOffset = selection?.anchorOffset || 0;
+    // Armazenar informações completas da seleção
+    let savedSelection = null;
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      savedSelection = {
+        startContainer: range.startContainer,
+        startOffset: range.startOffset,
+        endContainer: range.endContainer,
+        endOffset: range.endOffset,
+        collapsed: range.collapsed
+      };
+    }
     
     // Obter o novo conteúdo antes de qualquer atualização de estado
     const novoConteudo = editorDiv.innerHTML;
@@ -885,73 +892,62 @@ ${camposDoc.map(campo => {
     // Atualizar o estado
     setDocumentoGerado(novoConteudo);
     
-    // Usar um timeout maior para garantir que o React atualizou o DOM
+    // Restaurar a seleção após a atualização do estado
     setTimeout(() => {
-      // Usar o ref para acessar o elemento atual do DOM
-      if (editorRef.current) {
+      if (editorRef.current && savedSelection) {
         try {
-          // Tentar restaurar o foco primeiro
+          // Focar o editor primeiro
           editorRef.current.focus();
           
-          // Agora tente restaurar a seleção
-          const selection = window.getSelection();
+          // Verificar se os containers ainda estão no DOM
+          const docContainsStart = document.contains(savedSelection.startContainer);
+          const docContainsEnd = document.contains(savedSelection.endContainer);
           
-          // Encontrar o texto e posição para restaurar cursor
-          function encontrarPosicaoTexto(node: Node, offset: number): { node: Node, offset: number } | null {
-            // Se o nó for um nó de texto, este é o destino
-            if (node.nodeType === Node.TEXT_NODE) {
-              return { node, offset };
-            }
+          if (docContainsStart && docContainsEnd) {
+            // Criar uma nova seleção
+            const newRange = document.createRange();
+            const sel = window.getSelection();
             
-            // Se for um elemento, procurar pelos filhos
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              const elem = node as Element;
-              // Se o elemento for do tipo de entrada, não percorrer
-              if (elem.tagName === 'INPUT' || elem.tagName === 'TEXTAREA') {
-                return null;
-              }
-              
-              // Percorrer nós filhos
-              for (let i = 0; i < elem.childNodes.length; i++) {
-                const resultado = encontrarPosicaoTexto(elem.childNodes[i], offset);
-                if (resultado) return resultado;
-              }
-            }
+            // Configurar a seleção exatamente como estava antes
+            newRange.setStart(savedSelection.startContainer, savedSelection.startOffset);
+            newRange.setEnd(savedSelection.endContainer, savedSelection.endOffset);
             
-            return null;
-          }
-          
-          // Se tivermos o nó âncora, tente restaurar naquele nó específico ou encontre
-          // um nó de texto adequado
-          if (anchorNode) {
-            // Ver se o nó âncora anterior ainda está no DOM
-            let novoAnchorNode = anchorNode;
-            let novoAnchorOffset = anchorOffset;
+            // Aplicar a seleção
+            sel?.removeAllRanges();
+            sel?.addRange(newRange);
+          } else {
+            // Fallback para o nó do editor se os containers originais não estiverem mais disponíveis
+            // Este é um último recurso para pelo menos manter o foco no editor
+            const textNodes = [];
             
-            // Se o nó não estiver mais no DOM ou for o próprio editor
-            if (!document.contains(anchorNode) || anchorNode === editorRef.current) {
-              // Procurar um nó de texto adequado no editor
-              const resultado = encontrarPosicaoTexto(editorRef.current, 0);
-              if (resultado) {
-                novoAnchorNode = resultado.node;
-                novoAnchorOffset = Math.min(anchorOffset, novoAnchorNode.textContent?.length || 0);
+            function collectTextNodes(node) {
+              if (node.nodeType === Node.TEXT_NODE) {
+                textNodes.push(node);
+              } else if (node.nodeType === Node.ELEMENT_NODE) {
+                for (let i = 0; i < node.childNodes.length; i++) {
+                  collectTextNodes(node.childNodes[i]);
+                }
               }
             }
             
-            // Criar e aplicar a nova seleção
-            if (selection) {
-              selection.removeAllRanges();
+            collectTextNodes(editorRef.current);
+            
+            if (textNodes.length > 0) {
               const range = document.createRange();
-              range.setStart(novoAnchorNode, novoAnchorOffset);
-              range.setEnd(novoAnchorNode, novoAnchorOffset);
-              selection.addRange(range);
+              const sel = window.getSelection();
+              
+              range.setStart(textNodes[0], 0);
+              range.setEnd(textNodes[0], 0);
+              
+              sel?.removeAllRanges();
+              sel?.addRange(range);
             }
           }
         } catch (error) {
-          console.error("Erro ao restaurar o cursor:", error);
+          console.error("Erro ao restaurar a seleção:", error);
         }
       }
-    }, 10); // Um timeout ligeiramente maior
+    }, 0);
   };
 
   // Função para alterar o título do documento
@@ -1610,28 +1606,27 @@ ${camposDoc.map(campo => {
           {sidebarAberta && user && (
             <motion.div
               key="sidebar"
-              initial={{ x: isMobile ? "-100%" : "-100%", opacity: 0 }}
+              initial={{ x: "-100%", opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              exit={{ x: isMobile ? "-100%" : "-100%", opacity: 0 }}
+              exit={{ x: "-100%", opacity: 0 }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className={`
-                ${isMobile ? 'fixed inset-0 z-40 w-full max-w-full' : 'relative w-full max-w-[280px] border-r'} 
-                bg-white dark:bg-law-900 overflow-hidden border-gray-200 dark:border-law-700
+                fixed inset-y-0 left-0 z-40 w-full sm:w-80 max-w-full sm:max-w-[280px] 
+                bg-white dark:bg-law-900 border-r border-gray-200 dark:border-law-700
               `}
+              style={{ top: isMobile ? "0" : "64px" }}
             >
-              {isMobile && (
-                <div className="w-full h-16 flex items-center justify-between px-4 border-b border-gray-200 dark:border-law-700">
-                  <h2 className="font-medium text-lg text-primary-700 dark:text-primary-200">Documentos</h2>
-                  <button 
-                    onClick={() => setSidebarAberta(false)}
-                    className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-law-800"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              )}
+              <div className="w-full h-16 flex items-center justify-between px-4 border-b border-gray-200 dark:border-law-700">
+                <h2 className="font-medium text-lg text-primary-700 dark:text-primary-200">Documentos</h2>
+                <button 
+                  onClick={() => setSidebarAberta(false)}
+                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-law-800"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
               <DocumentosSidebar 
                 documentoAtual={documentoAtual}
                 onSelecionarDocumento={carregarDocumento}
@@ -1646,42 +1641,26 @@ ${camposDoc.map(campo => {
         <motion.div 
           className="flex-grow h-full overflow-y-auto flex flex-col relative"
           animate={{ 
-            marginLeft: isMobile ? 0 : sidebarAberta ? "0" : "-280px",
-            width: isMobile ? "100%" : sidebarAberta ? "calc(100% - 280px)" : "100%",
-            opacity: isMobile && sidebarAberta ? 0.3 : 1
+            opacity: isMobile && sidebarAberta ? 0.5 : 1
           }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
         >
-          {/* Botão para abrir/fechar sidebar */}
+          {/* Botão para abrir sidebar (estilo igual ao do chat) */}
           {user && (
-            <div className={`${isMobile ? 'fixed right-4 bottom-20' : 'fixed left-4 top-24'} z-30`}>
+            <div className="absolute top-4 left-4 z-30">
               <button
                 onClick={() => setSidebarAberta(!sidebarAberta)}
-                className="p-3 rounded-full bg-primary-600 text-white shadow-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50 transition-colors duration-300"
-                aria-label={sidebarAberta ? "Fechar sidebar" : "Abrir sidebar"}
+                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-law-800 transition-colors focus:outline-none"
+                aria-label={sidebarAberta ? "Fechar menu" : "Abrir menu"}
               >
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  className="h-5 w-5" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  stroke="currentColor"
-                >
-                  {isMobile ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  ) : (
-                    sidebarAberta ? (
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                    ) : (
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    )
-                  )}
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-gray-700 dark:text-gray-300">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                 </svg>
               </button>
             </div>
           )}
           
-          <div className="container mx-auto py-6 pb-20">
+          <div className="container mx-auto py-6 pb-20 pt-16">
             <h1 className="text-2xl sm:text-3xl font-serif font-bold text-primary-800 dark:text-primary-300 mb-6 text-center">
               Gerador de Documentos Jurídicos
             </h1>
