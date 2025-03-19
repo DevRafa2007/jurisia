@@ -526,14 +526,17 @@ ${camposDoc.map(campo => {
       // Mostrar que o download está sendo processado
       toast.loading('Preparando documento para download...', { id: 'docx-loading' });
       
-      // Criar um elemento temporário para analisar o HTML
-      const parser = new DOMParser();
-      const htmlDoc = parser.parseFromString(documentoGerado, 'text/html');
+      // Para preservar a estrutura exata do documento, precisamos manter
+      // cada parágrafo e sua formatação original
       
-      // Obter todos os parágrafos do documento
-      const paragrafos = Array.from(htmlDoc.querySelectorAll('p'));
+      // Primeiro, criar uma cópia do elemento do editor
+      const editorClone = document.createElement('div');
+      editorClone.innerHTML = documentoGerado;
       
-      // Iniciar a criação do documento DOCX
+      // Obter todos os parágrafos e quebras do documento
+      const elementos = Array.from(editorClone.childNodes);
+      
+      // Iniciar a criação do documento DOCX com parágrafos mantendo exatamente a mesma estrutura
       const docxParagrafos = [];
       
       // Adicionar o título como um parágrafo centralizado em negrito
@@ -549,66 +552,141 @@ ${camposDoc.map(campo => {
         })
       );
       
-      // Processar cada parágrafo mantendo sua formatação
-      for (let i = 0; i < paragrafos.length; i++) {
-        const p = paragrafos[i];
+      // Adicionar uma função para verificar se um elemento é um título
+      const ehTitulo = (elemento) => {
+        if (!elemento.textContent) return false;
         
-        // Determinar o alinhamento do parágrafo
-        let alignment = AlignmentType.JUSTIFIED;
-        
-        if (p.style.textAlign === 'center' || p.classList.contains('titulo-centralizado')) {
-          alignment = AlignmentType.CENTER;
-        } else if (p.style.textAlign === 'right') {
-          alignment = AlignmentType.RIGHT;
-        } else if (p.style.textAlign === 'left') {
-          alignment = AlignmentType.LEFT;
-        }
-        
-        // Determinar se o parágrafo deve estar em negrito
-        const isBold = p.classList.contains('titulo-centralizado') || 
-                      (i === 0 && !p.classList.contains('titulo-centralizado')) ||
-                      p.style.fontWeight === 'bold';
-        
-        // Criar o parágrafo no formato DOCX
-        const docxParagrafo = new Paragraph({
-          text: p.textContent || '',
-          alignment: alignment,
-          spacing: {
-            after: 200,
-            // Adicionar espaço extra antes dos parágrafos de título
-            before: isBold ? 400 : 0,
-          },
-          // Aplicar negrito se necessário
-          bold: isBold,
-        });
-        
-        docxParagrafos.push(docxParagrafo);
-      }
-      
-      // Se não encontrou parágrafos, crie um documento com o conteúdo completo
-      if (paragrafos.length === 0) {
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = documentoGerado;
-        const textoCompleto = tempDiv.textContent || '';
-        
-        docxParagrafos.push(
-          new Paragraph({
-            text: textoCompleto,
-            alignment: AlignmentType.JUSTIFIED,
-          })
+        // Verificar se o texto está em formato de título (todo em maiúsculas e com **)
+        const texto = elemento.textContent.trim();
+        return (
+          (texto.startsWith('**') && texto.endsWith('**')) || 
+          (texto === texto.toUpperCase() && texto.length > 3) ||
+          elemento.classList.contains('titulo-centralizado')
         );
+      };
+      
+      // Processar o HTML diretamente, preservando a estrutura e formatação
+      let htmlParaDocx = documentoGerado;
+      
+      // Criar uma versão temporária em HTML
+      const tempElement = document.createElement('div');
+      tempElement.innerHTML = htmlParaDocx;
+      
+      // Processar cada elemento no HTML
+      const paragrafos = Array.from(tempElement.querySelectorAll('p'));
+      
+      // Se não encontrou parágrafos, vamos tentar analisar o texto como texto puro
+      if (paragrafos.length === 0) {
+        // Dividir o texto por quebras de linha e criar um parágrafo para cada linha
+        const linhas = tempElement.innerText.split('\n').filter(linha => linha.trim() !== '');
+        
+        for (const linha of linhas) {
+          const estilo = linha.trim().toUpperCase() === linha.trim() && linha.trim().length > 3 ? 
+            { alignment: AlignmentType.CENTER, bold: true, spacing: { before: 400, after: 400 } } : 
+            { alignment: AlignmentType.JUSTIFIED, spacing: { after: 240 } };
+          
+          docxParagrafos.push(
+            new Paragraph({
+              text: linha.trim(),
+              ...estilo
+            })
+          );
+        }
+      } else {
+        // Processar cada parágrafo do HTML
+        for (let i = 0; i < paragrafos.length; i++) {
+          const p = paragrafos[i];
+          const texto = p.textContent || '';
+          
+          // Determinar o alinhamento e estilo do parágrafo
+          let estilo = {
+            alignment: AlignmentType.JUSTIFIED,
+            spacing: { after: 240 }
+          };
+          
+          // Verificar se é um título
+          if (ehTitulo(p) || (i === 0 && texto.toUpperCase() === texto)) {
+            estilo = {
+              alignment: AlignmentType.CENTER,
+              bold: true,
+              spacing: { before: 400, after: 400 }
+            };
+          }
+          
+          // Adicionar quebras de linha extras entre seções
+          if (i > 0 && ehTitulo(p) && ehTitulo(paragrafos[i-1])) {
+            docxParagrafos.push(new Paragraph({ text: '', spacing: { before: 240, after: 240 } }));
+          }
+          
+          // Preservar quebras de linha dentro do parágrafo
+          if (texto.includes('\n')) {
+            const linhas = texto.split('\n');
+            for (const linha of linhas) {
+              if (linha.trim() !== '') {
+                docxParagrafos.push(
+                  new Paragraph({
+                    text: linha.trim(),
+                    ...estilo
+                  })
+                );
+              } else {
+                // Adicionar um parágrafo vazio para quebras de linha
+                docxParagrafos.push(new Paragraph({ text: '', spacing: { before: 120, after: 120 } }));
+              }
+            }
+          } else {
+            // Adicionar o parágrafo normalmente
+            docxParagrafos.push(
+              new Paragraph({
+                text: texto,
+                ...estilo
+              })
+            );
+          }
+          
+          // Adicionar um espaçamento extra após cada parágrafo
+          if (i < paragrafos.length - 1) {
+            docxParagrafos.push(new Paragraph({ text: '', spacing: { before: 120, after: 120 } }));
+          }
+        }
       }
       
-      // Criar o documento final
+      // Se não conseguimos extrair nenhum conteúdo, usar uma abordagem mais simples
+      if (docxParagrafos.length <= 1) {
+        const textoCompleto = documentoGerado.replace(/<[^>]+>/g, '\n').replace(/\n+/g, '\n');
+        const linhas = textoCompleto.split('\n').filter(l => l.trim() !== '');
+        
+        for (const linha of linhas) {
+          const ehTituloLinha = linha.trim().toUpperCase() === linha.trim() && linha.trim().length > 3;
+          
+          docxParagrafos.push(
+            new Paragraph({
+              text: linha.trim(),
+              alignment: ehTituloLinha ? AlignmentType.CENTER : AlignmentType.JUSTIFIED,
+              bold: ehTituloLinha,
+              spacing: { 
+                before: ehTituloLinha ? 400 : 0, 
+                after: ehTituloLinha ? 400 : 240 
+              }
+            })
+          );
+        }
+      }
+      
+      // Criar o documento final com margens adequadas para A4
       const doc = new Document({
         sections: [{
           properties: {
             page: {
               margin: {
-                top: 1440, // 1 polegada = 1440 twips
-                right: 1440,
-                bottom: 1440,
-                left: 1440,
+                top: 1440,    // Margem superior: 1 polegada (1440 twips)
+                right: 1440,  // Margem direita: 1 polegada
+                bottom: 1440, // Margem inferior: 1 polegada
+                left: 1440,   // Margem esquerda: 1 polegada
+              },
+              size: {
+                width: 11906, // Largura A4: 8.27" (8.27 * 1440 = 11906 twips)
+                height: 16838, // Altura A4: 11.69" (11.69 * 1440 = 16838 twips)
               },
             },
           },
@@ -639,22 +717,26 @@ ${camposDoc.map(campo => {
             <meta charset="utf-8">
             <title>${tituloDocumento || 'Documento Jurídico'}</title>
             <style>
+              @page {
+                size: A4;
+                margin: 2.54cm;
+              }
               body {
                 font-family: 'Times New Roman', Times, serif;
                 font-size: 12pt;
                 line-height: 1.5;
-                margin: 2.54cm;
+                margin: 0;
                 padding: 0;
               }
               p {
-                margin: 0 0 0.5em 0;
+                margin: 0 0 10pt 0;
                 text-align: justify;
               }
-              .titulo-centralizado, p:first-child {
+              .titulo-centralizado, p:first-child, p strong {
                 text-align: center;
                 font-weight: bold;
-                font-size: 14pt;
-                margin-bottom: 2em;
+                font-size: 12pt;
+                margin-bottom: 12pt;
               }
               strong {
                 font-weight: bold;
