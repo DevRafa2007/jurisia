@@ -14,7 +14,7 @@ import {
   criarDocumento, 
   atualizarDocumento
 } from '../utils/supabase';
-import CKEditor from '../components/CKEditor';
+import CKEditorComponent from '../components/CKEditor';
 
 // Tipos de documentos suportados
 const TIPOS_DOCUMENTOS = [
@@ -1058,7 +1058,7 @@ ${camposDoc.map(campo => {
 
       {/* CKEditor */}
       <div className="w-full max-w-5xl mx-auto">
-        <CKEditor
+        <CKEditorComponent
           editorLoaded={editorLoaded}
           value={documentoGerado}
           onChange={handleEditorChange}

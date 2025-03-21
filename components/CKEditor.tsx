@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface CKEditorProps {
   onChange: (data: string) => void;
@@ -8,21 +8,28 @@ interface CKEditorProps {
   height?: string;
 }
 
-const CKEditor: React.FC<CKEditorProps> = ({ 
+const CKEditorComponent: React.FC<CKEditorProps> = ({ 
   onChange, 
   editorLoaded, 
   value, 
   height = '29.7cm' 
 }) => {
-  const editorRef = useRef<any>();
-  const { CKEditor, ClassicEditor } = editorRef.current || {};
+  const [CKEditorComponent, setCKEditorComponent] = useState<any>(null);
+  const [ClassicEditorComponent, setClassicEditorComponent] = useState<any>(null);
 
+  // Carregar os componentes do CKEditor dinamicamente
   useEffect(() => {
-    editorRef.current = {
-      CKEditor: require('@ckeditor/ckeditor5-react').CKEditor,
-      ClassicEditor: require('@ckeditor/ckeditor5-build-classic'),
-    };
-  }, []);
+    if (editorLoaded) {
+      // Importar os componentes apenas no lado do cliente
+      (async () => {
+        const CKEditorModule = await import('@ckeditor/ckeditor5-react');
+        const ClassicEditorModule = await import('@ckeditor/ckeditor5-build-classic');
+        
+        setCKEditorComponent(() => CKEditorModule.CKEditor);
+        setClassicEditorComponent(() => ClassicEditorModule.default);
+      })();
+    }
+  }, [editorLoaded]);
 
   // Função para ajustar a altura do editor
   useEffect(() => {
@@ -33,9 +40,9 @@ const CKEditor: React.FC<CKEditorProps> = ({
         (editorContainer as HTMLElement).style.minHeight = height;
       }
     }
-  }, [editorLoaded, height]);
+  }, [editorLoaded, height, CKEditorComponent]);
 
-  if (!editorLoaded) {
+  if (!editorLoaded || !CKEditorComponent || !ClassicEditorComponent) {
     return <div className="border border-gray-300 dark:border-gray-600 rounded-md p-4 bg-white dark:bg-gray-800 animate-pulse text-center">Carregando editor...</div>;
   }
 
@@ -110,8 +117,8 @@ const CKEditor: React.FC<CKEditorProps> = ({
         }
       `}</style>
       
-      <CKEditor
-        editor={ClassicEditor}
+      <CKEditorComponent
+        editor={ClassicEditorComponent}
         data={value}
         config={{
           toolbar: [
@@ -167,4 +174,4 @@ const CKEditor: React.FC<CKEditorProps> = ({
   );
 };
 
-export default CKEditor; 
+export default CKEditorComponent; 
