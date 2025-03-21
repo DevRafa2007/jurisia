@@ -526,9 +526,22 @@ ${camposDoc.map(campo => {
   // Função para copiar o documento para a área de transferência
   const copiarDocumento = () => {
     if (documentoGerado) {
-      navigator.clipboard.writeText(documentoGerado)
-        .then(() => toast.success('Documento copiado para a área de transferência!'))
-        .catch(() => toast.error('Erro ao copiar documento.'));
+      try {
+        // Criar um elemento temporário para extrair apenas o texto sem formatação HTML
+        const tempElement = document.createElement('div');
+        tempElement.innerHTML = documentoGerado;
+        
+        // Extrair o texto puro sem marcações HTML
+        const textoPuro = tempElement.innerText || tempElement.textContent || '';
+        
+        // Copiar o texto puro para a área de transferência
+        navigator.clipboard.writeText(textoPuro)
+          .then(() => toast.success('Documento copiado para a área de transferência!'))
+          .catch(() => toast.error('Erro ao copiar documento.'));
+      } catch (error) {
+        console.error('Erro ao processar texto para cópia:', error);
+        toast.error('Erro ao copiar documento.');
+      }
     }
   };
 
