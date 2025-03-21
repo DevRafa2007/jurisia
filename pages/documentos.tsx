@@ -9,6 +9,7 @@ import Head from 'next/head';
 import DocumentosSidebar from '../components/DocumentosSidebar';
 import { Document, Packer, Paragraph, AlignmentType, TextRun } from 'docx';
 import { saveAs } from 'file-saver';
+import { Editor } from '@tinymce/tinymce-react';
 import { 
   carregarDocumento as fetchDocumento, 
   criarDocumento, 
@@ -187,7 +188,7 @@ export default function Documentos() {
   const [documentoAtual, setDocumentoAtual] = useState<string | null>(null);
   const [tituloDocumento, setTituloDocumento] = useState<string>('');
   const [salvando, setSalvando] = useState(false);
-  const editorRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<any>(null);
 
   // Detectar se é dispositivo móvel
   useEffect(() => {
@@ -348,8 +349,10 @@ ${camposDoc.map(campo => {
 
   // Função para imprimir o documento
   const imprimirDocumento = () => {
+    if (!editorRef.current) return;
+    
     // Preparar o conteúdo para impressão
-    const conteudoParaImprimir = documentoGerado;
+    const conteudoParaImprimir = editorRef.current.getContent();
     
     // Criar um novo documento para impressão
     const janelaImpressao = window.open('', '_blank');
@@ -518,8 +521,15 @@ ${camposDoc.map(campo => {
 
   // Função para copiar o documento para a área de transferência
   const copiarDocumento = () => {
-    if (documentoGerado) {
-      navigator.clipboard.writeText(documentoGerado)
+    if (editorRef.current) {
+      const conteudo = editorRef.current.getContent();
+      
+      // Criar um elemento temporário para extrair o texto
+      const temp = document.createElement('div');
+      temp.innerHTML = conteudo;
+      const texto = temp.textContent || temp.innerText || '';
+      
+      navigator.clipboard.writeText(texto)
         .then(() => toast.success('Documento copiado para a área de transferência!'))
         .catch(() => toast.error('Erro ao copiar documento.'));
     }
@@ -527,7 +537,7 @@ ${camposDoc.map(campo => {
 
   // Função para baixar o documento como DOCX
   const baixarComoDocx = async () => {
-    if (!documentoGerado) return;
+    if (!editorRef.current) return;
     
     try {
       // Mostrar que o download está sendo processado
@@ -551,7 +561,7 @@ ${camposDoc.map(campo => {
       
       // Criar uma versão temporária em HTML para processamento
       const tempElement = document.createElement('div');
-      tempElement.innerHTML = documentoGerado;
+      tempElement.innerHTML = editorRef.current.getContent();
       
       // Processar cada parágrafo do documento
       const paragrafos = Array.from(tempElement.querySelectorAll('p'));
@@ -768,7 +778,7 @@ ${camposDoc.map(campo => {
             </style>
           </head>
           <body>
-            ${documentoGerado}
+            ${editorRef.current.getContent()}
           </body>
           </html>
         `], { type: 'text/html' });
@@ -784,7 +794,7 @@ ${camposDoc.map(campo => {
 
   // Função para salvar o documento no banco de dados
   const salvarDocumento = async () => {
-    if (!user || !documentoGerado || !tipoDocumentoSelecionado) {
+    if (!user || !editorRef.current || !tipoDocumentoSelecionado) {
       toast.error('Não foi possível salvar o documento.');
       return;
     }
@@ -793,12 +803,13 @@ ${camposDoc.map(campo => {
       setSalvando(true);
       
       const tipoDoc = CONFIGURACOES_FORMULARIOS[tipoDocumentoSelecionado].nome;
+      const conteudoAtual = editorRef.current.getContent();
       
       if (documentoAtual) {
         // Atualizar documento existente
         await atualizarDocumento(documentoAtual, {
           titulo: tituloDocumento,
-          conteudo: documentoGerado
+          conteudo: conteudoAtual
         });
         
         toast.success('Documento atualizado com sucesso!');
@@ -808,7 +819,7 @@ ${camposDoc.map(campo => {
           user.id,
           tituloDocumento,
           tipoDoc,
-          documentoGerado
+          conteudoAtual
         );
         
         // Atualizar o ID do documento atual
@@ -880,193 +891,19 @@ ${camposDoc.map(campo => {
     }
   };
 
-  // Função para editar o documento diretamente no editor
-  const handleDocumentoChange = (e: React.FormEvent<HTMLDivElement>) => {
-    // Obter a div do editor
-    const editorDiv = e.currentTarget;
-    
-    // Capturar o estado atual da seleção antes de qualquer atualização
-    const selection = window.getSelection();
-    
-    // Armazenar informações completas da seleção
-    let savedSelection = null;
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      savedSelection = {
-        startContainer: range.startContainer,
-        startOffset: range.startOffset,
-        endContainer: range.endContainer,
-        endOffset: range.endOffset,
-        collapsed: range.collapsed
-      };
-    }
-    
-    // Obter o novo conteúdo antes de qualquer atualização de estado
-    const novoConteudo = editorDiv.innerHTML;
-    
-    // Ignorar atualizações desnecessárias (otimização)
-    if (documentoGerado === novoConteudo) return;
-    
-    // Atualizar o estado
-    setDocumentoGerado(novoConteudo);
-    
-    // Restaurar a seleção após a atualização do estado
-    setTimeout(() => {
-      if (editorRef.current && savedSelection) {
-        try {
-          // Focar o editor primeiro
-          editorRef.current.focus();
-          
-          // Verificar se os containers ainda estão no DOM
-          const docContainsStart = document.contains(savedSelection.startContainer);
-          const docContainsEnd = document.contains(savedSelection.endContainer);
-          
-          if (docContainsStart && docContainsEnd) {
-            // Criar uma nova seleção
-            const newRange = document.createRange();
-            const sel = window.getSelection();
-            
-            // Configurar a seleção exatamente como estava antes
-            newRange.setStart(savedSelection.startContainer, savedSelection.startOffset);
-            newRange.setEnd(savedSelection.endContainer, savedSelection.endOffset);
-            
-            // Aplicar a seleção
-            sel?.removeAllRanges();
-            sel?.addRange(newRange);
-          } else {
-            // Fallback para o nó do editor se os containers originais não estiverem mais disponíveis
-            // Este é um último recurso para pelo menos manter o foco no editor
-            const textNodes = [];
-            
-            function collectTextNodes(node) {
-              if (node.nodeType === Node.TEXT_NODE) {
-                textNodes.push(node);
-              } else if (node.nodeType === Node.ELEMENT_NODE) {
-                for (let i = 0; i < node.childNodes.length; i++) {
-                  collectTextNodes(node.childNodes[i]);
-                }
-              }
-            }
-            
-            collectTextNodes(editorRef.current);
-            
-            if (textNodes.length > 0) {
-              const range = document.createRange();
-              const sel = window.getSelection();
-              
-              range.setStart(textNodes[0], 0);
-              range.setEnd(textNodes[0], 0);
-              
-              sel?.removeAllRanges();
-              sel?.addRange(range);
-            }
-          }
-        } catch (error) {
-          console.error("Erro ao restaurar a seleção:", error);
-        }
-      }
-    }, 0);
-  };
-
   // Função para alterar o título do documento
   const handleTituloChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTituloDocumento(e.target.value);
   };
 
-  // Adicionar funções de formatação de texto
-  const executarComando = (comando: string, valor: string = '') => {
-    document.execCommand(comando, false, valor);
-    if (editorRef.current) {
-      editorRef.current.focus();
-    }
+  // Handler para o TinyMCE
+  const handleEditorChange = (content: string) => {
+    setDocumentoGerado(content);
   };
 
-  const formatarTexto = (estilo: string) => {
-    switch (estilo) {
-      case 'negrito':
-        executarComando('bold');
-        break;
-      case 'italico':
-        executarComando('italic');
-        break;
-      case 'sublinhado':
-        executarComando('underline');
-        break;
-      case 'tachado':
-        executarComando('strikeThrough');
-        break;
-      case 'justificar':
-        executarComando('justifyFull');
-        break;
-      case 'alinhar-esquerda':
-        executarComando('justifyLeft');
-        break;
-      case 'alinhar-centro':
-        executarComando('justifyCenter');
-        break;
-      case 'alinhar-direita':
-        executarComando('justifyRight');
-        break;
-      case 'lista-ordenada':
-        executarComando('insertOrderedList');
-        break;
-      case 'lista-nao-ordenada':
-        executarComando('insertUnorderedList');
-        break;
-      case 'recuo':
-        executarComando('indent');
-        break;
-      case 'reduzir-recuo':
-        executarComando('outdent');
-        break;
-      default:
-        break;
-    }
-    // Atualizar o estado documentoGerado após a formatação
-    if (editorRef.current) {
-      setDocumentoGerado(editorRef.current.innerHTML);
-    }
-  };
-
-  const alterarFonte = (evento: React.ChangeEvent<HTMLSelectElement>) => {
-    executarComando('fontName', evento.target.value);
-    if (editorRef.current) {
-      setDocumentoGerado(editorRef.current.innerHTML);
-    }
-  };
-
-  const alterarTamanhoFonte = (evento: React.ChangeEvent<HTMLSelectElement>) => {
-    executarComando('fontSize', evento.target.value);
-    if (editorRef.current) {
-      setDocumentoGerado(editorRef.current.innerHTML);
-    }
-  };
-
-  const alterarCorTexto = (evento: React.ChangeEvent<HTMLInputElement>) => {
-    executarComando('foreColor', evento.target.value);
-    if (editorRef.current) {
-      setDocumentoGerado(editorRef.current.innerHTML);
-    }
-  };
-
-  const inserirLink = () => {
-    const url = prompt('Digite o URL do link:');
-    if (url) {
-      executarComando('createLink', url);
-      if (editorRef.current) {
-        setDocumentoGerado(editorRef.current.innerHTML);
-      }
-    }
-  };
-
-  const inserirImagem = () => {
-    const url = prompt('Digite o URL da imagem:');
-    if (url) {
-      executarComando('insertImage', url);
-      if (editorRef.current) {
-        setDocumentoGerado(editorRef.current.innerHTML);
-      }
-    }
+  // Inicializar o TinyMCE
+  const handleEditorInit = (evt: any, editor: any) => {
+    editorRef.current = editor;
   };
 
   // Renderiza o seletor de tipo de documento
@@ -1311,251 +1148,112 @@ ${camposDoc.map(campo => {
         </div>
       </div>
 
-      {/* Barra de ferramentas de formatação */}
-      <div className="mb-4 p-2 bg-gray-100 dark:bg-law-800 rounded-lg border border-gray-300 dark:border-law-700 overflow-x-auto no-print">
-        <div className="flex flex-wrap items-center gap-1 min-w-max">
-          {/* Grupo de estilo de texto */}
-          <div className="flex border-r border-gray-300 dark:border-law-700 pr-2 gap-1">
-            <button 
-              onClick={() => formatarTexto('negrito')} 
-              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
-              title="Negrito"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path>
-                <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path>
-              </svg>
-            </button>
-            <button 
-              onClick={() => formatarTexto('italico')} 
-              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
-              title="Itálico"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="19" y1="4" x2="10" y2="4"></line>
-                <line x1="14" y1="20" x2="5" y2="20"></line>
-                <line x1="15" y1="4" x2="9" y2="20"></line>
-              </svg>
-            </button>
-            <button 
-              onClick={() => formatarTexto('sublinhado')} 
-              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
-              title="Sublinhado"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"></path>
-                <line x1="4" y1="21" x2="20" y2="21"></line>
-              </svg>
-            </button>
-            <button 
-              onClick={() => formatarTexto('tachado')} 
-              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
-              title="Tachado"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M17 9V5H7v4"></path>
-                <path d="M7 15v4h10v-4"></path>
-                <line x1="4" y1="12" x2="20" y2="12"></line>
-              </svg>
-            </button>
-          </div>
-
-          {/* Grupo de alinhamento */}
-          <div className="flex border-r border-gray-300 dark:border-law-700 pr-2 gap-1">
-            <button 
-              onClick={() => formatarTexto('alinhar-esquerda')} 
-              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
-              title="Alinhar à esquerda"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="17" y1="10" x2="3" y2="10"></line>
-                <line x1="21" y1="6" x2="3" y2="6"></line>
-                <line x1="21" y1="14" x2="3" y2="14"></line>
-                <line x1="17" y1="18" x2="3" y2="18"></line>
-              </svg>
-            </button>
-            <button 
-              onClick={() => formatarTexto('alinhar-centro')} 
-              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
-              title="Centralizar"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="18" y1="10" x2="6" y2="10"></line>
-                <line x1="21" y1="6" x2="3" y2="6"></line>
-                <line x1="21" y1="14" x2="3" y2="14"></line>
-                <line x1="18" y1="18" x2="6" y2="18"></line>
-              </svg>
-            </button>
-            <button 
-              onClick={() => formatarTexto('alinhar-direita')} 
-              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
-              title="Alinhar à direita"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="21" y1="10" x2="7" y2="10"></line>
-                <line x1="21" y1="6" x2="3" y2="6"></line>
-                <line x1="21" y1="14" x2="3" y2="14"></line>
-                <line x1="21" y1="18" x2="7" y2="18"></line>
-              </svg>
-            </button>
-            <button 
-              onClick={() => formatarTexto('justificar')} 
-              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
-              title="Justificar"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="21" y1="10" x2="3" y2="10"></line>
-                <line x1="21" y1="6" x2="3" y2="6"></line>
-                <line x1="21" y1="14" x2="3" y2="14"></line>
-                <line x1="21" y1="18" x2="3" y2="18"></line>
-              </svg>
-            </button>
-          </div>
-
-          {/* Grupo de listas */}
-          <div className="flex border-r border-gray-300 dark:border-law-700 pr-2 gap-1">
-            <button 
-              onClick={() => formatarTexto('lista-ordenada')} 
-              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
-              title="Lista numerada"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="9" y1="6" x2="20" y2="6"></line>
-                <line x1="9" y1="12" x2="20" y2="12"></line>
-                <line x1="9" y1="18" x2="20" y2="18"></line>
-                <line x1="5" y1="6" x2="5" y2="6"></line>
-                <line x1="5" y1="12" x2="5" y2="12"></line>
-                <line x1="5" y1="18" x2="5" y2="18"></line>
-              </svg>
-            </button>
-            <button 
-              onClick={() => formatarTexto('lista-nao-ordenada')} 
-              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
-              title="Lista com marcadores"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="9" y1="6" x2="20" y2="6"></line>
-                <line x1="9" y1="12" x2="20" y2="12"></line>
-                <line x1="9" y1="18" x2="20" y2="18"></line>
-                <circle cx="5" cy="6" r="1"></circle>
-                <circle cx="5" cy="12" r="1"></circle>
-                <circle cx="5" cy="18" r="1"></circle>
-              </svg>
-            </button>
-            <button 
-              onClick={() => formatarTexto('recuo')} 
-              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
-              title="Aumentar recuo"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="20" y1="6" x2="9" y2="6"></line>
-                <line x1="20" y1="12" x2="9" y2="12"></line>
-                <line x1="20" y1="18" x2="9" y2="18"></line>
-                <polyline points="5 8 1 12 5 16"></polyline>
-              </svg>
-            </button>
-            <button 
-              onClick={() => formatarTexto('reduzir-recuo')} 
-              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
-              title="Diminuir recuo"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="20" y1="6" x2="9" y2="6"></line>
-                <line x1="20" y1="12" x2="9" y2="12"></line>
-                <line x1="20" y1="18" x2="9" y2="18"></line>
-                <polyline points="1 8 5 12 1 16"></polyline>
-              </svg>
-            </button>
-          </div>
-
-          {/* Seletor de fonte */}
-          <div className="flex border-r border-gray-300 dark:border-law-700 pr-2 gap-1">
-            <select 
-              onChange={alterarFonte} 
-              className="p-1 text-xs rounded border border-gray-300 dark:border-law-700 bg-white dark:bg-law-900 text-gray-800 dark:text-gray-300"
-              title="Tipo de fonte"
-            >
-              <option value="">Fonte</option>
-              <option value="Arial">Arial</option>
-              <option value="Times New Roman">Times New Roman</option>
-              <option value="Calibri">Calibri</option>
-              <option value="Georgia">Georgia</option>
-              <option value="Verdana">Verdana</option>
-              <option value="Tahoma">Tahoma</option>
-              <option value="Courier New">Courier New</option>
-            </select>
-            
-            <select 
-              onChange={alterarTamanhoFonte} 
-              className="p-1 text-xs rounded border border-gray-300 dark:border-law-700 bg-white dark:bg-law-900 text-gray-800 dark:text-gray-300"
-              title="Tamanho da fonte"
-            >
-              <option value="">Tamanho</option>
-              <option value="1">Pequeno</option>
-              <option value="3">Normal</option>
-              <option value="5">Grande</option>
-              <option value="7">Muito grande</option>
-            </select>
-
-            <div className="flex items-center">
-              <input 
-                type="color" 
-                onChange={alterarCorTexto} 
-                className="w-6 h-6 rounded cursor-pointer"
-                title="Cor do texto"
-              />
-            </div>
-          </div>
-
-          {/* Inserir elementos */}
-          <div className="flex gap-1">
-            <button 
-              onClick={inserirLink} 
-              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
-              title="Inserir link"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-              </svg>
-            </button>
-            <button 
-              onClick={inserirImagem} 
-              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-law-700 text-gray-800 dark:text-gray-300"
-              title="Inserir imagem"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                <polyline points="21 15 16 10 5 21"></polyline>
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-      
-      {/* Editor estilo A4 */}
-      <div className="bg-white shadow-lg mx-auto rounded-sm overflow-y-auto print:shadow-none mb-10">
-        <div 
-          ref={editorRef}
-          contentEditable={true}
-          onInput={handleDocumentoChange}
-          className="min-h-[29.7cm] w-full max-w-[21cm] mx-auto bg-white p-4 sm:p-[2.54cm] text-black border border-gray-200 outline-none font-serif text-sm leading-relaxed break-words"
-          style={{ 
-            boxSizing: 'border-box',
-            whiteSpace: 'pre-wrap',
-            width: '100%',
-            maxWidth: '21cm',
-            minHeight: '29.7cm',
-            padding: '1.5cm',
-            margin: '0 auto',
-            lineHeight: '1.5',
-            fontSize: '12pt',
-            fontFamily: 'Times New Roman, Times, serif',
-            textAlign: 'justify'
-          }}
-          dangerouslySetInnerHTML={{ __html: documentoGerado }}
+      {/* TinyMCE Editor */}
+      <div className="bg-white shadow-lg mx-auto rounded-sm overflow-hidden print:shadow-none mb-10 w-full">
+        <Editor
+          onInit={handleEditorInit}
+          initialValue={documentoGerado}
+          value={documentoGerado}
+          onEditorChange={handleEditorChange}
           id="documento-para-impressao"
+          init={{
+            height: 842, // A4 height in pixels at 96dpi
+            width: '100%',
+            menubar: true,
+            plugins: [
+              'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+              'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+              'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount',
+              'paste', 'print', 'pagebreak'
+            ],
+            toolbar: 'undo redo | formatselect | ' +
+              'bold italic underline strikethrough | alignleft aligncenter ' +
+              'alignright alignjustify | bullist numlist outdent indent | ' +
+              'removeformat | help | print',
+            content_style: `
+              body {
+                font-family: 'Times New Roman', Times, serif;
+                font-size: 12pt;
+                line-height: 1.5;
+                max-width: 21cm;
+                min-height: 29.7cm;
+                padding: 2.54cm;
+                margin: 0 auto;
+                box-sizing: border-box;
+                background-color: white;
+                color: black;
+              }
+              p {
+                margin: 0 0 0.8em 0;
+                text-align: justify;
+              }
+              /* Estilos para títulos */
+              h1, h2, h3, .titulo-centralizado {
+                text-align: center;
+                font-weight: bold;
+                margin: 1.2em 0;
+              }
+              h1 {
+                font-size: 14pt;
+                margin-top: 2em;
+                margin-bottom: 2.5em;
+              }
+              /* Garantir que elementos com alinhamento específico mantenham a formatação */
+              p[style*="text-align: center"], .titulo-centralizado {
+                text-align: center !important;
+                font-weight: bold;
+              }
+              p[style*="text-align: right"] {
+                text-align: right !important;
+              }
+              p[style*="text-align: justify"] {
+                text-align: justify !important;
+              }
+              /* Estilos para texto em negrito */
+              strong, b {
+                font-weight: bold;
+              }
+              /* Estilos para texto em itálico */
+              em, i {
+                font-style: italic;
+              }
+              /* Estilos para texto sublinhado */
+              u {
+                text-decoration: underline;
+              }
+            `,
+            branding: false,
+            language: 'pt_BR',
+            forced_root_block: 'p',
+            setup: function(editor) {
+              editor.on('init', function() {
+                // Sobrescrever estilos do TinyMCE para parecer com documento A4
+                const iframe = document.querySelector('.tox-edit-area__iframe');
+                if (iframe) {
+                  const iframeDocument = iframe.contentDocument;
+                  if (iframeDocument) {
+                    const style = iframeDocument.createElement('style');
+                    style.innerHTML = `
+                      html, body {
+                        background-color: white !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        height: 100% !important;
+                      }
+                      body {
+                        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1) !important;
+                        background-color: white !important;
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        overflow-y: auto !important;
+                      }
+                    `;
+                    iframeDocument.head.appendChild(style);
+                  }
+                }
+              });
+            }
+          }}
         />
       </div>
     </motion.div>
