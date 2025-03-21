@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
@@ -192,6 +192,9 @@ export default function Documentos() {
   const [documentoAtual, setDocumentoAtual] = useState<string | null>(null);
   const [tituloDocumento, setTituloDocumento] = useState<string>('');
   const [salvando, setSalvando] = useState(false);
+  const [ultimoSalvamento, setUltimoSalvamento] = useState<Date | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const documentoModificado = useRef(false);
 
   // Detectar se é dispositivo móvel
   useEffect(() => {
@@ -559,9 +562,92 @@ ${camposDoc.map(campo => {
   // Adaptação da função de edição para o Quill
   const handleDocumentoChange = (content: string) => {
     setDocumentoGerado(content);
+    documentoModificado.current = true;
   };
 
-  // Função para salvar o documento no banco de dados
+  // Salvamento automático
+  useEffect(() => {
+    // Configurar salvamento automático a cada 30 segundos se houver alterações
+    const configurarSalvamentoAutomatico = () => {
+      // Limpar qualquer timer existente
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      
+      // Configurar novo timer
+      timerRef.current = setInterval(() => {
+        if (documentoModificado.current && user && documentoGerado && tipoDocumentoSelecionado) {
+          salvarDocumentoAutomatico();
+        }
+      }, 30000); // 30 segundos
+    };
+
+    // Iniciar o temporizador quando o documento estiver no modo de edição
+    if (etapa === 'editor') {
+      configurarSalvamentoAutomatico();
+    }
+
+    // Limpar temporizador ao desmontar o componente ou mudar de etapa
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [etapa, user, documentoGerado, tipoDocumentoSelecionado]);
+
+  // Função para salvamento automático (sem feedback visual de toast)
+  const salvarDocumentoAutomatico = async () => {
+    if (!user || !documentoGerado || !tipoDocumentoSelecionado || salvando) {
+      return;
+    }
+    
+    try {
+      setSalvando(true);
+      const tipoDoc = CONFIGURACOES_FORMULARIOS[tipoDocumentoSelecionado].nome;
+      
+      if (documentoAtual) {
+        // Atualizar documento existente
+        await atualizarDocumento(documentoAtual, {
+          titulo: tituloDocumento,
+          conteudo: documentoGerado
+        });
+      } else {
+        // Criar novo documento
+        const novoDocumento = await criarDocumento(
+          user.id,
+          tituloDocumento,
+          tipoDoc,
+          documentoGerado
+        );
+        
+        // Atualizar o ID do documento atual
+        setDocumentoAtual(novoDocumento.id || null);
+      }
+      
+      // Resetar flag de modificação e atualizar hora do último salvamento
+      documentoModificado.current = false;
+      setUltimoSalvamento(new Date());
+      
+      // Feedback sutil de salvamento
+      const statusElement = document.getElementById('status-salvamento');
+      if (statusElement) {
+        statusElement.textContent = 'Salvo automaticamente';
+        setTimeout(() => {
+          if (statusElement) {
+            statusElement.textContent = 'Todas as alterações salvas';
+          }
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Erro ao salvar documento automaticamente:', error);
+      // Sem toast para não interromper o usuário
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  // Função para salvar o documento no banco de dados (com feedback visual)
   const salvarDocumento = async () => {
     if (!user || !documentoGerado || !tipoDocumentoSelecionado) {
       toast.error('Não foi possível salvar o documento.');
@@ -595,6 +681,10 @@ ${camposDoc.map(campo => {
         
         toast.success('Documento salvo com sucesso!');
       }
+      
+      // Resetar flag de modificação e atualizar hora do último salvamento
+      documentoModificado.current = false;
+      setUltimoSalvamento(new Date());
     } catch (error) {
       console.error('Erro ao salvar documento:', error);
       toast.error('Erro ao salvar documento. Tente novamente.');
@@ -820,71 +910,36 @@ ${camposDoc.map(campo => {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      <div className="flex items-center mb-4">
-        <button 
-          onClick={voltarEtapa}
-          className="mr-4 p-2 rounded-full hover:bg-law-100 dark:hover:bg-law-800 transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary-700 dark:text-primary-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <h2 className="text-xl sm:text-2xl font-serif font-bold text-primary-800 dark:text-primary-300">
-          Editor de Documento
-        </h2>
-      </div>
-      
-      {/* Campo para título do documento */}
-      <div className="mb-4">
-        <label htmlFor="documento-titulo" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 no-print">
-          Título do Documento
-        </label>
-        <input
-          type="text"
-          id="documento-titulo"
-          value={tituloDocumento}
-          onChange={handleTituloChange}
-          placeholder="Insira um título para o documento"
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-white no-print"
-        />
-      </div>
-      
-      <div className="mb-4 flex flex-wrap gap-2 no-print">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full">
-          <button
-            onClick={imprimirDocumento}
-            className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+      <div className="flex items-center justify-between p-4 border-b border-law-200 dark:border-law-700">
+        <div className="flex items-center">
+          <button 
+            onClick={voltarEtapa}
+            className="mr-4 p-2 rounded-full hover:bg-law-100 dark:hover:bg-law-800 transition-colors"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary-700 dark:text-primary-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            <span className="whitespace-nowrap">Imprimir</span>
           </button>
-          
-          <button
-            onClick={baixarComoDocx}
-            className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <span className="whitespace-nowrap">Baixar DOCX</span>
-          </button>
-          
-          <button
-            onClick={copiarDocumento}
-            className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-            </svg>
-            <span className="whitespace-nowrap">Copiar</span>
-          </button>
+          <input
+            type="text"
+            value={tituloDocumento}
+            onChange={handleTituloChange}
+            placeholder="Título do documento"
+            className="font-serif text-xl font-bold bg-transparent border-b border-transparent focus:border-primary-500 focus:outline-none dark:text-white"
+          />
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <span id="status-salvamento" className="text-sm text-gray-500 dark:text-gray-400 hidden md:inline-block">
+            {ultimoSalvamento 
+              ? `Última alteração salva: ${ultimoSalvamento.toLocaleTimeString()}` 
+              : 'Documento não salvo'}
+          </span>
           
           <button
             onClick={salvarDocumento}
             disabled={salvando}
-            className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 text-sm bg-primary-600 hover:bg-primary-700 text-white rounded-md transition-colors flex items-center"
           >
             {salvando ? (
               <>
@@ -892,18 +947,48 @@ ${camposDoc.map(campo => {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <span className="whitespace-nowrap">Salvando...</span>
+                Salvando
               </>
             ) : (
               <>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                </svg>
-                <span className="whitespace-nowrap">Salvar</span>
+                Salvar
               </>
             )}
           </button>
         </div>
+      </div>
+      
+      {/* Barra de ferramentas do documento */}
+      <div className="flex flex-wrap gap-2 p-4 border-b border-law-200 dark:border-law-700 no-print">
+        <button
+          onClick={imprimirDocumento}
+          className="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+          Imprimir
+        </button>
+        
+        <button
+          onClick={baixarComoDocx}
+          className="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Baixar DOCX
+        </button>
+        
+        <button
+          onClick={copiarDocumento}
+          className="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+          </svg>
+          Copiar
+        </button>
         
         {/* Dica para melhor experiência de edição */}
         <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-md p-3 mt-2 w-full no-print">
@@ -919,7 +1004,7 @@ ${camposDoc.map(campo => {
           </div>
         </div>
       </div>
-
+      
       {/* Editor Quill */}
       <div className="bg-white shadow-lg mx-auto rounded-sm overflow-hidden print:shadow-none mb-10">
         <div id="documento-para-impressao" className="min-h-[29.7cm] w-full max-w-[21cm] mx-auto bg-white border border-gray-200 outline-none">
