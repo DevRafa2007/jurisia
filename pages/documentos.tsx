@@ -1151,6 +1151,7 @@ ${camposDoc.map(campo => {
       {/* TinyMCE Editor */}
       <div className="bg-white shadow-lg mx-auto rounded-sm overflow-hidden print:shadow-none mb-10 w-full">
         <Editor
+          apiKey="g0cfoz0z2qtdpt5houf4r9gi87dkagespb9zik46bf6cyxtp"
           onInit={handleEditorInit}
           initialValue={documentoGerado}
           value={documentoGerado}
