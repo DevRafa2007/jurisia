@@ -7,7 +7,6 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import Head from 'next/head';
 import DocumentosSidebar from '../components/DocumentosSidebar';
-import { Document, Packer, Paragraph, AlignmentType } from 'docx';
 import { saveAs } from 'file-saver';
 import dynamic from 'next/dynamic';
 import 'react-quill/dist/quill.snow.css';
@@ -19,6 +18,11 @@ import {
 
 // Importação dinâmica do React Quill para evitar problemas de SSR
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
+
+// Adicionar declaração para html-docx-js
+declare module 'html-docx-js' {
+  export function asBlob(html: string, options?: any): Blob;
+}
 
 // Tipos de documentos suportados
 const TIPOS_DOCUMENTOS = [
@@ -928,17 +932,16 @@ ${camposDoc.map(campo => {
     </motion.div>
   );
 
-  // Baixar como DOCX adaptado para o Quill
+  // Baixar como DOCX com preservação completa de formatação
   const baixarComoDocx = async () => {
     // Mostrar toast de carregamento
     const loadingToast = toast.loading('Preparando documento para download...');
 
     try {
-      // Converter HTML para formato DOCX usando docx-html
-      // Como o docx-html não está instalado, usaremos uma abordagem alternativa
-      // que preserva melhor a formatação
-
-      // Preparar arquivo HTML para download
+      // Importação dinâmica do html-docx-js
+      const htmlDocx = await import('html-docx-js');
+      
+      // Preparar HTML completo para conversão
       const htmlContent = `<!DOCTYPE html>
       <html>
       <head>
@@ -949,10 +952,22 @@ ${camposDoc.map(campo => {
             font-family: 'Times New Roman', Times, serif;
             font-size: 12pt;
             line-height: 1.5;
-            margin: 2.54cm;
+            margin: 0;
+            padding: 0;
+          }
+          .documento {
+            padding: 2.54cm;
+            width: 21cm;
+            min-height: 29.7cm;
+            box-sizing: border-box;
           }
           h1, h2, h3, h4 {
             font-weight: bold;
+          }
+          h1 {
+            font-size: 14pt;
+            text-align: center;
+            margin-bottom: 24pt;
           }
           p {
             margin-bottom: 10pt;
@@ -978,88 +993,134 @@ ${camposDoc.map(campo => {
           }
           ol, ul {
             padding-left: 2em;
+            margin-bottom: 10pt;
+          }
+          li {
+            margin-bottom: 5pt;
           }
         </style>
       </head>
       <body>
-        <h1 style="text-align: center;">${tituloDocumento}</h1>
-        ${documentoGerado}
+        <div class="documento">
+          <h1>${tituloDocumento}</h1>
+          ${documentoGerado}
+        </div>
       </body>
       </html>`;
 
-      // Salvar como HTML - melhor solução para preservar formatação
-      const htmlBlob = new Blob([htmlContent], {type: 'text/html'});
-      saveAs(htmlBlob, `${tituloDocumento || 'documento'}.html`);
-      
-      toast.success('Documento HTML gerado com sucesso! Abra no Word e salve como DOCX.', { id: loadingToast });
-      
-      // Criar versão DOCX simplificada (sem formatação avançada)
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = documentoGerado;
-      
-      const doc = new Document({
-        sections: [{
-          properties: {
-            page: {
-              margin: {
-                top: 1440,
-                right: 1440,
-                bottom: 1440,
-                left: 1440
-              }
-            }
-          },
-          children: [
-            new Paragraph({
-              text: tituloDocumento,
-              heading: 'Heading1',
-              alignment: AlignmentType.CENTER,
-              spacing: { before: 400, after: 400 }
-            }),
-            new Paragraph({
-              text: tempDiv.textContent || '',
-              alignment: AlignmentType.JUSTIFIED
-            })
-          ]
-        }]
+      // Converter HTML para DOCX usando html-docx-js
+      const docxBlob = htmlDocx.asBlob(htmlContent, {
+        orientation: 'portrait',
+        margins: { top: 1440, right: 1440, bottom: 1440, left: 1440 }
       });
-
-      // Gerar versão DOCX (sem formatação) como alternativa
-      const buffer = await Packer.toBuffer(doc);
       
-      // Mostrar mensagem explicativa
-      setTimeout(() => {
-        toast.success('Para melhor formatação, use o arquivo HTML. Foi gerada também uma versão DOCX simplificada.', 
-          { duration: 6000 });
-      }, 2000);
+      // Salvar o arquivo DOCX
+      saveAs(docxBlob, `${tituloDocumento || 'documento'}.docx`);
       
-      // Salvar versão DOCX simples
-      setTimeout(() => {
-        saveAs(new Blob([buffer]), `${tituloDocumento || 'documento'}_simples.docx`);
-      }, 3000);
-      
+      toast.success('Documento DOCX gerado com sucesso!', { id: loadingToast });
     } catch (error) {
-      console.error('Erro ao gerar documentos:', error);
-      toast.error('Não foi possível gerar o documento. Tentando alternativa...', { id: loadingToast });
+      console.error('Erro ao gerar DOCX:', error);
+      toast.error('Não foi possível gerar o documento DOCX. Tentando alternativa...', { id: loadingToast });
       
       try {
-        // Fallback direto para HTML
-        const blob = new Blob([`
-          <!DOCTYPE html>
+        // Importação dinâmica para o fallback
+        const htmlDocx = await import('html-docx-js');
+        
+        // Fallback: converter apenas o conteúdo sem estilos
+        const conteudoSimplificado = `<!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>${tituloDocumento}</title>
+          </head>
+          <body>
+            <h1 style="text-align: center;">${tituloDocumento}</h1>
+            ${documentoGerado}
+          </body>
+        </html>`;
+        
+        const docxBlobSimplificado = htmlDocx.asBlob(conteudoSimplificado);
+        saveAs(docxBlobSimplificado, `${tituloDocumento || 'documento'}.docx`);
+        toast.success('Documento DOCX gerado com formatação simplificada', { id: loadingToast });
+      } catch (fallbackError) {
+        console.error('Erro no fallback:', fallbackError);
+        
+        // Último recurso: salvar como HTML
+        try {
+          // Usar o mesmo htmlContent da tentativa original
+          const htmlContent = `<!DOCTYPE html>
           <html>
-            <head>
-              <title>${tituloDocumento}</title>
-            </head>
-            <body>
+          <head>
+            <meta charset="utf-8">
+            <title>${tituloDocumento || 'Documento Jurídico'}</title>
+            <style>
+              body {
+                font-family: 'Times New Roman', Times, serif;
+                font-size: 12pt;
+                line-height: 1.5;
+                margin: 0;
+                padding: 0;
+              }
+              .documento {
+                padding: 2.54cm;
+                width: 21cm;
+                min-height: 29.7cm;
+                box-sizing: border-box;
+              }
+              h1, h2, h3, h4 {
+                font-weight: bold;
+              }
+              h1 {
+                font-size: 14pt;
+                text-align: center;
+                margin-bottom: 24pt;
+              }
+              p {
+                margin-bottom: 10pt;
+                text-align: justify;
+              }
+              .ql-align-center {
+                text-align: center;
+              }
+              .ql-align-right {
+                text-align: right;
+              }
+              .ql-align-left {
+                text-align: left;
+              }
+              strong, b {
+                font-weight: bold;
+              }
+              em, i {
+                font-style: italic;
+              }
+              u {
+                text-decoration: underline;
+              }
+              ol, ul {
+                padding-left: 2em;
+                margin-bottom: 10pt;
+              }
+              li {
+                margin-bottom: 5pt;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="documento">
+              <h1>${tituloDocumento}</h1>
               ${documentoGerado}
-            </body>
-          </html>
-        `], { type: 'text/html' });
-        saveAs(blob, `${tituloDocumento || 'documento'}.html`);
-        toast.success('Documento salvo como HTML', { id: loadingToast });
-      } catch (e) {
-        console.error('Erro no fallback para HTML:', e);
-        toast.error('Falha ao salvar o documento. Tente novamente.', { id: loadingToast });
+            </div>
+          </body>
+          </html>`;
+          
+          const blob = new Blob([htmlContent], { type: 'text/html' });
+          saveAs(blob, `${tituloDocumento || 'documento'}.html`);
+          toast.success('Documento salvo como HTML', { id: loadingToast });
+        } catch (e) {
+          console.error('Erro ao salvar como HTML:', e);
+          toast.error('Falha ao salvar o documento. Tente novamente.', { id: loadingToast });
+        }
       }
     }
   };
