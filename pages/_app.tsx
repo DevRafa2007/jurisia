@@ -1,4 +1,5 @@
 import '../styles/globals.css';
+import '../styles/ckeditor.css';
 import type { AppProps } from 'next/app';
 import { useState, useEffect } from 'react';
 import { AuthProvider } from '../contexts/AuthContext';
