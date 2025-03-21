@@ -189,7 +189,6 @@ export default function Documentos() {
   const [tituloDocumento, setTituloDocumento] = useState<string>('');
   const [salvando, setSalvando] = useState(false);
   const [editorLoaded, setEditorLoaded] = useState(false);
-  const editorRef = useRef<HTMLDivElement>(null);
 
   // Detectar se é dispositivo móvel
   useEffect(() => {
@@ -226,8 +225,19 @@ export default function Documentos() {
 
   // Carregar o editor
   useEffect(() => {
-    setEditorLoaded(true);
-  }, []);
+    // Apenas carregar o editor quando chegarmos à etapa 'editor'
+    if (etapa === 'editor') {
+      // Pequeno timeout para garantir que a renderização inicial seja concluída
+      const timer = setTimeout(() => {
+        setEditorLoaded(true);
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    } else {
+      // Descarregar o editor quando não estiver na etapa de edição
+      setEditorLoaded(false);
+    }
+  }, [etapa]);
 
   // Função para atualizar os valores do formulário
   const handleInputChange = (campoId: string, valor: any) => {

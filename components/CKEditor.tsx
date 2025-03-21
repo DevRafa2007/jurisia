@@ -11,38 +11,55 @@ interface CKEditorProps {
 const CKEditorComponent: React.FC<CKEditorProps> = ({ 
   onChange, 
   editorLoaded, 
-  value, 
+  value = '', // Garantir valor default para evitar null
   height = '29.7cm' 
 }) => {
   const [CKEditorComponent, setCKEditorComponent] = useState<any>(null);
   const [ClassicEditorComponent, setClassicEditorComponent] = useState<any>(null);
+  const [editorInstance, setEditorInstance] = useState<any>(null);
+  const [isReady, setIsReady] = useState(false);
 
   // Carregar os componentes do CKEditor dinamicamente
   useEffect(() => {
+    let isMounted = true;
+    
     if (editorLoaded) {
       // Importar os componentes apenas no lado do cliente
       (async () => {
-        const CKEditorModule = await import('@ckeditor/ckeditor5-react');
-        const ClassicEditorModule = await import('@ckeditor/ckeditor5-build-classic');
-        
-        setCKEditorComponent(() => CKEditorModule.CKEditor);
-        setClassicEditorComponent(() => ClassicEditorModule.default);
+        try {
+          const CKEditorModule = await import('@ckeditor/ckeditor5-react');
+          const ClassicEditorModule = await import('@ckeditor/ckeditor5-build-classic');
+          
+          if (isMounted) {
+            setCKEditorComponent(() => CKEditorModule.CKEditor);
+            setClassicEditorComponent(() => ClassicEditorModule.default);
+            setTimeout(() => {
+              if (isMounted) setIsReady(true);
+            }, 100); // Pequeno atraso para garantir que tudo esteja pronto
+          }
+        } catch (error) {
+          console.error('Erro ao carregar o CKEditor:', error);
+        }
       })();
     }
+    
+    return () => {
+      isMounted = false;
+    };
   }, [editorLoaded]);
 
   // Função para ajustar a altura do editor
   useEffect(() => {
-    if (editorLoaded) {
+    if (isReady && editorLoaded) {
       // Aplicar CSS personalizado após o carregamento do editor
       const editorContainer = document.querySelector('.ck-editor__main');
       if (editorContainer) {
         (editorContainer as HTMLElement).style.minHeight = height;
       }
     }
-  }, [editorLoaded, height, CKEditorComponent]);
+  }, [isReady, editorLoaded, height]);
 
-  if (!editorLoaded || !CKEditorComponent || !ClassicEditorComponent) {
+  if (!editorLoaded || !isReady || !CKEditorComponent || !ClassicEditorComponent) {
     return <div className="border border-gray-300 dark:border-gray-600 rounded-md p-4 bg-white dark:bg-gray-800 animate-pulse text-center">Carregando editor...</div>;
   }
 
@@ -119,7 +136,7 @@ const CKEditorComponent: React.FC<CKEditorProps> = ({
       
       <CKEditorComponent
         editor={ClassicEditorComponent}
-        data={value}
+        data={value || ''}
         config={{
           toolbar: [
             'heading',
@@ -165,9 +182,20 @@ const CKEditorComponent: React.FC<CKEditorProps> = ({
             ]
           }
         }}
+        onReady={(editor: any) => {
+          // Guardar referência ao editor
+          setEditorInstance(editor);
+        }}
         onChange={(event: any, editor: any) => {
-          const data = editor.getData();
-          onChange(data);
+          if (editor && typeof editor.getData === 'function') {
+            try {
+              const data = editor.getData();
+              onChange(data);
+            } catch (error) {
+              console.error('Erro ao obter dados do editor:', error);
+              onChange('');
+            }
+          }
         }}
       />
     </div>
