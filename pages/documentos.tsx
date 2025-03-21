@@ -7,6 +7,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import Head from 'next/head';
 import DocumentosSidebar from '../components/DocumentosSidebar';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, convertInchesToTwip } from 'docx';
 import { saveAs } from 'file-saver';
 import dynamic from 'next/dynamic';
 import 'react-quill/dist/quill.snow.css';
@@ -932,195 +933,189 @@ ${camposDoc.map(campo => {
     </motion.div>
   );
 
-  // Baixar como DOCX com preservação completa de formatação
+  // Baixar como DOCX com preservação de formatação
   const baixarComoDocx = async () => {
     // Mostrar toast de carregamento
     const loadingToast = toast.loading('Preparando documento para download...');
 
     try {
-      // Importação dinâmica do html-docx-js
-      const htmlDocx = await import('html-docx-js');
-      
-      // Preparar HTML completo para conversão
-      const htmlContent = `<!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>${tituloDocumento || 'Documento Jurídico'}</title>
-        <style>
-          body {
-            font-family: 'Times New Roman', Times, serif;
-            font-size: 12pt;
-            line-height: 1.5;
-            margin: 0;
-            padding: 0;
-          }
-          .documento {
-            padding: 2.54cm;
-            width: 21cm;
-            min-height: 29.7cm;
-            box-sizing: border-box;
-          }
-          h1, h2, h3, h4 {
-            font-weight: bold;
-          }
-          h1 {
-            font-size: 14pt;
-            text-align: center;
-            margin-bottom: 24pt;
-          }
-          p {
-            margin-bottom: 10pt;
-            text-align: justify;
-          }
-          .ql-align-center {
-            text-align: center;
-          }
-          .ql-align-right {
-            text-align: right;
-          }
-          .ql-align-left {
-            text-align: left;
-          }
-          strong, b {
-            font-weight: bold;
-          }
-          em, i {
-            font-style: italic;
-          }
-          u {
-            text-decoration: underline;
-          }
-          ol, ul {
-            padding-left: 2em;
-            margin-bottom: 10pt;
-          }
-          li {
-            margin-bottom: 5pt;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="documento">
-          <h1>${tituloDocumento}</h1>
-          ${documentoGerado}
-        </div>
-      </body>
-      </html>`;
+      // Criar elemento temporário para analisar o HTML do Quill
+      const tempElement = document.createElement('div');
+      tempElement.innerHTML = documentoGerado;
 
-      // Converter HTML para DOCX usando html-docx-js
-      const docxBlob = htmlDocx.asBlob(htmlContent, {
-        orientation: 'portrait',
-        margins: { top: 1440, right: 1440, bottom: 1440, left: 1440 }
+      // Extrair texto e formatação básica do HTML
+      const paragraphs: Paragraph[] = [];
+      const elements = Array.from(tempElement.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, div'));
+      
+      for (const element of elements) {
+        // Pular elementos aninhados para evitar duplicação
+        if (element.parentElement && elements.includes(element.parentElement)) {
+          continue;
+        }
+        
+        // Obter texto simples do elemento
+        const text = element.textContent || '';
+        
+        // Determinar alinhamento
+        let alignment;
+        const computedStyle = window.getComputedStyle(element);
+        const textAlign = computedStyle.textAlign;
+        
+        // Mapear valores de alinhamento entre CSS e docx
+        if (textAlign === 'center') {
+          alignment = AlignmentType.CENTER;
+        } else if (textAlign === 'right') {
+          alignment = AlignmentType.RIGHT;
+        } else if (textAlign === 'left') {
+          alignment = AlignmentType.LEFT;
+        } else {
+          alignment = AlignmentType.JUSTIFIED;
+        }
+
+        // Determinar se é título
+        let heading = undefined;
+        if (element.tagName.match(/^H[1-6]$/)) {
+          const level = parseInt(element.tagName.substring(1));
+          switch (level) {
+            case 1: heading = HeadingLevel.HEADING_1; break;
+            case 2: heading = HeadingLevel.HEADING_2; break;
+            case 3: heading = HeadingLevel.HEADING_3; break;
+            case 4: heading = HeadingLevel.HEADING_4; break;
+            case 5: heading = HeadingLevel.HEADING_5; break;
+            case 6: heading = HeadingLevel.HEADING_6; break;
+          }
+        }
+
+        // Criar TextRun simples
+        const textRun = new TextRun({
+          text: text
+        });
+        
+        // Criar parágrafo com o TextRun
+        paragraphs.push(new Paragraph({
+          heading,
+          alignment,
+          children: [textRun],
+          spacing: {
+            after: 200,
+          }
+        }));
+      }
+
+      // Criar título se existir
+      if (tituloDocumento) {
+        paragraphs.unshift(new Paragraph({
+          text: tituloDocumento,
+          heading: HeadingLevel.HEADING_1,
+          alignment: AlignmentType.CENTER,
+          spacing: {
+            before: 400,
+            after: 400
+          }
+        }));
+      }
+
+      // Criar documento
+      const doc = new Document({
+        sections: [{
+          properties: {
+            page: {
+              margin: {
+                top: convertInchesToTwip(1),
+                right: convertInchesToTwip(1),
+                bottom: convertInchesToTwip(1),
+                left: convertInchesToTwip(1)
+              }
+            }
+          },
+          children: paragraphs
+        }]
       });
-      
-      // Salvar o arquivo DOCX
-      saveAs(docxBlob, `${tituloDocumento || 'documento'}.docx`);
-      
+
+      // Gerar arquivo
+      const buffer = await Packer.toBuffer(doc);
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+      saveAs(blob, `${tituloDocumento || 'documento'}.docx`);
+
       toast.success('Documento DOCX gerado com sucesso!', { id: loadingToast });
     } catch (error) {
       console.error('Erro ao gerar DOCX:', error);
       toast.error('Não foi possível gerar o documento DOCX. Tentando alternativa...', { id: loadingToast });
       
       try {
-        // Importação dinâmica para o fallback
-        const htmlDocx = await import('html-docx-js');
-        
-        // Fallback: converter apenas o conteúdo sem estilos
-        const conteudoSimplificado = `<!DOCTYPE html>
+        // Fallback: exportar como HTML que pode ser aberto no Word
+        const htmlContent = `<!DOCTYPE html>
         <html>
-          <head>
-            <meta charset="utf-8">
-            <title>${tituloDocumento}</title>
-          </head>
-          <body>
-            <h1 style="text-align: center;">${tituloDocumento}</h1>
+        <head>
+          <meta charset="utf-8">
+          <title>${tituloDocumento || 'Documento Jurídico'}</title>
+          <style>
+            body {
+              font-family: 'Times New Roman', Times, serif;
+              font-size: 12pt;
+              line-height: 1.5;
+              margin: 0;
+              padding: 0;
+            }
+            .documento {
+              padding: 2.54cm;
+              width: 21cm;
+              min-height: 29.7cm;
+              box-sizing: border-box;
+            }
+            h1, h2, h3, h4 {
+              font-weight: bold;
+            }
+            h1 {
+              font-size: 14pt;
+              text-align: center;
+              margin-bottom: 24pt;
+            }
+            p {
+              margin-bottom: 10pt;
+              text-align: justify;
+            }
+            .ql-align-center {
+              text-align: center;
+            }
+            .ql-align-right {
+              text-align: right;
+            }
+            .ql-align-left {
+              text-align: left;
+            }
+            strong, b {
+              font-weight: bold;
+            }
+            em, i {
+              font-style: italic;
+            }
+            u {
+              text-decoration: underline;
+            }
+            ol, ul {
+              padding-left: 2em;
+              margin-bottom: 10pt;
+            }
+            li {
+              margin-bottom: 5pt;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="documento">
+            <h1>${tituloDocumento}</h1>
             ${documentoGerado}
-          </body>
+          </div>
+        </body>
         </html>`;
         
-        const docxBlobSimplificado = htmlDocx.asBlob(conteudoSimplificado);
-        saveAs(docxBlobSimplificado, `${tituloDocumento || 'documento'}.docx`);
-        toast.success('Documento DOCX gerado com formatação simplificada', { id: loadingToast });
-      } catch (fallbackError) {
-        console.error('Erro no fallback:', fallbackError);
-        
-        // Último recurso: salvar como HTML
-        try {
-          // Usar o mesmo htmlContent da tentativa original
-          const htmlContent = `<!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <title>${tituloDocumento || 'Documento Jurídico'}</title>
-            <style>
-              body {
-                font-family: 'Times New Roman', Times, serif;
-                font-size: 12pt;
-                line-height: 1.5;
-                margin: 0;
-                padding: 0;
-              }
-              .documento {
-                padding: 2.54cm;
-                width: 21cm;
-                min-height: 29.7cm;
-                box-sizing: border-box;
-              }
-              h1, h2, h3, h4 {
-                font-weight: bold;
-              }
-              h1 {
-                font-size: 14pt;
-                text-align: center;
-                margin-bottom: 24pt;
-              }
-              p {
-                margin-bottom: 10pt;
-                text-align: justify;
-              }
-              .ql-align-center {
-                text-align: center;
-              }
-              .ql-align-right {
-                text-align: right;
-              }
-              .ql-align-left {
-                text-align: left;
-              }
-              strong, b {
-                font-weight: bold;
-              }
-              em, i {
-                font-style: italic;
-              }
-              u {
-                text-decoration: underline;
-              }
-              ol, ul {
-                padding-left: 2em;
-                margin-bottom: 10pt;
-              }
-              li {
-                margin-bottom: 5pt;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="documento">
-              <h1>${tituloDocumento}</h1>
-              ${documentoGerado}
-            </div>
-          </body>
-          </html>`;
-          
-          const blob = new Blob([htmlContent], { type: 'text/html' });
-          saveAs(blob, `${tituloDocumento || 'documento'}.html`);
-          toast.success('Documento salvo como HTML', { id: loadingToast });
-        } catch (e) {
-          console.error('Erro ao salvar como HTML:', e);
-          toast.error('Falha ao salvar o documento. Tente novamente.', { id: loadingToast });
-        }
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        saveAs(blob, `${tituloDocumento || 'documento'}.html`);
+        toast.success('Documento salvo como HTML. Abra no Word e salve como DOCX para melhor compatibilidade.', { id: loadingToast });
+      } catch (e) {
+        console.error('Erro ao salvar como HTML:', e);
+        toast.error('Falha ao salvar o documento. Tente novamente.', { id: loadingToast });
       }
     }
   };
