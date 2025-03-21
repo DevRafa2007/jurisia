@@ -9,12 +9,12 @@ import Head from 'next/head';
 import DocumentosSidebar from '../components/DocumentosSidebar';
 import { Document, Packer, Paragraph, AlignmentType, TextRun } from 'docx';
 import { saveAs } from 'file-saver';
-import { Editor } from '@tinymce/tinymce-react';
 import { 
   carregarDocumento as fetchDocumento, 
   criarDocumento, 
   atualizarDocumento
 } from '../utils/supabase';
+import CKEditor from '../components/CKEditor';
 
 // Tipos de documentos suportados
 const TIPOS_DOCUMENTOS = [
@@ -188,7 +188,8 @@ export default function Documentos() {
   const [documentoAtual, setDocumentoAtual] = useState<string | null>(null);
   const [tituloDocumento, setTituloDocumento] = useState<string>('');
   const [salvando, setSalvando] = useState(false);
-  const editorRef = useRef<any>(null);
+  const [editorLoaded, setEditorLoaded] = useState(false);
+  const editorRef = useRef<HTMLDivElement>(null);
 
   // Detectar se é dispositivo móvel
   useEffect(() => {
@@ -222,6 +223,11 @@ export default function Documentos() {
       );
     }
   }, [isMobile, etapa, documentoGerado]);
+
+  // Carregar o editor
+  useEffect(() => {
+    setEditorLoaded(true);
+  }, []);
 
   // Função para atualizar os valores do formulário
   const handleInputChange = (campoId: string, valor: any) => {
@@ -349,10 +355,8 @@ ${camposDoc.map(campo => {
 
   // Função para imprimir o documento
   const imprimirDocumento = () => {
-    if (!editorRef.current) return;
-    
     // Preparar o conteúdo para impressão
-    const conteudoParaImprimir = editorRef.current.getContent();
+    const conteudoParaImprimir = documentoGerado;
     
     // Criar um novo documento para impressão
     const janelaImpressao = window.open('', '_blank');
@@ -391,27 +395,6 @@ ${camposDoc.map(campo => {
               page-break-after: always;
               overflow: visible;
             }
-            p {
-              margin: 0 0 0.8em 0;
-              text-align: justify;
-            }
-            /* Estilos para títulos */
-            h1, h2, h3, .titulo-centralizado, p.titulo, p:first-child {
-              text-align: center;
-              font-weight: bold;
-              margin: 1.2em 0;
-            }
-            h1, .titulo-principal {
-              font-size: 14pt;
-              margin-top: 2em;
-              margin-bottom: 2.5em;
-            }
-            /* Garantir que elementos com a classe de título centralizado mantenham a formatação */
-            .titulo-centralizado {
-              text-align: center !important;
-              font-weight: bold;
-              margin: 1.5em 0;
-            }
             /* Estilos para texto em negrito */
             strong, b {
               font-weight: bold;
@@ -424,44 +407,9 @@ ${camposDoc.map(campo => {
             u {
               text-decoration: underline;
             }
-            /* Alinhamentos específicos */
-            .text-center, [align="center"] {
-              text-align: center;
-            }
-            .text-right, [align="right"] {
-              text-align: right;
-            }
-            .text-left, [align="left"] {
-              text-align: left;
-            }
-            .text-justify, [align="justify"] {
-              text-align: justify;
-            }
-            /* Espaçamento entre parágrafos */
-            p + p {
-              margin-top: 0.5em;
-            }
             /* Preservar quebras de linha */
             br {
               line-height: 150%;
-            }
-            /* Estilo para parágrafo com assinatura */
-            p.assinatura {
-              text-align: center;
-              margin-top: 3em;
-              margin-bottom: 1em;
-            }
-            /* Quebra de página */
-            .quebra-pagina {
-              page-break-before: always;
-            }
-            /* Listas */
-            ul, ol {
-              margin: 0.5em 0;
-              padding-left: 2em;
-            }
-            li {
-              margin-bottom: 0.3em;
             }
           </style>
         </head>
@@ -470,43 +418,12 @@ ${camposDoc.map(campo => {
             ${conteudoParaImprimir}
           </div>
           <script>
-            // Aplicar formatações adicionais após o carregamento
-            document.addEventListener('DOMContentLoaded', function() {
-              // Identificar e formatar elementos especiais
-              const paragrafos = document.querySelectorAll('p');
-              
-              // Verificar se o primeiro parágrafo é um título
-              if (paragrafos.length > 0) {
-                const primeiroParagrafo = paragrafos[0];
-                const texto = primeiroParagrafo.textContent || '';
-                
-                // Se o texto está todo em maiúsculas, provavelmente é um título
-                if (texto === texto.toUpperCase() && texto.length > 3) {
-                  primeiroParagrafo.classList.add('titulo-principal');
-                }
-              }
-              
-              // Formatar parágrafos com texto todo em maiúsculas como títulos
-              paragrafos.forEach(p => {
-                const texto = p.textContent || '';
-                if (texto === texto.toUpperCase() && texto.length > 3) {
-                  p.classList.add('titulo-centralizado');
-                }
-                
-                // Verificar se é um parágrafo de assinatura
-                if (texto.includes('__________________') || 
-                    texto.toLowerCase().includes('assinatura') ||
-                    texto.match(/[a-zA-Z ]+,\\s+\\d{1,2}\\s+de\\s+[a-zA-Z]+\\s+de\\s+\\d{4}/)) {
-                  p.classList.add('assinatura');
-                }
-              });
-              
-              // Permitir que o conteúdo seja renderizado
+            window.onload = function() {
               setTimeout(function() {
                 window.print();
                 setTimeout(function() { window.close(); }, 750);
               }, 300);
-            });
+            };
           </script>
         </body>
         </html>
@@ -521,15 +438,13 @@ ${camposDoc.map(campo => {
 
   // Função para copiar o documento para a área de transferência
   const copiarDocumento = () => {
-    if (editorRef.current) {
-      const conteudo = editorRef.current.getContent();
+    if (documentoGerado) {
+      // Tratar conteúdo HTML para remover as tags
+      const tempElement = document.createElement('div');
+      tempElement.innerHTML = documentoGerado;
+      const textoPlano = tempElement.textContent || tempElement.innerText || '';
       
-      // Criar um elemento temporário para extrair o texto
-      const temp = document.createElement('div');
-      temp.innerHTML = conteudo;
-      const texto = temp.textContent || temp.innerText || '';
-      
-      navigator.clipboard.writeText(texto)
+      navigator.clipboard.writeText(textoPlano)
         .then(() => toast.success('Documento copiado para a área de transferência!'))
         .catch(() => toast.error('Erro ao copiar documento.'));
     }
@@ -537,7 +452,7 @@ ${camposDoc.map(campo => {
 
   // Função para baixar o documento como DOCX
   const baixarComoDocx = async () => {
-    if (!editorRef.current) return;
+    if (!documentoGerado) return;
     
     try {
       // Mostrar que o download está sendo processado
@@ -561,7 +476,7 @@ ${camposDoc.map(campo => {
       
       // Criar uma versão temporária em HTML para processamento
       const tempElement = document.createElement('div');
-      tempElement.innerHTML = editorRef.current.getContent();
+      tempElement.innerHTML = documentoGerado;
       
       // Processar cada parágrafo do documento
       const paragrafos = Array.from(tempElement.querySelectorAll('p'));
@@ -641,7 +556,7 @@ ${camposDoc.map(campo => {
                           textRuns.push(new TextRun({
                             text: filho.textContent,
                             bold: ehNegrito,
-                            italic: ehItalico,
+                            italics: ehItalico,
                             underline: ehSublinhado,
                           }));
                         }
@@ -655,7 +570,7 @@ ${camposDoc.map(campo => {
                     textRuns.push(new TextRun({
                       text: elemento.textContent,
                       bold: ehNegrito,
-                      italic: ehItalico,
+                      italics: ehItalico,
                       underline: ehSublinhado,
                     }));
                   }
@@ -690,7 +605,6 @@ ${camposDoc.map(campo => {
               new Paragraph({
                 text: paragrafo.textContent || '',
                 alignment: alinhamento,
-                bold: ehTitulo,
                 spacing: {
                   before: ehTitulo ? 400 : 120,
                   after: ehTitulo ? 400 : 240,
@@ -778,7 +692,7 @@ ${camposDoc.map(campo => {
             </style>
           </head>
           <body>
-            ${editorRef.current.getContent()}
+            ${documentoGerado}
           </body>
           </html>
         `], { type: 'text/html' });
@@ -794,7 +708,7 @@ ${camposDoc.map(campo => {
 
   // Função para salvar o documento no banco de dados
   const salvarDocumento = async () => {
-    if (!user || !editorRef.current || !tipoDocumentoSelecionado) {
+    if (!user || !documentoGerado || !tipoDocumentoSelecionado) {
       toast.error('Não foi possível salvar o documento.');
       return;
     }
@@ -803,13 +717,12 @@ ${camposDoc.map(campo => {
       setSalvando(true);
       
       const tipoDoc = CONFIGURACOES_FORMULARIOS[tipoDocumentoSelecionado].nome;
-      const conteudoAtual = editorRef.current.getContent();
       
       if (documentoAtual) {
         // Atualizar documento existente
         await atualizarDocumento(documentoAtual, {
           titulo: tituloDocumento,
-          conteudo: conteudoAtual
+          conteudo: documentoGerado
         });
         
         toast.success('Documento atualizado com sucesso!');
@@ -819,7 +732,7 @@ ${camposDoc.map(campo => {
           user.id,
           tituloDocumento,
           tipoDoc,
-          conteudoAtual
+          documentoGerado
         );
         
         // Atualizar o ID do documento atual
@@ -891,19 +804,14 @@ ${camposDoc.map(campo => {
     }
   };
 
+  // Função para lidar com as mudanças no CKEditor
+  const handleEditorChange = (data: string) => {
+    setDocumentoGerado(data);
+  };
+
   // Função para alterar o título do documento
   const handleTituloChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTituloDocumento(e.target.value);
-  };
-
-  // Handler para o TinyMCE
-  const handleEditorChange = (content: string) => {
-    setDocumentoGerado(content);
-  };
-
-  // Inicializar o TinyMCE
-  const handleEditorInit = (evt: any, editor: any) => {
-    editorRef.current = editor;
   };
 
   // Renderiza o seletor de tipo de documento
@@ -1148,126 +1056,13 @@ ${camposDoc.map(campo => {
         </div>
       </div>
 
-      {/* Dica para o usuário */}
-      <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-md text-sm text-blue-700 dark:text-blue-300 no-print">
-        <div className="flex items-start">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 flex-shrink-0 text-blue-600 dark:text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9z" clipRule="evenodd" />
-          </svg>
-          <div>
-            <p className="font-medium">Dica para melhor formatação:</p>
-            <p>Para edição avançada do documento, recomendamos baixar como DOCX e utilizar o Microsoft Word ou Google Docs para ajustes finais na formatação e estilo.</p>
-          </div>
-        </div>
-      </div>
-
-      {/* TinyMCE Editor */}
-      <div className="bg-white shadow-lg mx-auto rounded-sm overflow-hidden print:shadow-none mb-10 w-full">
-        <Editor
-          apiKey="g0cfoz0z2qtdpt5houf4r9gi87dkagespb9zik46bf6cyxtp"
-          onInit={handleEditorInit}
-          initialValue={documentoGerado}
+      {/* CKEditor */}
+      <div className="w-full max-w-5xl mx-auto">
+        <CKEditor
+          editorLoaded={editorLoaded}
           value={documentoGerado}
-          onEditorChange={handleEditorChange}
-          id="documento-para-impressao"
-          init={{
-            height: 842, // A4 height in pixels at 96dpi
-            width: '100%',
-            menubar: true,
-            plugins: [
-              'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-              'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-              'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount',
-              'paste', 'print', 'pagebreak'
-            ],
-            toolbar: 'undo redo | formatselect | ' +
-              'bold italic underline strikethrough | alignleft aligncenter ' +
-              'alignright alignjustify | bullist numlist outdent indent | ' +
-              'removeformat | help | print',
-            content_style: `
-              body {
-                font-family: 'Times New Roman', Times, serif;
-                font-size: 12pt;
-                line-height: 1.5;
-                max-width: 21cm;
-                min-height: 29.7cm;
-                padding: 2.54cm;
-                margin: 0 auto;
-                box-sizing: border-box;
-                background-color: white;
-                color: black;
-              }
-              p {
-                margin: 0 0 0.8em 0;
-                text-align: justify;
-              }
-              /* Estilos para títulos */
-              h1, h2, h3, .titulo-centralizado {
-                text-align: center;
-                font-weight: bold;
-                margin: 1.2em 0;
-              }
-              h1 {
-                font-size: 14pt;
-                margin-top: 2em;
-                margin-bottom: 2.5em;
-              }
-              /* Garantir que elementos com alinhamento específico mantenham a formatação */
-              p[style*="text-align: center"], .titulo-centralizado {
-                text-align: center !important;
-                font-weight: bold;
-              }
-              p[style*="text-align: right"] {
-                text-align: right !important;
-              }
-              p[style*="text-align: justify"] {
-                text-align: justify !important;
-              }
-              /* Estilos para texto em negrito */
-              strong, b {
-                font-weight: bold;
-              }
-              /* Estilos para texto em itálico */
-              em, i {
-                font-style: italic;
-              }
-              /* Estilos para texto sublinhado */
-              u {
-                text-decoration: underline;
-              }
-            `,
-            branding: false,
-            language: 'pt_BR',
-            forced_root_block: 'p',
-            setup: function(editor) {
-              editor.on('init', function() {
-                // Sobrescrever estilos do TinyMCE para parecer com documento A4
-                const iframe = document.querySelector('.tox-edit-area__iframe');
-                if (iframe) {
-                  const iframeDocument = iframe.contentDocument;
-                  if (iframeDocument) {
-                    const style = iframeDocument.createElement('style');
-                    style.innerHTML = `
-                      html, body {
-                        background-color: white !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        height: 100% !important;
-                      }
-                      body {
-                        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1) !important;
-                        background-color: white !important;
-                        width: 100% !important;
-                        max-width: 100% !important;
-                        overflow-y: auto !important;
-                      }
-                    `;
-                    iframeDocument.head.appendChild(style);
-                  }
-                }
-              });
-            }
-          }}
+          onChange={handleEditorChange}
+          height="29.7cm"
         />
       </div>
     </motion.div>
@@ -1281,10 +1076,10 @@ ${camposDoc.map(campo => {
             body * {
               visibility: hidden;
             }
-            #documento-para-impressao, #documento-para-impressao * {
+            .ck-content, .ck-content * {
               visibility: visible;
             }
-            #documento-para-impressao {
+            .ck-content {
               position: absolute;
               left: 0;
               top: 0;
@@ -1295,6 +1090,9 @@ ${camposDoc.map(campo => {
               box-sizing: border-box;
               overflow: visible;
               page-break-inside: avoid;
+            }
+            .ck-toolbar, .ck-toolbar-container {
+              display: none !important;
             }
             @page {
               size: A4;
@@ -1308,24 +1106,6 @@ ${camposDoc.map(campo => {
             .no-print {
               display: none !important;
             }
-          }
-          
-          /* Estilos para o editor */
-          #documento-para-impressao p {
-            margin: 0 0 0.5em 0;
-            text-align: justify;
-          }
-          
-          #documento-para-impressao .titulo-centralizado,
-          #documento-para-impressao p:first-child {
-            text-align: center !important;
-            font-weight: bold;
-            font-size: 14pt;
-            margin-bottom: 2em;
-          }
-          
-          #documento-para-impressao strong {
-            font-weight: bold;
           }
         `}</style>
       </Head>
