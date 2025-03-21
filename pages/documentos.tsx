@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,14 +7,18 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import Head from 'next/head';
 import DocumentosSidebar from '../components/DocumentosSidebar';
-import { Document, Packer, Paragraph, AlignmentType, TextRun } from 'docx';
+import { Document, Packer, Paragraph, AlignmentType } from 'docx';
 import { saveAs } from 'file-saver';
+import dynamic from 'next/dynamic';
+import 'react-quill/dist/quill.snow.css';
 import { 
   carregarDocumento as fetchDocumento, 
   criarDocumento, 
   atualizarDocumento
 } from '../utils/supabase';
-import CKEditorComponent from '../components/CKEditor';
+
+// Importação dinâmica do React Quill para evitar problemas de SSR
+const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
 // Tipos de documentos suportados
 const TIPOS_DOCUMENTOS = [
@@ -188,7 +192,6 @@ export default function Documentos() {
   const [documentoAtual, setDocumentoAtual] = useState<string | null>(null);
   const [tituloDocumento, setTituloDocumento] = useState<string>('');
   const [salvando, setSalvando] = useState(false);
-  const [editorLoaded, setEditorLoaded] = useState(false);
 
   // Detectar se é dispositivo móvel
   useEffect(() => {
@@ -222,25 +225,6 @@ export default function Documentos() {
       );
     }
   }, [isMobile, etapa, documentoGerado]);
-
-  // Carregar o editor
-  useEffect(() => {
-    // Apenas carregar o editor quando chegarmos à etapa 'editor'
-    if (etapa === 'editor') {
-      console.log('Ativando editor, documento atual:', documentoAtual);
-      console.log('Conteúdo do documento:', documentoGerado?.substring(0, 100));
-      
-      // Pequeno timeout para garantir que a renderização inicial seja concluída
-      const timer = setTimeout(() => {
-        setEditorLoaded(true);
-      }, 300); // Aumentando o timeout para garantir carregamento completo
-      
-      return () => clearTimeout(timer);
-    } else {
-      // Descarregar o editor quando não estiver na etapa de edição
-      setEditorLoaded(false);
-    }
-  }, [etapa, documentoAtual, documentoGerado]);
 
   // Função para atualizar os valores do formulário
   const handleInputChange = (campoId: string, valor: any) => {
@@ -408,6 +392,27 @@ ${camposDoc.map(campo => {
               page-break-after: always;
               overflow: visible;
             }
+            p {
+              margin: 0 0 0.8em 0;
+              text-align: justify;
+            }
+            /* Estilos para títulos */
+            h1, h2, h3, .titulo-centralizado, p.titulo, p:first-child {
+              text-align: center;
+              font-weight: bold;
+              margin: 1.2em 0;
+            }
+            h1, .titulo-principal {
+              font-size: 14pt;
+              margin-top: 2em;
+              margin-bottom: 2.5em;
+            }
+            /* Garantir que elementos com a classe de título centralizado mantenham a formatação */
+            .titulo-centralizado {
+              text-align: center !important;
+              font-weight: bold;
+              margin: 1.5em 0;
+            }
             /* Estilos para texto em negrito */
             strong, b {
               font-weight: bold;
@@ -420,9 +425,44 @@ ${camposDoc.map(campo => {
             u {
               text-decoration: underline;
             }
+            /* Alinhamentos específicos */
+            .text-center, [align="center"] {
+              text-align: center;
+            }
+            .text-right, [align="right"] {
+              text-align: right;
+            }
+            .text-left, [align="left"] {
+              text-align: left;
+            }
+            .text-justify, [align="justify"] {
+              text-align: justify;
+            }
+            /* Espaçamento entre parágrafos */
+            p + p {
+              margin-top: 0.5em;
+            }
             /* Preservar quebras de linha */
             br {
               line-height: 150%;
+            }
+            /* Estilo para parágrafo com assinatura */
+            p.assinatura {
+              text-align: center;
+              margin-top: 3em;
+              margin-bottom: 1em;
+            }
+            /* Quebra de página */
+            .quebra-pagina {
+              page-break-before: always;
+            }
+            /* Listas */
+            ul, ol {
+              margin: 0.5em 0;
+              padding-left: 2em;
+            }
+            li {
+              margin-bottom: 0.3em;
             }
           </style>
         </head>
@@ -431,12 +471,43 @@ ${camposDoc.map(campo => {
             ${conteudoParaImprimir}
           </div>
           <script>
-            window.onload = function() {
+            // Aplicar formatações adicionais após o carregamento
+            document.addEventListener('DOMContentLoaded', function() {
+              // Identificar e formatar elementos especiais
+              const paragrafos = document.querySelectorAll('p');
+              
+              // Verificar se o primeiro parágrafo é um título
+              if (paragrafos.length > 0) {
+                const primeiroParagrafo = paragrafos[0];
+                const texto = primeiroParagrafo.textContent || '';
+                
+                // Se o texto está todo em maiúsculas, provavelmente é um título
+                if (texto === texto.toUpperCase() && texto.length > 3) {
+                  primeiroParagrafo.classList.add('titulo-principal');
+                }
+              }
+              
+              // Formatar parágrafos com texto todo em maiúsculas como títulos
+              paragrafos.forEach(p => {
+                const texto = p.textContent || '';
+                if (texto === texto.toUpperCase() && texto.length > 3) {
+                  p.classList.add('titulo-centralizado');
+                }
+                
+                // Verificar se é um parágrafo de assinatura
+                if (texto.includes('__________________') || 
+                    texto.toLowerCase().includes('assinatura') ||
+                    texto.match(/[a-zA-Z ]+,\\s+\\d{1,2}\\s+de\\s+[a-zA-Z]+\\s+de\\s+\\d{4}/)) {
+                  p.classList.add('assinatura');
+                }
+              });
+              
+              // Permitir que o conteúdo seja renderizado
               setTimeout(function() {
                 window.print();
                 setTimeout(function() { window.close(); }, 750);
               }, 300);
-            };
+            });
           </script>
         </body>
         </html>
@@ -452,271 +523,42 @@ ${camposDoc.map(campo => {
   // Função para copiar o documento para a área de transferência
   const copiarDocumento = () => {
     if (documentoGerado) {
-      // Tratar conteúdo HTML para remover as tags
-      const tempElement = document.createElement('div');
-      tempElement.innerHTML = documentoGerado;
-      const textoPlano = tempElement.textContent || tempElement.innerText || '';
-      
-      navigator.clipboard.writeText(textoPlano)
+      navigator.clipboard.writeText(documentoGerado)
         .then(() => toast.success('Documento copiado para a área de transferência!'))
         .catch(() => toast.error('Erro ao copiar documento.'));
     }
   };
 
-  // Função para baixar o documento como DOCX
-  const baixarComoDocx = async () => {
-    if (!documentoGerado) return;
-    
-    try {
-      // Mostrar que o download está sendo processado
-      toast.loading('Preparando documento para download...', { id: 'docx-loading' });
-      
-      // Configurações para a conversão
-      const docxParagrafos = [];
-      
-      // Adicionar o título como um parágrafo centralizado em negrito
-      docxParagrafos.push(
-        new Paragraph({
-          text: tituloDocumento || 'Documento Jurídico',
-          alignment: AlignmentType.CENTER,
-          spacing: {
-            before: 400,
-            after: 400,
-          },
-          bold: true,
-        })
-      );
-      
-      // Criar uma versão temporária em HTML para processamento
-      const tempElement = document.createElement('div');
-      tempElement.innerHTML = documentoGerado;
-      
-      // Processar cada parágrafo do documento
-      const paragrafos = Array.from(tempElement.querySelectorAll('p'));
-      
-      // Se não houver parágrafos, processar o texto bruto
-      if (paragrafos.length === 0) {
-        docxParagrafos.push(
-          new Paragraph({
-            text: tempElement.textContent || '',
-            alignment: AlignmentType.JUSTIFIED,
-          })
-        );
-      } else {
-        // Processar cada parágrafo, preservando formatação
-        for (let i = 0; i < paragrafos.length; i++) {
-          const paragrafo = paragrafos[i];
-          
-          // Determinar alinhamento
-          let alinhamento = AlignmentType.JUSTIFIED;
-          if (paragrafo.style.textAlign === 'center' || paragrafo.classList.contains('titulo-centralizado')) {
-            alinhamento = AlignmentType.CENTER;
-          } else if (paragrafo.style.textAlign === 'right') {
-            alinhamento = AlignmentType.RIGHT;
-          } else if (paragrafo.style.textAlign === 'left') {
-            alinhamento = AlignmentType.LEFT;
-          }
-          
-          // Verificar se é um título
-          const ehTitulo = paragrafo.textContent === paragrafo.textContent?.toUpperCase() && 
-                           paragrafo.textContent.trim().length > 3;
-          
-          // Verificar se o parágrafo tem formatação interna
-          if (paragrafo.querySelector('strong, b, em, i, u, span[style]')) {
-            // Processar parágrafo com formatação
-            const textRuns = [];
-            
-            // Função para processar nós de texto e elementos com formatação
-            function processarNos(node) {
-              if (node.nodeType === Node.TEXT_NODE) {
-                // Texto simples sem formatação específica
-                if (node.textContent && node.textContent.trim()) {
-                  textRuns.push(new TextRun({
-                    text: node.textContent,
-                    bold: ehTitulo,
-                  }));
-                }
-              } else if (node.nodeType === Node.ELEMENT_NODE) {
-                const elemento = node;
-                
-                if (elemento.nodeName === 'BR') {
-                  // Quebra de linha
-                  textRuns.push(new TextRun({ text: '\n' }));
-                } else if (['STRONG', 'B', 'EM', 'I', 'U', 'SPAN'].includes(elemento.nodeName)) {
-                  // Elemento com possível formatação
-                  
-                  // Verificar formatações
-                  const ehNegrito = elemento.nodeName === 'STRONG' || 
-                                   elemento.nodeName === 'B' || 
-                                   elemento.style.fontWeight === 'bold' || 
-                                   elemento.style.fontWeight >= '600' ||
-                                   ehTitulo;
-                                   
-                  const ehItalico = elemento.nodeName === 'EM' || 
-                                   elemento.nodeName === 'I' || 
-                                   elemento.style.fontStyle === 'italic';
-                                   
-                  const ehSublinhado = elemento.nodeName === 'U' || 
-                                     elemento.style.textDecoration === 'underline' ||
-                                     elemento.style.textDecoration.includes('underline');
-                  
-                  // Verificar se tem conteúdo aninhado
-                  if (elemento.childNodes.length > 0) {
-                    // Processar nós filhos com a formatação do pai
-                    for (const filho of Array.from(elemento.childNodes)) {
-                      if (filho.nodeType === Node.TEXT_NODE) {
-                        if (filho.textContent && filho.textContent.trim()) {
-                          textRuns.push(new TextRun({
-                            text: filho.textContent,
-                            bold: ehNegrito,
-                            italics: ehItalico,
-                            underline: ehSublinhado,
-                          }));
-                        }
-                      } else {
-                        // Processar elementos aninhados recursivamente
-                        processarNos(filho);
-                      }
-                    }
-                  } else if (elemento.textContent && elemento.textContent.trim()) {
-                    // Elemento sem filhos, apenas texto
-                    textRuns.push(new TextRun({
-                      text: elemento.textContent,
-                      bold: ehNegrito,
-                      italics: ehItalico,
-                      underline: ehSublinhado,
-                    }));
-                  }
-                } else {
-                  // Outros elementos, processar os filhos
-                  for (const filho of Array.from(elemento.childNodes)) {
-                    processarNos(filho);
-                  }
-                }
-              }
-            }
-            
-            // Processar todos os nós filhos do parágrafo
-            for (const node of Array.from(paragrafo.childNodes)) {
-              processarNos(node);
-            }
-            
-            // Adicionar o parágrafo com todas as formatações
-            docxParagrafos.push(
-              new Paragraph({
-                children: textRuns,
-                alignment: alinhamento,
-                spacing: {
-                  before: ehTitulo ? 400 : 120,
-                  after: ehTitulo ? 400 : 240,
-                },
-              })
-            );
-          } else {
-            // Parágrafo sem formatação interna
-            docxParagrafos.push(
-              new Paragraph({
-                text: paragrafo.textContent || '',
-                alignment: alinhamento,
-                spacing: {
-                  before: ehTitulo ? 400 : 120,
-                  after: ehTitulo ? 400 : 240,
-                },
-              })
-            );
-          }
-        }
-      }
-      
-      // Criar o documento final
-      const doc = new Document({
-        sections: [{
-          properties: {
-            page: {
-              margin: {
-                top: 1440,
-                right: 1440,
-                bottom: 1440,
-                left: 1440,
-              },
-              size: {
-                width: 11906,  // A4 width in twips
-                height: 16838, // A4 height in twips
-              },
-            },
-          },
-          children: docxParagrafos,
-        }],
-      });
-      
-      // Gerar o blob do documento
-      const buffer = await Packer.toBlob(doc);
-      
-      // Salvar o documento
-      saveAs(buffer, `${tituloDocumento || 'Documento Jurídico'}.docx`);
-      
-      // Fechar notificação de carregamento e mostrar sucesso
-      toast.dismiss('docx-loading');
-      toast.success('Documento DOCX baixado com sucesso!');
-    } catch (error) {
-      console.error('Erro ao baixar documento DOCX:', error);
-      toast.dismiss('docx-loading');
-      toast.error('Erro ao baixar documento. Tentando método alternativo...');
-      
-      try {
-        // Método alternativo usando o HTML diretamente
-        const htmlBlob = new Blob([`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <title>${tituloDocumento || 'Documento Jurídico'}</title>
-            <style>
-              @page {
-                size: A4;
-                margin: 2.54cm;
-              }
-              body {
-                font-family: 'Times New Roman', Times, serif;
-                font-size: 12pt;
-                line-height: 1.5;
-                margin: 0;
-                padding: 0;
-              }
-              p {
-                margin: 0 0 10pt 0;
-                text-align: justify;
-              }
-              .titulo-centralizado, p:first-child, p strong {
-                text-align: center;
-                font-weight: bold;
-                font-size: 12pt;
-                margin-bottom: 12pt;
-              }
-              strong, b {
-                font-weight: bold;
-              }
-              em, i {
-                font-style: italic;
-              }
-              u {
-                text-decoration: underline;
-              }
-            </style>
-          </head>
-          <body>
-            ${documentoGerado}
-          </body>
-          </html>
-        `], { type: 'text/html' });
-        
-        saveAs(htmlBlob, `${tituloDocumento || 'Documento Jurídico'}.html`);
-        toast.success('Documento salvo como HTML. Você pode abrir este arquivo no Word.');
-      } catch (htmlError) {
-        console.error('Erro ao salvar como HTML:', htmlError);
-        toast.error('Não foi possível baixar o documento. Por favor, tente usar a opção de imprimir.');
-      }
+  // Configurações do editor Quill
+  const quillModules = {
+    toolbar: [
+      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+      [{ 'font': [] }],
+      [{ 'size': ['small', false, 'large', 'huge'] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'color': [] }, { 'background': [] }],
+      [{ 'align': [] }],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      [{ 'indent': '-1' }, { 'indent': '+1' }],
+      ['link', 'image'],
+      ['clean']
+    ],
+    clipboard: {
+      matchVisual: false
     }
+  };
+
+  const quillFormats = [
+    'header', 'font', 'size',
+    'bold', 'italic', 'underline', 'strike',
+    'color', 'background',
+    'align', 'list', 'indent',
+    'link', 'image'
+  ];
+
+  // Adaptação da função de edição para o Quill
+  const handleDocumentoChange = (content: string) => {
+    setDocumentoGerado(content);
   };
 
   // Função para salvar o documento no banco de dados
@@ -815,11 +657,6 @@ ${camposDoc.map(campo => {
     if (isMobile) {
       setSidebarAberta(false);
     }
-  };
-
-  // Função para lidar com as mudanças no CKEditor
-  const handleEditorChange = (data: string) => {
-    setDocumentoGerado(data);
   };
 
   // Função para alterar o título do documento
@@ -978,67 +815,169 @@ ${camposDoc.map(campo => {
   // Renderiza o editor de documento estilo A4
   const renderEditor = () => (
     <motion.div 
-      className="w-full"
+      className="max-w-5xl mx-auto p-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      {/* Cabeçalho do editor */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <div className="w-full md:w-1/2">
-          <label htmlFor="titulo-documento" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Título do documento
-          </label>
-          <input
-            id="titulo-documento"
-            type="text"
-            value={tituloDocumento}
-            onChange={handleTituloChange}
-            placeholder="Digite um título para o documento"
-            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-law-800"
-          />
-        </div>
-        
-        <div className="flex space-x-2 w-full md:w-auto">
+      <div className="flex items-center mb-4">
+        <button 
+          onClick={voltarEtapa}
+          className="mr-4 p-2 rounded-full hover:bg-law-100 dark:hover:bg-law-800 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary-700 dark:text-primary-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h2 className="text-xl sm:text-2xl font-serif font-bold text-primary-800 dark:text-primary-300">
+          Editor de Documento
+        </h2>
+      </div>
+      
+      {/* Campo para título do documento */}
+      <div className="mb-4">
+        <label htmlFor="documento-titulo" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 no-print">
+          Título do Documento
+        </label>
+        <input
+          type="text"
+          id="documento-titulo"
+          value={tituloDocumento}
+          onChange={handleTituloChange}
+          placeholder="Insira um título para o documento"
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-white no-print"
+        />
+      </div>
+      
+      <div className="mb-4 flex flex-wrap gap-2 no-print">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full">
           <button
-            onClick={salvarDocumento}
-            disabled={salvando || !documentoGerado}
-            className="flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-law-600 hover:bg-law-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-law-500 disabled:bg-law-300 disabled:cursor-not-allowed"
+            onClick={imprimirDocumento}
+            className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
           >
-            {salvando ? 'Salvando...' : documentoAtual ? 'Atualizar' : 'Salvar'}
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            <span className="whitespace-nowrap">Imprimir</span>
           </button>
           
           <button
             onClick={baixarComoDocx}
-            disabled={!documentoGerado}
-            className="flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:bg-primary-300 disabled:cursor-not-allowed"
+            className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
           >
-            Baixar
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span className="whitespace-nowrap">Baixar DOCX</span>
           </button>
           
           <button
-            onClick={() => window.print()}
-            disabled={!documentoGerado}
-            className="flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-law-700 hover:bg-gray-50 dark:hover:bg-law-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-law-500 disabled:bg-gray-100 dark:disabled:bg-law-800 disabled:text-gray-400 dark:disabled:text-gray-500 disabled:cursor-not-allowed"
+            onClick={copiarDocumento}
+            className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
           >
-            Imprimir
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+            </svg>
+            <span className="whitespace-nowrap">Copiar</span>
+          </button>
+          
+          <button
+            onClick={salvarDocumento}
+            disabled={salvando}
+            className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {salvando ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span className="whitespace-nowrap">Salvando...</span>
+              </>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+                <span className="whitespace-nowrap">Salvar</span>
+              </>
+            )}
           </button>
         </div>
       </div>
-      
-      {/* Editor CKEditor */}
-      <div className="w-full max-w-5xl mx-auto">
-        {documentoGerado !== undefined && (
-          <CKEditorComponent
-            editorLoaded={editorLoaded}
+
+      {/* Editor Quill */}
+      <div className="bg-white shadow-lg mx-auto rounded-sm overflow-hidden print:shadow-none mb-10">
+        <div id="documento-para-impressao" className="min-h-[29.7cm] w-full max-w-[21cm] mx-auto bg-white border border-gray-200 outline-none">
+          <ReactQuill
             value={documentoGerado}
-            onChange={handleEditorChange}
-            height="29.7cm"
+            onChange={handleDocumentoChange}
+            modules={quillModules}
+            formats={quillFormats}
+            className="print-content"
+            theme="snow"
+            style={{
+              width: '100%',
+              maxWidth: '21cm',
+              minHeight: '27cm',  // Menor para compensar a barra de ferramentas
+              fontFamily: 'Times New Roman, Times, serif'
+            }}
           />
-        )}
+        </div>
       </div>
     </motion.div>
   );
+
+  // Baixar como DOCX adaptado para o Quill
+  const baixarComoDocx = async () => {
+    // Mostrar toast de carregamento
+    const loadingToast = toast.loading('Preparando documento para download...');
+
+    try {
+      // Método simplificado para extrair texto sem formatação avançada
+      // Criar um elemento temporário para processar o HTML
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = documentoGerado;
+      
+      // Cria um documento DOCX simples
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: [
+            new Paragraph({
+              text: tituloDocumento,
+              heading: 'Heading1',
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 400, after: 400 }
+            }),
+            // Obter o texto do conteúdo HTML e criar um parágrafo simples
+            new Paragraph({
+              text: tempDiv.textContent || '',
+              alignment: AlignmentType.JUSTIFIED
+            })
+          ]
+        }]
+      });
+
+      // Gerar e salvar o arquivo DOCX
+      const buffer = await Packer.toBuffer(doc);
+      saveAs(new Blob([buffer]), `${tituloDocumento || 'documento'}.docx`);
+      toast.success('Documento baixado com sucesso!', { id: loadingToast });
+    } catch (error) {
+      console.error('Erro ao gerar DOCX:', error);
+      toast.error('Não foi possível gerar o documento DOCX. Tentando alternativa...', { id: loadingToast });
+      
+      // Fallback: salvar como HTML
+      try {
+        const blob = new Blob([documentoGerado], { type: 'text/html' });
+        saveAs(blob, `${tituloDocumento || 'documento'}.html`);
+        toast.success('Documento salvo como HTML', { id: loadingToast });
+      } catch (e) {
+        console.error('Erro no fallback para HTML:', e);
+        toast.error('Falha ao salvar o documento. Tente novamente.', { id: loadingToast });
+      }
+    }
+  };
 
   return (
     <Layout title="Documentos | JurisIA">
@@ -1048,10 +987,10 @@ ${camposDoc.map(campo => {
             body * {
               visibility: hidden;
             }
-            .ck-content, .ck-content * {
+            .print-content .ql-editor, .print-content .ql-editor * {
               visibility: visible;
             }
-            .ck-content {
+            .print-content .ql-editor {
               position: absolute;
               left: 0;
               top: 0;
@@ -1063,7 +1002,7 @@ ${camposDoc.map(campo => {
               overflow: visible;
               page-break-inside: avoid;
             }
-            .ck-toolbar, .ck-toolbar-container {
+            .ql-toolbar {
               display: none !important;
             }
             @page {
@@ -1078,6 +1017,50 @@ ${camposDoc.map(campo => {
             .no-print {
               display: none !important;
             }
+          }
+          
+          /* Estilos Quill personalizados */
+          .ql-editor {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 12pt;
+            line-height: 1.5;
+            padding: 1.5cm;
+            text-align: justify;
+          }
+          
+          .ql-editor p, .ql-editor ol, .ql-editor ul, .ql-editor pre, .ql-editor blockquote {
+            margin-bottom: 1em;
+          }
+          
+          /* Estilos para impressão */
+          .print-content .ql-editor {
+            height: auto !important;
+            min-height: 29.7cm;
+            box-shadow: none;
+          }
+          
+          .ql-snow .ql-toolbar {
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+            background-color: #f9fafb;
+          }
+          
+          .dark .ql-snow .ql-toolbar {
+            background-color: #1e293b;
+            border-color: #334155;
+          }
+          
+          .dark .ql-snow .ql-editor {
+            color: black; /* Mantém o texto preto mesmo no modo escuro */
+          }
+          
+          .dark .ql-snow.ql-container {
+            border-color: #334155;
+          }
+          
+          /* Ajusta altura do container para incluir a barra de ferramentas */
+          .ql-container {
+            min-height: calc(29.7cm - 42px);
           }
         `}</style>
       </Head>
