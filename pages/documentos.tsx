@@ -20,11 +20,6 @@ import {
 // Importação dinâmica do React Quill para evitar problemas de SSR
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
-// Adicionar declaração para html-docx-js
-declare module 'html-docx-js' {
-  export function asBlob(html: string, options?: any): Blob;
-}
-
 // Tipos de documentos suportados
 const TIPOS_DOCUMENTOS = [
   { id: 'peticao_inicial', nome: 'Petição Inicial' },
@@ -909,6 +904,20 @@ ${camposDoc.map(campo => {
             )}
           </button>
         </div>
+        
+        {/* Dica para melhor experiência de edição */}
+        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-md p-3 mt-2 w-full no-print">
+          <div className="flex items-start">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                <strong>Dica:</strong> Para melhor experiência e formatação completa, recomendamos baixar o documento em formato DOCX e editá-lo no Microsoft Word ou Google Docs.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Editor Quill */}
@@ -1037,7 +1046,7 @@ ${camposDoc.map(campo => {
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
       saveAs(blob, `${tituloDocumento || 'documento'}.docx`);
 
-      toast.success('Documento DOCX gerado com sucesso!', { id: loadingToast });
+      toast.success('Documento DOCX gerado com sucesso! Para melhor experiência, edite-o no Word ou Google Docs.', { id: loadingToast, duration: 5000 });
     } catch (error) {
       console.error('Erro ao gerar DOCX:', error);
       toast.error('Não foi possível gerar o documento DOCX. Tentando alternativa...', { id: loadingToast });
