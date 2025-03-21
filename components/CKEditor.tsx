@@ -18,6 +18,8 @@ const CKEditorWrapper = ({ onChange, value = '', height = '29.7cm' }: CKEditorPr
   const { CKEditor } = require('@ckeditor/ckeditor5-react');
   const ClassicEditor = require('@ckeditor/ckeditor5-build-classic');
   
+  console.log('CKEditorWrapper renderizando com valor:', value);
+
   return (
     <div className="ckeditor-wrapper">
       <style jsx global>{`
@@ -89,6 +91,16 @@ const CKEditorWrapper = ({ onChange, value = '', height = '29.7cm' }: CKEditorPr
         }
       `}</style>
       
+      {value ? (
+        <p className="mb-4 text-xs text-gray-500 bg-gray-100 p-2 rounded">
+          Valor atual do editor (depuração): {value.substring(0, 100)}{value.length > 100 ? '...' : ''}
+        </p>
+      ) : (
+        <p className="mb-4 text-xs text-gray-500 bg-gray-100 p-2 rounded">
+          Nenhum valor recebido no editor
+        </p>
+      )}
+      
       <CKEditor
         editor={ClassicEditor}
         data={value || ''}
@@ -138,13 +150,20 @@ const CKEditorWrapper = ({ onChange, value = '', height = '29.7cm' }: CKEditorPr
           }
         }}
         onReady={(editor: any) => {
-          // Guardar referência ao editor
+          console.log('Editor está pronto', editor);
           setEditorInstance(editor);
+          
+          // Forçar o editor a usar o valor inicial
+          if (value && editor) {
+            console.log('Definindo dados iniciais no editor');
+            editor.setData(value);
+          }
         }}
         onChange={(event: any, editor: any) => {
           if (editor && typeof editor.getData === 'function') {
             try {
               const data = editor.getData();
+              console.log('Dados do editor alterados:', data.substring(0, 100));
               onChange(data);
             } catch (error) {
               console.error('Erro ao obter dados do editor:', error);
@@ -171,6 +190,8 @@ const CKEditorComponent: React.FC<CKEditorProps> = ({
   value,
   height
 }) => {
+  console.log('CKEditorComponent principal renderizando, editorLoaded:', editorLoaded, 'valor:', value?.substring(0, 50));
+  
   // Usando dynamic import para carregar o componente apenas no lado do cliente
   const DynamicCKEditor = dynamic(
     () => Promise.resolve(CKEditorWrapper),

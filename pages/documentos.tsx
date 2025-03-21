@@ -227,17 +227,20 @@ export default function Documentos() {
   useEffect(() => {
     // Apenas carregar o editor quando chegarmos à etapa 'editor'
     if (etapa === 'editor') {
+      console.log('Ativando editor, documento atual:', documentoAtual);
+      console.log('Conteúdo do documento:', documentoGerado?.substring(0, 100));
+      
       // Pequeno timeout para garantir que a renderização inicial seja concluída
       const timer = setTimeout(() => {
         setEditorLoaded(true);
-      }, 100);
+      }, 300); // Aumentando o timeout para garantir carregamento completo
       
       return () => clearTimeout(timer);
     } else {
       // Descarregar o editor quando não estiver na etapa de edição
       setEditorLoaded(false);
     }
-  }, [etapa]);
+  }, [etapa, documentoAtual, documentoGerado]);
 
   // Função para atualizar os valores do formulário
   const handleInputChange = (campoId: string, valor: any) => {
@@ -975,105 +978,64 @@ ${camposDoc.map(campo => {
   // Renderiza o editor de documento estilo A4
   const renderEditor = () => (
     <motion.div 
-      className="max-w-5xl mx-auto p-4"
+      className="w-full"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      <div className="flex items-center mb-4">
-        <button 
-          onClick={voltarEtapa}
-          className="mr-4 p-2 rounded-full hover:bg-law-100 dark:hover:bg-law-800 transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary-700 dark:text-primary-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <h2 className="text-xl sm:text-2xl font-serif font-bold text-primary-800 dark:text-primary-300">
-          Editor de Documento
-        </h2>
-      </div>
-      
-      {/* Campo para título do documento */}
-      <div className="mb-4">
-        <label htmlFor="documento-titulo" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 no-print">
-          Título do Documento
-        </label>
-        <input
-          type="text"
-          id="documento-titulo"
-          value={tituloDocumento}
-          onChange={handleTituloChange}
-          placeholder="Insira um título para o documento"
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-white no-print"
-        />
-      </div>
-      
-      <div className="mb-4 flex flex-wrap gap-2 no-print">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full">
+      {/* Cabeçalho do editor */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div className="w-full md:w-1/2">
+          <label htmlFor="titulo-documento" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Título do documento
+          </label>
+          <input
+            id="titulo-documento"
+            type="text"
+            value={tituloDocumento}
+            onChange={handleTituloChange}
+            placeholder="Digite um título para o documento"
+            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-law-800"
+          />
+        </div>
+        
+        <div className="flex space-x-2 w-full md:w-auto">
           <button
-            onClick={imprimirDocumento}
-            className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+            onClick={salvarDocumento}
+            disabled={salvando || !documentoGerado}
+            className="flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-law-600 hover:bg-law-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-law-500 disabled:bg-law-300 disabled:cursor-not-allowed"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-            </svg>
-            <span className="whitespace-nowrap">Imprimir</span>
+            {salvando ? 'Salvando...' : documentoAtual ? 'Atualizar' : 'Salvar'}
           </button>
           
           <button
             onClick={baixarComoDocx}
-            className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+            disabled={!documentoGerado}
+            className="flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:bg-primary-300 disabled:cursor-not-allowed"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <span className="whitespace-nowrap">Baixar DOCX</span>
+            Baixar
           </button>
           
           <button
-            onClick={copiarDocumento}
-            className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+            onClick={() => window.print()}
+            disabled={!documentoGerado}
+            className="flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-law-700 hover:bg-gray-50 dark:hover:bg-law-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-law-500 disabled:bg-gray-100 dark:disabled:bg-law-800 disabled:text-gray-400 dark:disabled:text-gray-500 disabled:cursor-not-allowed"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-            </svg>
-            <span className="whitespace-nowrap">Copiar</span>
-          </button>
-          
-          <button
-            onClick={salvarDocumento}
-            disabled={salvando}
-            className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {salvando ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span className="whitespace-nowrap">Salvando...</span>
-              </>
-            ) : (
-              <>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                </svg>
-                <span className="whitespace-nowrap">Salvar</span>
-              </>
-            )}
+            Imprimir
           </button>
         </div>
       </div>
-
-      {/* CKEditor */}
+      
+      {/* Editor CKEditor */}
       <div className="w-full max-w-5xl mx-auto">
-        <CKEditorComponent
-          editorLoaded={editorLoaded}
-          value={documentoGerado}
-          onChange={handleEditorChange}
-          height="29.7cm"
-        />
+        {documentoGerado !== undefined && (
+          <CKEditorComponent
+            editorLoaded={editorLoaded}
+            value={documentoGerado}
+            onChange={handleEditorChange}
+            height="29.7cm"
+          />
+        )}
       </div>
     </motion.div>
   );
