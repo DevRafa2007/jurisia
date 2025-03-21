@@ -1,6 +1,8 @@
 'use client';
 import React, { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 
+// Definir a interface de props
 interface CKEditorProps {
   onChange: (data: string) => void;
   editorLoaded: boolean;
@@ -8,61 +10,14 @@ interface CKEditorProps {
   height?: string;
 }
 
-const CKEditorComponent: React.FC<CKEditorProps> = ({ 
-  onChange, 
-  editorLoaded, 
-  value = '', // Garantir valor default para evitar null
-  height = '29.7cm' 
-}) => {
-  const [CKEditorComponent, setCKEditorComponent] = useState<any>(null);
-  const [ClassicEditorComponent, setClassicEditorComponent] = useState<any>(null);
+// Criar um CKEditor com carregamento dinâmico sem SSR
+const CKEditorWrapper = ({ onChange, value = '', height = '29.7cm' }: CKEditorProps) => {
   const [editorInstance, setEditorInstance] = useState<any>(null);
-  const [isReady, setIsReady] = useState(false);
-
-  // Carregar os componentes do CKEditor dinamicamente
-  useEffect(() => {
-    let isMounted = true;
-    
-    if (editorLoaded) {
-      // Importar os componentes apenas no lado do cliente
-      (async () => {
-        try {
-          const CKEditorModule = await import('@ckeditor/ckeditor5-react');
-          const ClassicEditorModule = await import('@ckeditor/ckeditor5-build-classic');
-          
-          if (isMounted) {
-            setCKEditorComponent(() => CKEditorModule.CKEditor);
-            setClassicEditorComponent(() => ClassicEditorModule.default);
-            setTimeout(() => {
-              if (isMounted) setIsReady(true);
-            }, 100); // Pequeno atraso para garantir que tudo esteja pronto
-          }
-        } catch (error) {
-          console.error('Erro ao carregar o CKEditor:', error);
-        }
-      })();
-    }
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [editorLoaded]);
-
-  // Função para ajustar a altura do editor
-  useEffect(() => {
-    if (isReady && editorLoaded) {
-      // Aplicar CSS personalizado após o carregamento do editor
-      const editorContainer = document.querySelector('.ck-editor__main');
-      if (editorContainer) {
-        (editorContainer as HTMLElement).style.minHeight = height;
-      }
-    }
-  }, [isReady, editorLoaded, height]);
-
-  if (!editorLoaded || !isReady || !CKEditorComponent || !ClassicEditorComponent) {
-    return <div className="border border-gray-300 dark:border-gray-600 rounded-md p-4 bg-white dark:bg-gray-800 animate-pulse text-center">Carregando editor...</div>;
-  }
-
+  
+  // Importar o CKEditor e o ClassicEditor
+  const { CKEditor } = require('@ckeditor/ckeditor5-react');
+  const ClassicEditor = require('@ckeditor/ckeditor5-build-classic');
+  
   return (
     <div className="ckeditor-wrapper">
       <style jsx global>{`
@@ -134,8 +89,8 @@ const CKEditorComponent: React.FC<CKEditorProps> = ({
         }
       `}</style>
       
-      <CKEditorComponent
-        editor={ClassicEditorComponent}
+      <CKEditor
+        editor={ClassicEditor}
         data={value || ''}
         config={{
           toolbar: [
@@ -199,6 +154,45 @@ const CKEditorComponent: React.FC<CKEditorProps> = ({
         }}
       />
     </div>
+  );
+};
+
+// Componente "placeholder" que será mostrado enquanto o CKEditor não estiver carregado
+const Placeholder = () => (
+  <div className="border border-gray-300 dark:border-gray-600 rounded-md p-4 bg-white dark:bg-gray-800 animate-pulse text-center" style={{minHeight: '29.7cm'}}>
+    Carregando editor...
+  </div>
+);
+
+// Componente principal que usa dynamic import
+const CKEditorComponent: React.FC<CKEditorProps> = ({
+  onChange,
+  editorLoaded,
+  value,
+  height
+}) => {
+  // Usando dynamic import para carregar o componente apenas no lado do cliente
+  const DynamicCKEditor = dynamic(
+    () => Promise.resolve(CKEditorWrapper),
+    {
+      ssr: false, // Garante que o componente não seja renderizado no servidor
+      loading: () => <Placeholder />
+    }
+  );
+
+  // Se o editor não estiver carregado, mostrar placeholder
+  if (!editorLoaded) {
+    return <Placeholder />;
+  }
+
+  // Renderizar o editor com as props correspondentes
+  return (
+    <DynamicCKEditor
+      onChange={onChange}
+      editorLoaded={editorLoaded}
+      value={value}
+      height={height}
+    />
   );
 };
 
