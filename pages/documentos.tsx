@@ -934,15 +934,81 @@ ${camposDoc.map(campo => {
     const loadingToast = toast.loading('Preparando documento para download...');
 
     try {
-      // Método simplificado para extrair texto sem formatação avançada
-      // Criar um elemento temporário para processar o HTML
+      // Converter HTML para formato DOCX usando docx-html
+      // Como o docx-html não está instalado, usaremos uma abordagem alternativa
+      // que preserva melhor a formatação
+
+      // Preparar arquivo HTML para download
+      const htmlContent = `<!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>${tituloDocumento || 'Documento Jurídico'}</title>
+        <style>
+          body {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 12pt;
+            line-height: 1.5;
+            margin: 2.54cm;
+          }
+          h1, h2, h3, h4 {
+            font-weight: bold;
+          }
+          p {
+            margin-bottom: 10pt;
+            text-align: justify;
+          }
+          .ql-align-center {
+            text-align: center;
+          }
+          .ql-align-right {
+            text-align: right;
+          }
+          .ql-align-left {
+            text-align: left;
+          }
+          strong, b {
+            font-weight: bold;
+          }
+          em, i {
+            font-style: italic;
+          }
+          u {
+            text-decoration: underline;
+          }
+          ol, ul {
+            padding-left: 2em;
+          }
+        </style>
+      </head>
+      <body>
+        <h1 style="text-align: center;">${tituloDocumento}</h1>
+        ${documentoGerado}
+      </body>
+      </html>`;
+
+      // Salvar como HTML - melhor solução para preservar formatação
+      const htmlBlob = new Blob([htmlContent], {type: 'text/html'});
+      saveAs(htmlBlob, `${tituloDocumento || 'documento'}.html`);
+      
+      toast.success('Documento HTML gerado com sucesso! Abra no Word e salve como DOCX.', { id: loadingToast });
+      
+      // Criar versão DOCX simplificada (sem formatação avançada)
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = documentoGerado;
       
-      // Cria um documento DOCX simples
       const doc = new Document({
         sections: [{
-          properties: {},
+          properties: {
+            page: {
+              margin: {
+                top: 1440,
+                right: 1440,
+                bottom: 1440,
+                left: 1440
+              }
+            }
+          },
           children: [
             new Paragraph({
               text: tituloDocumento,
@@ -950,7 +1016,6 @@ ${camposDoc.map(campo => {
               alignment: AlignmentType.CENTER,
               spacing: { before: 400, after: 400 }
             }),
-            // Obter o texto do conteúdo HTML e criar um parágrafo simples
             new Paragraph({
               text: tempDiv.textContent || '',
               alignment: AlignmentType.JUSTIFIED
@@ -959,17 +1024,37 @@ ${camposDoc.map(campo => {
         }]
       });
 
-      // Gerar e salvar o arquivo DOCX
+      // Gerar versão DOCX (sem formatação) como alternativa
       const buffer = await Packer.toBuffer(doc);
-      saveAs(new Blob([buffer]), `${tituloDocumento || 'documento'}.docx`);
-      toast.success('Documento baixado com sucesso!', { id: loadingToast });
-    } catch (error) {
-      console.error('Erro ao gerar DOCX:', error);
-      toast.error('Não foi possível gerar o documento DOCX. Tentando alternativa...', { id: loadingToast });
       
-      // Fallback: salvar como HTML
+      // Mostrar mensagem explicativa
+      setTimeout(() => {
+        toast.success('Para melhor formatação, use o arquivo HTML. Foi gerada também uma versão DOCX simplificada.', 
+          { duration: 6000 });
+      }, 2000);
+      
+      // Salvar versão DOCX simples
+      setTimeout(() => {
+        saveAs(new Blob([buffer]), `${tituloDocumento || 'documento'}_simples.docx`);
+      }, 3000);
+      
+    } catch (error) {
+      console.error('Erro ao gerar documentos:', error);
+      toast.error('Não foi possível gerar o documento. Tentando alternativa...', { id: loadingToast });
+      
       try {
-        const blob = new Blob([documentoGerado], { type: 'text/html' });
+        // Fallback direto para HTML
+        const blob = new Blob([`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>${tituloDocumento}</title>
+            </head>
+            <body>
+              ${documentoGerado}
+            </body>
+          </html>
+        `], { type: 'text/html' });
         saveAs(blob, `${tituloDocumento || 'documento'}.html`);
         toast.success('Documento salvo como HTML', { id: loadingToast });
       } catch (e) {
