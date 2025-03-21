@@ -490,7 +490,13 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
                 className={`p-3 hover:bg-law-100 dark:hover:bg-law-800 cursor-pointer relative group ${
                   conversa.id === conversaAtual ? 'bg-law-100 dark:bg-law-800 border-l-4 border-primary-500 dark:border-primary-600 pl-2' : 'border-l-4 border-transparent'
                 }`}
-                onClick={() => onSelecionarConversa(conversa.id)}
+                onClick={() => {
+                  onSelecionarConversa(conversa.id);
+                  // Fechar sidebar automaticamente em dispositivos móveis
+                  if (isMobile && onFecharSidebar) {
+                    onFecharSidebar();
+                  }
+                }}
               >
                 <div className="flex items-start">
                   <div className="flex-grow truncate pr-10">
