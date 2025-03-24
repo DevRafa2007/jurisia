@@ -83,10 +83,13 @@ export default function Home() {
     }
   }, []);
 
-  // Redirecionar para login se não estiver autenticado
+  // Redirecionar para landing page apenas se não estiver autenticado
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push('/login');
+    if (!isLoading && !user && typeof window !== 'undefined') {
+      // Apenas redirecione se estamos no cliente e não estamos na landing page
+      if (router.pathname !== '/landing') {
+        router.push('/landing');
+      }
     }
   }, [user, isLoading, router]);
 

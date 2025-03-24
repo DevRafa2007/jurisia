@@ -194,6 +194,12 @@ export default function Landing() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
               </Link>
+              <Link 
+                href="/sobre" 
+                className="inline-flex items-center justify-center px-5 py-3 border border-law-300 dark:border-law-700 text-base font-medium rounded-md shadow-sm text-primary-700 dark:text-primary-300 bg-white dark:bg-law-900 hover:bg-law-100 dark:hover:bg-law-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-300"
+              >
+                Saiba mais
+              </Link>
             </motion.div>
           </motion.div>
           
@@ -229,156 +235,6 @@ export default function Landing() {
               </div>
             </div>
           </motion.div>
-        </div>
-      </section>
-
-      {/* Sobre o JurisIA */}
-      <section className="py-16 sm:py-24 bg-law-100 dark:bg-law-900/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div 
-            className="text-center mb-16"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            variants={staggerContainer}
-          >
-            <motion.h2 
-              variants={fadeIn}
-              className="text-2xl sm:text-3xl font-serif font-bold text-primary-800 dark:text-primary-300 mb-4"
-            >
-              Sobre o JurisIA
-            </motion.h2>
-            <motion.p 
-              variants={fadeIn}
-              className="max-w-3xl mx-auto text-law-700 dark:text-law-400"
-            >
-              JurisIA é um assistente jurídico inteligente desenvolvido para advogados brasileiros. Ele combina inteligência artificial avançada com conhecimento jurídico brasileiro para oferecer ferramentas que realmente fazem diferença no seu dia a dia.
-            </motion.p>
-          </motion.div>
-        </div>
-      </section>
-      
-      {/* Como Funciona Section */}
-      <section className="py-16 sm:py-24 bg-white dark:bg-law-900/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div 
-            className="text-center mb-16"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            variants={staggerContainer}
-          >
-            <motion.h2 
-              variants={fadeIn}
-              className="text-2xl sm:text-3xl font-serif font-bold text-primary-800 dark:text-primary-300 mb-4"
-            >
-              Como o JurisIA funciona
-            </motion.h2>
-            <motion.p 
-              variants={fadeIn}
-              className="max-w-3xl mx-auto text-law-700 dark:text-law-400"
-            >
-              Uma experiência intuitiva e poderosa para transformar sua prática jurídica
-            </motion.p>
-          </motion.div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true }}
-              className="bg-white dark:bg-law-900 p-6 rounded-lg shadow-elegant border border-law-200 dark:border-law-800"
-            >
-              <div className="relative w-full h-64 bg-law-100 dark:bg-law-800 rounded-md mb-6 overflow-hidden">
-                <div className="absolute inset-0 flex flex-col p-4">
-                  <div className="w-3/4 h-4 bg-primary-200 dark:bg-primary-700 rounded-md mb-2"></div>
-                  <div className="flex-1 flex items-center justify-center">
-                    <div className="text-2xl text-primary-400 dark:text-primary-600 font-serif">Assistente Virtual</div>
-                  </div>
-                  <div className="w-full h-10 bg-white dark:bg-law-700 rounded-md opacity-60"></div>
-                </div>
-              </div>
-              <h3 className="text-xl font-medium text-primary-800 dark:text-primary-300 mb-3">1. Converse com o Assistente</h3>
-              <p className="text-law-600 dark:text-law-400">
-                Faça perguntas jurídicas complexas usando linguagem natural. O JurisIA compreende o contexto legal brasileiro e fornece respostas precisas, citando fontes relevantes e explicando conceitos jurídicos de forma clara.
-              </p>
-            </motion.div>
-            
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true }}
-              className="bg-white dark:bg-law-900 p-6 rounded-lg shadow-elegant border border-law-200 dark:border-law-800"
-            >
-              <div className="relative w-full h-64 bg-law-100 dark:bg-law-800 rounded-md mb-6 overflow-hidden">
-                <div className="absolute inset-0 flex flex-col p-4">
-                  <div className="h-8 w-full bg-law-200 dark:bg-law-700 rounded-md mb-2"></div>
-                  <div className="flex-1 grid grid-cols-2 gap-2">
-                    <div className="bg-white dark:bg-law-700 rounded-md opacity-60"></div>
-                    <div className="bg-white dark:bg-law-700 rounded-md opacity-60"></div>
-                    <div className="bg-white dark:bg-law-700 rounded-md opacity-60"></div>
-                    <div className="bg-white dark:bg-law-700 rounded-md opacity-60"></div>
-                  </div>
-                  <div className="mt-2 h-10 w-1/3 bg-primary-300 dark:bg-primary-700 rounded-md mx-auto"></div>
-                </div>
-              </div>
-              <h3 className="text-xl font-medium text-primary-800 dark:text-primary-300 mb-3">2. Crie Documentos Jurídicos</h3>
-              <p className="text-law-600 dark:text-law-400">
-                Gere petições, contratos e pareceres a partir de algumas informações básicas. Personalize modelos pré-existentes ou crie novos documentos do zero, com formatação profissional e fundamentação jurídica adequada.
-              </p>
-            </motion.div>
-            
-            <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true }}
-              className="bg-white dark:bg-law-900 p-6 rounded-lg shadow-elegant border border-law-200 dark:border-law-800"
-            >
-              <div className="relative w-full h-64 bg-law-100 dark:bg-law-800 rounded-md mb-6 overflow-hidden">
-                <div className="absolute inset-0 flex flex-col p-4">
-                  <div className="h-6 w-full bg-law-200 dark:bg-law-700 rounded-md mb-4"></div>
-                  <div className="flex-1 flex gap-4">
-                    <div className="w-1/3 bg-white dark:bg-law-700 rounded-md opacity-60"></div>
-                    <div className="w-2/3 flex flex-col gap-2">
-                      <div className="h-4 w-3/4 bg-primary-200 dark:bg-primary-700 rounded-md"></div>
-                      <div className="h-4 w-1/2 bg-primary-200 dark:bg-primary-700 rounded-md"></div>
-                      <div className="flex-1 bg-white dark:bg-law-700 rounded-md opacity-60"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <h3 className="text-xl font-medium text-primary-800 dark:text-primary-300 mb-3">3. Gerencie e Organize</h3>
-              <p className="text-law-600 dark:text-law-400">
-                Mantenha todos os seus documentos e consultas organizados e facilmente acessíveis. O sistema inteligente de armazenamento permite que você encontre rapidamente qualquer informação quando precisar.
-              </p>
-            </motion.div>
-            
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true }}
-              className="bg-white dark:bg-law-900 p-6 rounded-lg shadow-elegant border border-law-200 dark:border-law-800"
-            >
-              <div className="relative w-full h-64 bg-law-100 dark:bg-law-800 rounded-md mb-6 overflow-hidden">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="flex flex-col items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-20 w-20 text-primary-400 dark:text-primary-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    <div className="text-xl text-primary-500 dark:text-primary-400 font-serif">Aumento de Produtividade</div>
-                  </div>
-                </div>
-              </div>
-              <h3 className="text-xl font-medium text-primary-800 dark:text-primary-300 mb-3">4. Potencialize sua Prática</h3>
-              <p className="text-law-600 dark:text-law-400">
-                Com o tempo economizado em tarefas repetitivas, você pode dedicar mais atenção ao que realmente importa: estratégia jurídica, relacionamento com clientes e desenvolvimento profissional.
-              </p>
-            </motion.div>
-          </div>
         </div>
       </section>
 

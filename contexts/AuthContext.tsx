@@ -101,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await supabaseClient.auth.signOut();
       
       // Redireciona para landing page após logout
-      window.location.href = '/landing';
+      router.push('/landing');
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     }
