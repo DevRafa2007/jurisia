@@ -219,13 +219,19 @@ export default function Documentos() {
     }
   }, [user, isLoading, router]);
 
-  // Mostrar dica para usuários de dispositivos móveis
+  // Mostrar dica para usuários de dispositivos móveis - apenas uma vez por sessão
   useEffect(() => {
-    if (isMobile && etapa === 'editor' && documentoGerado.length > 2000) {
+    // Verificar se a dica já foi exibida nesta sessão
+    const dicaExibida = sessionStorage.getItem('dicaRotacaoExibida');
+    
+    if (isMobile && etapa === 'editor' && documentoGerado.length > 2000 && !dicaExibida) {
       toast.success(
         'Dica: Para melhor experiência ao editar documentos grandes, gire o dispositivo para modo paisagem.',
         { duration: 5000, icon: '📱' }
       );
+      
+      // Marcar que a dica já foi exibida nesta sessão
+      sessionStorage.setItem('dicaRotacaoExibida', 'true');
     }
   }, [isMobile, etapa, documentoGerado]);
 
@@ -915,15 +921,15 @@ ${camposDoc.map(campo => {
     );
   };
 
-  // Renderiza o editor de documento estilo A4
+  // Renderiza o editor
   const renderEditor = () => (
     <motion.div 
-      className="max-w-5xl mx-auto p-4"
+      className="h-full flex flex-col"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      <div className="flex items-center justify-between p-4 border-b border-law-200 dark:border-law-700">
+      <div className="flex items-center justify-between p-4 border-b border-law-200 dark:border-law-700 fixed top-0 left-0 right-0 bg-white dark:bg-law-800 z-10 mt-14">
         <div className="flex items-center">
           <button 
             onClick={voltarEtapa}
@@ -971,8 +977,8 @@ ${camposDoc.map(campo => {
         </div>
       </div>
       
-      {/* Barra de ferramentas do documento */}
-      <div className="flex flex-wrap gap-2 p-4 border-b border-law-200 dark:border-law-700 no-print">
+      {/* Barra de ferramentas do documento - fixa no topo abaixo do cabeçalho */}
+      <div className="flex flex-wrap gap-2 p-4 border-b border-law-200 dark:border-law-700 no-print fixed left-0 right-0 z-10 bg-white dark:bg-law-800 mt-[4.5rem]">
         <button
           onClick={imprimirDocumento}
           className="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 transition-colors"
@@ -1017,6 +1023,9 @@ ${camposDoc.map(campo => {
           </div>
         </div>
       </div>
+      
+      {/* Espaço para compensar o cabeçalho e a barra de ferramentas fixas */}
+      <div className="h-[11rem] md:h-[10rem]"></div>
       
       {/* Editor Quill */}
       <div className="bg-white shadow-lg mx-auto rounded-sm overflow-hidden print:shadow-none mb-10">
