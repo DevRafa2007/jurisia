@@ -98,10 +98,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // Type assertion para evitar erros de TypeScript
       const supabaseClient = supabase as SupabaseClient;
-      await supabaseClient.auth.signOut();
+      const { error } = await supabaseClient.auth.signOut();
       
-      // Redireciona para landing page após logout
-      router.push('/landing');
+      if (error) {
+        throw error;
+      }
+      
+      // Limpar o estado local
+      setUser(null);
+      setSession(null);
+      
+      // Usar redirecionamento direto ao invés de router.push para evitar problemas no Vercel
+      if (typeof window !== 'undefined') {
+        window.location.href = '/landing';
+      }
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     }
