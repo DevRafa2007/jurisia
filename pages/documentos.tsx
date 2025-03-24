@@ -195,6 +195,7 @@ export default function Documentos() {
   const [ultimoSalvamento, setUltimoSalvamento] = useState<Date | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const documentoModificado = useRef(false);
+  const [dicaExibida, setDicaExibida] = useState(false);
 
   // Detectar se é dispositivo móvel
   useEffect(() => {
@@ -219,21 +220,16 @@ export default function Documentos() {
     }
   }, [user, isLoading, router]);
 
-  // Mostrar dica para usuários de dispositivos móveis - apenas uma vez por sessão
+  // Mostrar dica para usuários de dispositivos móveis
   useEffect(() => {
-    // Verificar se a dica já foi exibida nesta sessão
-    const dicaExibida = sessionStorage.getItem('dicaRotacaoExibida');
-    
     if (isMobile && etapa === 'editor' && documentoGerado.length > 2000 && !dicaExibida) {
       toast.success(
         'Dica: Para melhor experiência ao editar documentos grandes, gire o dispositivo para modo paisagem.',
         { duration: 5000, icon: '📱' }
       );
-      
-      // Marcar que a dica já foi exibida nesta sessão
-      sessionStorage.setItem('dicaRotacaoExibida', 'true');
+      setDicaExibida(true);
     }
-  }, [isMobile, etapa, documentoGerado]);
+  }, [isMobile, etapa, documentoGerado, dicaExibida]);
 
   // Função para atualizar os valores do formulário
   const handleInputChange = (campoId: string, valor: any) => {
@@ -921,7 +917,7 @@ ${camposDoc.map(campo => {
     );
   };
 
-  // Renderiza o editor
+  // Renderiza o editor de documento estilo A4
   const renderEditor = () => (
     <motion.div 
       className="h-full flex flex-col"
@@ -929,8 +925,8 @@ ${camposDoc.map(campo => {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      <div className="flex items-center justify-between p-4 border-b border-law-200 dark:border-law-700 fixed top-0 left-0 right-0 bg-white dark:bg-law-800 z-10 mt-14">
-        <div className="flex items-center">
+      <div className="flex flex-wrap items-center justify-between p-4 border-b border-law-200 dark:border-law-700">
+        <div className="flex items-center mb-2 sm:mb-0">
           <button 
             onClick={voltarEtapa}
             className="mr-4 p-2 rounded-full hover:bg-law-100 dark:hover:bg-law-800 transition-colors"
@@ -944,12 +940,12 @@ ${camposDoc.map(campo => {
             value={tituloDocumento}
             onChange={handleTituloChange}
             placeholder="Título do documento"
-            className="font-serif text-xl font-bold bg-transparent border-b border-transparent focus:border-primary-500 focus:outline-none dark:text-white"
+            className="font-serif text-xl font-bold bg-transparent border-b border-transparent focus:border-primary-500 focus:outline-none dark:text-white w-full max-w-[200px] sm:max-w-none truncate"
           />
         </div>
         
-        <div className="flex items-center space-x-2">
-          <span id="status-salvamento" className="text-sm text-gray-500 dark:text-gray-400 hidden md:inline-block">
+        <div className="flex items-center">
+          <span id="status-salvamento" className="text-sm text-gray-500 dark:text-gray-400 hidden md:inline-block mr-2">
             {ultimoSalvamento 
               ? `Última alteração salva: ${ultimoSalvamento.toLocaleTimeString()}` 
               : 'Documento não salvo'}
@@ -977,8 +973,8 @@ ${camposDoc.map(campo => {
         </div>
       </div>
       
-      {/* Barra de ferramentas do documento - fixa no topo abaixo do cabeçalho */}
-      <div className="flex flex-wrap gap-2 p-4 border-b border-law-200 dark:border-law-700 no-print fixed left-0 right-0 z-10 bg-white dark:bg-law-800 mt-[4.5rem]">
+      {/* Barra de ferramentas do documento */}
+      <div className="flex flex-wrap gap-2 p-4 border-b border-law-200 dark:border-law-700 no-print">
         <button
           onClick={imprimirDocumento}
           className="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 transition-colors"
@@ -1023,9 +1019,6 @@ ${camposDoc.map(campo => {
           </div>
         </div>
       </div>
-      
-      {/* Espaço para compensar o cabeçalho e a barra de ferramentas fixas */}
-      <div className="h-[11rem] md:h-[10rem]"></div>
       
       {/* Editor Quill */}
       <div className="bg-white shadow-lg mx-auto rounded-sm overflow-hidden print:shadow-none mb-10">
