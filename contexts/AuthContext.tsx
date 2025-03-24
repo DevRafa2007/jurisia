@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session, SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '../utils/supabase';
+import { useRouter } from 'next/router';
 
 interface AuthContextType {
   user: User | null;
@@ -23,6 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     // Verifica se o código está rodando no cliente
@@ -52,6 +54,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         setSession(data.session);
         setUser(data.session?.user ?? null);
+        
+        // Remover redirecionamento automático para landing page
+        
       } catch (error) {
         console.error('Erro ao buscar sessão inicial:', error);
       } finally {
@@ -82,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         subscription.unsubscribe();
       }
     };
-  }, []);
+  }, [router]);
 
   const signOut = async () => {
     if (!supabase) {
@@ -94,6 +99,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Type assertion para evitar erros de TypeScript
       const supabaseClient = supabase as SupabaseClient;
       await supabaseClient.auth.signOut();
+      
+      // Redireciona para landing page após logout
+      window.location.href = '/landing';
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     }
