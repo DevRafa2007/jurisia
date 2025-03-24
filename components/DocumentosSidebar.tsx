@@ -8,13 +8,15 @@ interface DocumentosSidebarProps {
   onSelecionarDocumento: (documentoId: string) => void;
   onNovoDocumento: () => void;
   onFecharSidebar?: () => void;
+  isMobile?: boolean;
 }
 
 const DocumentosSidebar: React.FC<DocumentosSidebarProps> = ({
   documentoAtual,
   onSelecionarDocumento,
   onNovoDocumento,
-  onFecharSidebar
+  onFecharSidebar,
+  isMobile = false
 }) => {
   const { user } = useAuth();
   const [documentos, setDocumentos] = useState<Documento[]>([]);
@@ -321,7 +323,11 @@ const DocumentosSidebar: React.FC<DocumentosSidebarProps> = ({
                   </div>
                   
                   {/* Botão de opções */}
-                  <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <div className={`absolute right-2 top-2 ${
+                    isMobile 
+                      ? 'opacity-100' // Sempre visível em dispositivos móveis
+                      : 'opacity-0 group-hover:opacity-100 transition-opacity duration-200' // Visível apenas no hover em desktop
+                  }`}>
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();

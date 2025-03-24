@@ -1347,6 +1347,7 @@ ${camposDoc.map(campo => {
                 onSelecionarDocumento={carregarDocumento}
                 onNovoDocumento={criarNovoDocumento}
                 onFecharSidebar={() => setSidebarAberta(false)}
+                isMobile={isMobile}
               />
             </motion.div>
           )}
