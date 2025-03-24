@@ -1,12 +1,33 @@
 import '../styles/globals.css';
-import '../styles/ckeditor.css';
 import type { AppProps } from 'next/app';
 import { useState, useEffect } from 'react';
-import { AuthProvider } from '../contexts/AuthContext';
+import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider } from 'next-themes';
 import { AnimatePresence } from 'framer-motion';
 import ToastManager from '../components/ToastManager';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
+
+// Wrapper para redirecionamento baseado em autenticação
+function AuthWrapper({ Component, pageProps }: AppProps) {
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
+  
+  useEffect(() => {
+    // Se o usuário não estiver logado e tentar acessar a página inicial, redirecionar para landing
+    if (!isLoading && !user && router.pathname === '/') {
+      router.replace('/landing');
+    }
+    
+    // Se o usuário estiver logado e tentar acessar a landing page, redirecionar para home
+    if (!isLoading && user && router.pathname === '/landing') {
+      router.replace('/');
+    }
+  }, [user, isLoading, router]);
+
+  // Renderizando o componente normalmente
+  return <Component {...pageProps} />;
+}
 
 export default function App({ Component, pageProps }: AppProps) {
   // Usar o useState para garantir que não aconteça renderização no servidor
@@ -38,7 +59,7 @@ export default function App({ Component, pageProps }: AppProps) {
         </Head>
         {/* AnimatePresence permite animar componentes quando entram/saem do DOM */}
         <AnimatePresence mode="wait">
-          <Component {...pageProps} />
+          <AuthWrapper Component={Component} {...pageProps} />
         </AnimatePresence>
         {/* Gerenciador de notificações toast */}
         <ToastManager />

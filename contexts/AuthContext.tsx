@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session, SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from '../utils/supabase';
-import { useRouter } from 'next/router';
 
 interface AuthContextType {
   user: User | null;
@@ -24,7 +23,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     // Verifica se o código está rodando no cliente
@@ -54,9 +52,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         setSession(data.session);
         setUser(data.session?.user ?? null);
-        
-        // Remover redirecionamento automático para landing page
-        
       } catch (error) {
         console.error('Erro ao buscar sessão inicial:', error);
       } finally {
@@ -87,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         subscription.unsubscribe();
       }
     };
-  }, [router]);
+  }, []);
 
   const signOut = async () => {
     if (!supabase) {
@@ -98,20 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // Type assertion para evitar erros de TypeScript
       const supabaseClient = supabase as SupabaseClient;
-      const { error } = await supabaseClient.auth.signOut();
-      
-      if (error) {
-        throw error;
-      }
-      
-      // Limpar o estado local
-      setUser(null);
-      setSession(null);
-      
-      // Usar redirecionamento direto ao invés de router.push para evitar problemas no Vercel
-      if (typeof window !== 'undefined') {
-        window.location.href = '/landing';
-      }
+      await supabaseClient.auth.signOut();
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     }
