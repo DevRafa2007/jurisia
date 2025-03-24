@@ -69,6 +69,33 @@ export default function Landing() {
   useEffect(() => {
     setMounted(true);
   }, []);
+  
+  // Efeito para verificar parâmetro de logout
+  useEffect(() => {
+    const handleLogoutParameter = async () => {
+      if (typeof window !== 'undefined' && window.location.search.includes('logout=true')) {
+        console.log('Detectado parâmetro de logout, limpando cookies...');
+        
+        // Limpar cookie do Supabase manualmente
+        document.cookie = 'supabase-auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+        document.cookie = 'sb-access-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+        document.cookie = 'sb-refresh-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+        
+        // Limpar localStorage
+        localStorage.removeItem('supabase.auth.token');
+        localStorage.removeItem('supabase.auth.refreshToken');
+        
+        // Remover os parâmetros da URL para evitar loops
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+        
+        // Recarregar a página para garantir estado limpo
+        window.location.reload();
+      }
+    };
+    
+    handleLogoutParameter();
+  }, [router.query]);
 
   // Redirecionar para a página principal se já estiver logado
   useEffect(() => {

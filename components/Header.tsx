@@ -60,9 +60,21 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
 
   const handleSignOut = async () => {
     try {
+      console.log('Iniciando processo de logout...');
+      
+      // Tenta fazer logout pelo método normal
       await signOut();
+      
+      // Como fallback, força redirecionamento após um curto delay
+      setTimeout(() => {
+        console.log('Aplicando método alternativo de logout...');
+        window.location.href = '/landing';
+      }, 500);
     } catch (error) {
-      console.error('Erro ao fazer logout:', error);
+      console.error('Erro no handleSignOut:', error);
+      
+      // Último recurso: recarregar a página para a landing
+      window.location.href = '/landing';
     }
   };
 
@@ -305,6 +317,34 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
                         Sair
                       </div>
                     </button>
+                    
+                    {/* Método alternativo de logout com link direto */}
+                    <a 
+                      href="/api/auth/logout"
+                      className="block w-full text-left px-4 py-2 text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:bg-law-100 dark:hover:bg-law-700 transition-colors duration-300"
+                      onClick={(e) => {
+                        // Prevenir navegação padrão
+                        e.preventDefault();
+                        
+                        // Tenta o método normal primeiro
+                        handleSignOut();
+                        
+                        // Fallback: redirecionar após um curto delay
+                        setTimeout(() => {
+                          console.log('Forçando redirecionamento alternativo...');
+                          window.location.href = '/landing?logout=true';
+                        }, 1000);
+                        
+                        setMenuOpen(false);
+                      }}
+                    >
+                      <div className="flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                        </svg>
+                        Sair (Método alternativo)
+                      </div>
+                    </a>
                   </div>
                 </div>
               ) : (
