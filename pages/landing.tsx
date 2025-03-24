@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
-import { motion, useAnimation, useInView } from 'framer-motion';
+import { motion, useAnimation, useInView, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from 'next-themes';
 
@@ -196,7 +196,7 @@ export default function LandingPage() {
         </nav>
         
         {/* Seção Hero */}
-        <section className="pt-32 pb-16 md:pt-40 md:pb-24">
+        <section className="pt-32 pb-16 md:pt-40 md:pb-24" ref={heroRef}>
           <div className="max-w-7xl mx-auto px-4 text-center">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-blue-800 dark:text-blue-300 mb-6">
               Seu <span className="text-purple-600 dark:text-purple-400">Assistente Jurídico</span> Impulsionado por Inteligência Artificial
