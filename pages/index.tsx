@@ -45,23 +45,30 @@ export default function Home() {
   const [isMobile, setIsMobile] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-  const [sidebarAberta, setSidebarAberta] = useState(false);
+  const [sidebarAberta, setSidebarAberta] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
 
-  // Inicializar a barra lateral aberta apenas em dispositivos maiores (desktop)
+  // Detectar dispositivo móvel e configurar a barra lateral na inicialização
   useEffect(() => {
-    // Checar se estamos no cliente
     if (typeof window !== 'undefined') {
-      setSidebarAberta(window.innerWidth >= 768);
-      setIsMobile(window.innerWidth < 640);
+      // Inicialização: Abrir sidebar apenas em desktop
+      const checkIsMobile = () => {
+        const mobileCheck = window.innerWidth < 768;
+        setIsMobile(mobileCheck);
+        setSidebarAberta(!mobileCheck); // Sidebar fechada em mobile, aberta em desktop
+      };
+      
+      // Verificar inicialmente
+      checkIsMobile();
       
       // Função para atualizar o estado da barra lateral quando a tela é redimensionada
       const handleResize = () => {
-        const isMobile = window.innerWidth < 768;
-        setIsMobile(window.innerWidth < 640);
+        const mobileCheck = window.innerWidth < 768;
+        setIsMobile(mobileCheck);
+        
         // Em desktop, sempre mostrar a barra lateral
-        // Em mobile, manter o estado atual
-        if (!isMobile) {
+        // Em mobile, manter o estado atual se já estiver definido
+        if (!mobileCheck) {
           setSidebarAberta(true);
         }
       };
@@ -385,6 +392,7 @@ Como posso auxiliar você hoje?`,
                   onSelecionarConversa={handleSelecionarConversa}
                   onNovaConversa={handleNovaConversa}
                   onFecharSidebar={() => setSidebarAberta(false)}
+                  isMobile={isMobile}
                 />
               </motion.div>
             )}
