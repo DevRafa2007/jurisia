@@ -14,10 +14,6 @@ const nextConfig = {
     // Otimizações de compilação
     optimizePackageImports: ['@supabase/supabase-js'],
   },
-  eslint: {
-    // Ignorar verificações durante o build para evitar falhas
-    ignoreDuringBuilds: true,
-  },
 }
 
 module.exports = nextConfig 
