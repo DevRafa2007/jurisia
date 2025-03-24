@@ -203,6 +203,18 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
                     </svg>
                   </button>
                   
+                  {/* Botão de Contato */}
+                  <Link
+                    href="/contato"
+                    className="ml-2 sm:ml-4 p-1.5 rounded-md hover:bg-law-200 dark:hover:bg-law-800 transition-colors duration-300 active:scale-95 text-primary-700 dark:text-primary-400"
+                    aria-label="Contato"
+                    title="Entre em contato conosco"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </Link>
+                  
                   {/* Botão de Modo Escuro com tooltip */}
                   <div className="relative">
                     <button 
@@ -297,7 +309,10 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
                 </div>
               ) : (
                 <div className="flex items-center">
-                  <Link href="/login" className="btn btn-primary text-xs sm:text-sm py-1.5 px-3 sm:py-2 sm:px-4 dark:bg-primary-800 dark:hover:bg-primary-700 transition-colors duration-300 font-medium shadow-sm">
+                  <Link
+                    href="/login"
+                    className="inline-flex items-center px-3 py-1.5 rounded-md bg-primary-600 hover:bg-primary-700 text-white text-xs sm:text-sm font-medium transition-colors duration-300"
+                  >
                     Entrar
                   </Link>
                   

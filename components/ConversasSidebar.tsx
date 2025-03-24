@@ -521,7 +521,11 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
                       e.stopPropagation();
                       setMostraOpcoes(mostraOpcoes === conversa.id ? null : conversa.id);
                     }}
-                    className="absolute right-3 top-3 text-law-400 hover:text-law-600 dark:hover:text-law-300 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 rounded-md hover:bg-law-200 dark:hover:bg-law-700"
+                    className={`absolute right-3 top-3 text-law-400 hover:text-law-600 dark:hover:text-law-300 p-1 rounded-md hover:bg-law-200 dark:hover:bg-law-700 ${
+                      isMobile 
+                        ? 'opacity-100' // Sempre visível em dispositivos móveis
+                        : 'opacity-0 group-hover:opacity-100 transition-opacity duration-200' // Visível apenas no hover em desktop
+                    }`}
                     title="Opções"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
