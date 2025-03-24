@@ -194,12 +194,6 @@ export default function Landing() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
               </Link>
-              <Link 
-                href="/sobre" 
-                className="inline-flex items-center justify-center px-5 py-3 border border-law-300 dark:border-law-700 text-base font-medium rounded-md shadow-sm text-primary-700 dark:text-primary-300 bg-white dark:bg-law-900 hover:bg-law-100 dark:hover:bg-law-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-300"
-              >
-                Saiba mais
-              </Link>
             </motion.div>
           </motion.div>
           
