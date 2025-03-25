@@ -1,29 +1,32 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
-  const supabase = createMiddlewareClient({ req, res });
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  // URLs que não requerem autenticação
+  const publicUrls = ['/landing', '/login', '/auth'];
+  const url = req.nextUrl.clone();
+  const { pathname } = url;
 
-  // Se o usuário não estiver autenticado e tentar acessar rotas protegidas, 
-  // redirecionar para landing page
-  if (!session && req.nextUrl.pathname !== '/landing' && 
-      req.nextUrl.pathname !== '/login' && 
-      !req.nextUrl.pathname.startsWith('/auth/')) {
-    return NextResponse.redirect(new URL('/landing', req.url));
+  // Verificar se a URL atual está na lista de URLs públicas
+  const isPublicUrl = publicUrls.some(publicUrl => pathname.startsWith(publicUrl));
+  
+  // Verificar existência do token (simplificado)
+  const authCookie = req.cookies.get('sb-access-token');
+  const hasToken = !!authCookie?.value;
+
+  // Se a URL não for pública e não houver token, redirecionar para landing
+  if (!isPublicUrl && !hasToken) {
+    url.pathname = '/landing';
+    return NextResponse.redirect(url);
   }
 
-  // Se o usuário estiver autenticado e tentar acessar a landing page, 
-  // redirecionar para página inicial
-  if (session && req.nextUrl.pathname === '/landing') {
-    return NextResponse.redirect(new URL('/', req.url));
+  // Se tiver token e tentar acessar landing, redirecionar para home
+  if (pathname === '/landing' && hasToken) {
+    url.pathname = '/';
+    return NextResponse.redirect(url);
   }
 
-  return res;
+  return NextResponse.next();
 }
 
 // Configurar as rotas que o middleware deve executar

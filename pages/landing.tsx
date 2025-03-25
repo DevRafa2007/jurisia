@@ -6,7 +6,17 @@ import { useAuth } from '../contexts/AuthContext';
 import Link from 'next/link';
 
 // Componente para botão animado
-const AnimatedButton = ({ children, className = '', href, onClick }) => (
+const AnimatedButton = ({ 
+  children, 
+  className = '', 
+  href, 
+  onClick 
+}: { 
+  children: React.ReactNode; 
+  className?: string; 
+  href?: string; 
+  onClick?: () => void;
+}) => (
   <motion.a
     href={href}
     onClick={onClick}
@@ -29,7 +39,15 @@ const AnimatedButton = ({ children, className = '', href, onClick }) => (
 );
 
 // Seção que aparece com animação
-const AnimatedSection = ({ children, delay = 0, className = '' }) => (
+const AnimatedSection = ({ 
+  children, 
+  delay = 0, 
+  className = '' 
+}: { 
+  children: React.ReactNode; 
+  delay?: number; 
+  className?: string;
+}) => (
   <motion.div
     initial={{ opacity: 0, y: 50 }}
     animate={{ opacity: 1, y: 0 }}
@@ -41,7 +59,17 @@ const AnimatedSection = ({ children, delay = 0, className = '' }) => (
 );
 
 // Feature card com animação
-const FeatureCard = ({ icon, title, description, delay = 0 }) => (
+const FeatureCard = ({ 
+  icon, 
+  title, 
+  description, 
+  delay = 0 
+}: { 
+  icon: React.ReactNode; 
+  title: string; 
+  description: string; 
+  delay?: number;
+}) => (
   <motion.div
     className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 flex flex-col items-center text-center"
     initial={{ opacity: 0, y: 30 }}
@@ -56,7 +84,17 @@ const FeatureCard = ({ icon, title, description, delay = 0 }) => (
 );
 
 // Componente para depoimentos
-const Testimonial = ({ text, author, position, delay = 0 }) => (
+const Testimonial = ({ 
+  text, 
+  author, 
+  position, 
+  delay = 0 
+}: { 
+  text: string; 
+  author: string; 
+  position: string; 
+  delay?: number;
+}) => (
   <motion.div
     className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6"
     initial={{ opacity: 0, scale: 0.9 }}
@@ -114,12 +152,12 @@ export default function Landing() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <Link href="/login">
+            <Link href="/login" legacyBehavior>
               <AnimatedButton href="/login" className="hidden sm:inline-block mr-4">
                 Entrar
               </AnimatedButton>
             </Link>
-            <Link href="/login#auth-sign-up">
+            <Link href="/login#auth-sign-up" legacyBehavior>
               <AnimatedButton href="/login#auth-sign-up">
                 Cadastrar
               </AnimatedButton>
@@ -150,7 +188,7 @@ export default function Landing() {
           
           <AnimatedSection delay={0.6}>
             <div className="flex flex-col sm:flex-row justify-center gap-4 mb-8">
-              <Link href="/login">
+              <Link href="/login" legacyBehavior>
                 <AnimatedButton href="/login" className="w-full sm:w-auto">
                   Começar Agora
                 </AnimatedButton>
@@ -369,7 +407,7 @@ export default function Landing() {
                       </li>
                     ))}
                   </ul>
-                  <Link href="/login">
+                  <Link href={plan.name === "Escritório" ? "#contact" : "/login"} legacyBehavior>
                     <AnimatedButton 
                       href={plan.name === "Escritório" ? "#contact" : "/login"}
                       className={`w-full ${plan.popular ? 'bg-primary-600 hover:bg-primary-700' : 'bg-gray-800 dark:bg-gray-700 hover:bg-gray-900 dark:hover:bg-gray-600'}`}
@@ -436,7 +474,7 @@ export default function Landing() {
             <p className="text-primary-100 mb-8 max-w-2xl mx-auto">
               Junte-se a milhares de profissionais que já estão economizando tempo e aumentando sua produtividade com o JurisIA.
             </p>
-            <Link href="/login">
+            <Link href="/login" legacyBehavior>
               <motion.button
                 className="bg-white text-primary-700 px-8 py-3 rounded-lg font-bold shadow-md"
                 whileHover={{ scale: 1.05, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}
