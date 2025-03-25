@@ -7,51 +7,100 @@ import { useTheme } from '../contexts/ThemeContext';
 const Auth = () => {
   const [errorMessage] = useState<string | null>(null);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isResetPasswordPage, setIsResetPasswordPage] = useState(false);
   const { theme } = useTheme();
+
+  // Adicionando um estilo global para forçar recarregamento do componente
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const style = document.createElement('style');
+      style.innerHTML = `
+        .force-reload {
+          animation: reload 0.01s;
+        }
+        @keyframes reload {
+          0% { opacity: 0.99; }
+          100% { opacity: 1; }
+        }
+      `;
+      document.head.appendChild(style);
+      
+      return () => {
+        document.head.removeChild(style);
+      };
+    }
+  }, []);
 
   // Função para verificar e configurar o modo inicial (login ou cadastro)
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      // Verificar se estamos na página de recuperação de senha
+      const checkIfResetPasswordPage = () => {
+        const path = window.location.pathname;
+        if (path.includes('/auth/reset-password')) {
+          setIsResetPasswordPage(true);
+          return true;
+        }
+        return false;
+      };
+      
+      // Se estamos na página de recuperação, não prosseguir com configuração de login/signup
+      if (checkIfResetPasswordPage()) {
+        return;
+      }
+      
       const checkInitialMode = () => {
         // Verificar parâmetros da URL e hash
         const urlParams = new URLSearchParams(window.location.search);
         const action = urlParams.get('action');
-        const hash = window.location.hash;
         
-        // Priorizar parâmetro da URL, depois hash
-        if (action === 'signup' || hash.includes('#auth-sign-up')) {
+        // Priorizar parâmetro da URL
+        if (action === 'signup') {
           setIsSignUp(true);
-          // Forçar o hash para garantir que o Supabase Auth UI mostre o formulário correto
-          if (!hash.includes('#auth-sign-up')) {
+          // Forçar a view para signup removendo qualquer hash existente
+          if (window.location.hash) {
+            // Usar history API para não recarregar a página
+            window.history.pushState(null, "", window.location.pathname + window.location.search);
+          }
+          // Depois adicionar o hash correto
+          setTimeout(() => {
             window.location.hash = '#auth-sign-up';
-          }
-        } else if (action === 'signin' || hash.includes('#auth-sign-in')) {
+          }, 50);
+          return;
+        } else if (action === 'signin') {
           setIsSignUp(false);
-          // Forçar o hash para garantir que o Supabase Auth UI mostre o formulário correto
-          if (!hash.includes('#auth-sign-in')) {
+          // Forçar a view para signin removendo qualquer hash existente
+          if (window.location.hash) {
+            // Usar history API para não recarregar a página
+            window.history.pushState(null, "", window.location.pathname + window.location.search);
+          }
+          // Depois adicionar o hash correto
+          setTimeout(() => {
             window.location.hash = '#auth-sign-in';
-          }
-        } else {
-          // Se não houver indicação na URL, verificar o formulário atual
-          const signUpForm = document.querySelector('form[id*="auth-sign-up"]');
-          const signInForm = document.querySelector('form[id*="auth-sign-in"]');
-          const newIsSignUp = !!signUpForm && !signInForm;
-          
-          if (newIsSignUp !== isSignUp) {
-            setIsSignUp(newIsSignUp);
-          }
+          }, 50);
+          return;
+        }
+        
+        // Se não houver parâmetro na URL, verificar o hash
+        const hash = window.location.hash;
+        if (hash.includes('#auth-sign-up')) {
+          setIsSignUp(true);
+        } else if (hash.includes('#auth-sign-in') || !hash) {
+          setIsSignUp(false);
         }
       };
 
       // Verificar o modo inicial
       checkInitialMode();
       
-      // Escutar mudanças no hash
+      // Escutar mudanças no hash para sincronizar o estado
       const handleHashChange = () => {
         const hash = window.location.hash;
-        if (hash.includes('#auth-sign-up')) {
+        const currentIsSignUp = isSignUp;
+        
+        if (hash.includes('#auth-sign-up') && !currentIsSignUp) {
           setIsSignUp(true);
-        } else if (hash.includes('#auth-sign-in')) {
+        } else if ((hash.includes('#auth-sign-in') || !hash) && currentIsSignUp) {
           setIsSignUp(false);
         }
       };
@@ -62,15 +111,38 @@ const Auth = () => {
         window.removeEventListener('hashchange', handleHashChange);
       };
     }
-  }, []);
+  }, [isSignUp]);
 
-  // Função para alternar entre os modos
+  // Função para alternar entre os modos de forma mais robusta
   const toggleMode = () => {
+    // Primeiro, remover o hash atual para garantir uma mudança completa
+    window.history.pushState(null, "", window.location.pathname + window.location.search);
+    
+    // Atualizar o estado e aguardar um momento para aplicar o novo hash
     const newMode = !isSignUp;
     setIsSignUp(newMode);
     
-    // Atualizar o hash para mudar o formulário do Supabase
-    window.location.hash = newMode ? '#auth-sign-up' : '#auth-sign-in';
+    // Adicionar o hash correto com um pequeno delay para garantir que o DOM foi atualizado
+    setTimeout(() => {
+      window.location.hash = newMode ? '#auth-sign-up' : '#auth-sign-in';
+      
+      // Forçar um reload do componente Auth se necessário
+      const authContainer = document.querySelector('.supabase-auth-ui_ui-container');
+      if (authContainer) {
+        // Trigger a reflow
+        authContainer.classList.add('force-reload');
+        setTimeout(() => {
+          authContainer.classList.remove('force-reload');
+        }, 10);
+      }
+      
+      // Verificar se o formulário correto está presente, caso contrário forçar recarregamento
+      const formSelector = newMode ? 'form[id*="auth-sign-up"]' : 'form[id*="auth-sign-in"]';
+      if (!document.querySelector(formSelector)) {
+        console.log('Formulário não encontrado, recarregando página...');
+        window.location.reload();
+      }
+    }, 100);
   };
 
   // Função para interceptar o evento de envio do formulário
@@ -262,8 +334,11 @@ const Auth = () => {
         </div>
       )}
       
+      {/* Usando key para forçar remontagem do componente quando o modo muda */}
       <SupabaseAuth
+        key={isSignUp ? 'sign-up' : 'sign-in'}
         supabaseClient={supabase}
+        view={isSignUp ? 'sign_up' : 'sign_in'}
         appearance={{
           theme: ThemeSupa,
           variables: {
@@ -331,18 +406,20 @@ const Auth = () => {
         onlyThirdPartyProviders={false}
       />
 
-      {/* Nosso botão personalizado para alternar entre login e cadastro */}
-      <div className="mt-4 text-center text-gray-600 dark:text-gray-400">
-        <p>
-          {isSignUp ? 'Já tem uma conta? ' : 'Não tem uma conta? '}
-          <button
-            onClick={toggleMode}
-            className="text-primary-600 dark:text-primary-400 font-medium underline hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
-          >
-            {isSignUp ? 'Entre agora' : 'Crie uma conta'}
-          </button>
-        </p>
-      </div>
+      {/* Mostrar o botão de alternância apenas se não estivermos na página de recuperação de senha */}
+      {!isResetPasswordPage && (
+        <div className="mt-4 text-center text-gray-600 dark:text-gray-400">
+          <p>
+            {isSignUp ? 'Já tem uma conta? ' : 'Não tem uma conta? '}
+            <button
+              onClick={toggleMode}
+              className="text-primary-600 dark:text-primary-400 font-medium underline hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+            >
+              {isSignUp ? 'Entre agora' : 'Crie uma conta'}
+            </button>
+          </p>
+        </div>
+      )}
     </div>
   );
 };
