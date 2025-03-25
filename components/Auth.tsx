@@ -9,27 +9,73 @@ const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const { theme } = useTheme();
 
-  // Função para interceptar o evento de envio do formulário
+  // Função para verificar e configurar o modo inicial (login ou cadastro)
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // Monitorar mudanças na URL para identificar modo de registro
-      const checkURLForSignUp = () => {
+      const checkInitialMode = () => {
+        // Verificar parâmetros da URL e hash
+        const urlParams = new URLSearchParams(window.location.search);
+        const action = urlParams.get('action');
         const hash = window.location.hash;
-        if (hash && hash.includes('#auth-sign-up')) {
+        
+        // Priorizar parâmetro da URL, depois hash
+        if (action === 'signup' || hash.includes('#auth-sign-up')) {
           setIsSignUp(true);
-        } else if (hash && hash.includes('#auth-sign-in')) {
+          // Forçar o hash para garantir que o Supabase Auth UI mostre o formulário correto
+          if (!hash.includes('#auth-sign-up')) {
+            window.location.hash = '#auth-sign-up';
+          }
+        } else if (action === 'signin' || hash.includes('#auth-sign-in')) {
           setIsSignUp(false);
+          // Forçar o hash para garantir que o Supabase Auth UI mostre o formulário correto
+          if (!hash.includes('#auth-sign-in')) {
+            window.location.hash = '#auth-sign-in';
+          }
         } else {
-          // Se não houver hash, verificar o formulário atual
+          // Se não houver indicação na URL, verificar o formulário atual
           const signUpForm = document.querySelector('form[id*="auth-sign-up"]');
           const signInForm = document.querySelector('form[id*="auth-sign-in"]');
-          setIsSignUp(!!signUpForm && !signInForm);
+          const newIsSignUp = !!signUpForm && !signInForm;
+          
+          if (newIsSignUp !== isSignUp) {
+            setIsSignUp(newIsSignUp);
+          }
         }
       };
 
-      checkURLForSignUp();
-      window.addEventListener('hashchange', checkURLForSignUp);
+      // Verificar o modo inicial
+      checkInitialMode();
+      
+      // Escutar mudanças no hash
+      const handleHashChange = () => {
+        const hash = window.location.hash;
+        if (hash.includes('#auth-sign-up')) {
+          setIsSignUp(true);
+        } else if (hash.includes('#auth-sign-in')) {
+          setIsSignUp(false);
+        }
+      };
+      
+      window.addEventListener('hashchange', handleHashChange);
+      
+      return () => {
+        window.removeEventListener('hashchange', handleHashChange);
+      };
+    }
+  }, []);
 
+  // Função para alternar entre os modos
+  const toggleMode = () => {
+    const newMode = !isSignUp;
+    setIsSignUp(newMode);
+    
+    // Atualizar o hash para mudar o formulário do Supabase
+    window.location.hash = newMode ? '#auth-sign-up' : '#auth-sign-in';
+  };
+
+  // Função para interceptar o evento de envio do formulário
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
       // Função para interceptar o envio do formulário
       const handleFormSubmit = async (e: Event) => {
         // Verificar se estamos no modo de registro
@@ -136,13 +182,24 @@ const Auth = () => {
         emailField.parentNode?.insertBefore(nameFieldContainer, emailField);
       };
 
-      // Monitorar mudanças no DOM para detectar o formulário de cadastro
+      // Função para ocultar os links internos do Supabase Auth
+      const hideSupabaseLinks = () => {
+        // Encontrar e ocultar os links nativos do Supabase Auth
+        const links = document.querySelectorAll('.supabase-auth-ui_ui-anchor');
+        links.forEach(link => {
+          const linkElement = link as HTMLElement;
+          if (linkElement && 
+             (linkElement.textContent?.includes('Já tem uma conta') || 
+              linkElement.textContent?.includes('Não tem uma conta'))) {
+            linkElement.style.display = 'none';
+          }
+        });
+      };
+
+      // Monitorar mudanças no DOM para detectar o formulário
       const observer = new MutationObserver((mutations) => {
         for (const mutation of mutations) {
           if (mutation.type === 'childList') {
-            // Atualizar o estado com base na URL
-            checkURLForSignUp();
-            
             // Verificar se o formulário de cadastro está presente
             const signUpForm = document.querySelector('form[id*="auth-sign-up"]');
             if (signUpForm && !document.getElementById('user-name')) {
@@ -152,6 +209,9 @@ const Auth = () => {
               // Adicionar listener de envio ao formulário
               signUpForm.addEventListener('submit', handleFormSubmit);
             }
+            
+            // Ocultar links internos do Supabase Auth
+            hideSupabaseLinks();
           }
         }
       });
@@ -159,16 +219,18 @@ const Auth = () => {
       // Iniciar observação do DOM
       observer.observe(document.body, { childList: true, subtree: true });
       
-      // Verificar imediatamente se o formulário já existe
+      // Verificar imediatamente o formulário e links
       const signUpForm = document.querySelector('form[id*="auth-sign-up"]');
       if (signUpForm) {
         addNameField(signUpForm);
         signUpForm.addEventListener('submit', handleFormSubmit);
       }
       
+      // Ocultar links imediatamente se já existirem
+      hideSupabaseLinks();
+      
       return () => {
         observer.disconnect();
-        window.removeEventListener('hashchange', checkURLForSignUp);
         const form = document.querySelector('form[id*="auth-sign-up"]');
         if (form) {
           form.removeEventListener('submit', handleFormSubmit);
@@ -248,7 +310,8 @@ const Auth = () => {
               email_label: 'Email',
               password_label: 'Senha',
               button_label: 'Criar conta',
-              link_text: 'Não tem uma conta? Registre-se',
+              // Texto vazio para ocultar o link interno
+              link_text: '',
               email_input_placeholder: 'Seu endereço de email',
               password_input_placeholder: 'Sua senha',
             },
@@ -256,7 +319,8 @@ const Auth = () => {
               email_label: 'Email',
               password_label: 'Senha',
               button_label: 'Entrar',
-              link_text: 'Já tem uma conta? Entre',
+              // Texto vazio para ocultar o link interno
+              link_text: '',
               email_input_placeholder: 'Seu endereço de email',
               password_input_placeholder: 'Sua senha',
             },
@@ -267,18 +331,13 @@ const Auth = () => {
         onlyThirdPartyProviders={false}
       />
 
+      {/* Nosso botão personalizado para alternar entre login e cadastro */}
       <div className="mt-4 text-center text-gray-600 dark:text-gray-400">
         <p>
           {isSignUp ? 'Já tem uma conta? ' : 'Não tem uma conta? '}
           <button
-            onClick={() => {
-              if (isSignUp) {
-                window.location.hash = '#auth-sign-in';
-              } else {
-                window.location.hash = '#auth-sign-up';
-              }
-            }}
-            className="text-primary-600 dark:text-primary-400 font-medium underline"
+            onClick={toggleMode}
+            className="text-primary-600 dark:text-primary-400 font-medium underline hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
           >
             {isSignUp ? 'Entre agora' : 'Crie uma conta'}
           </button>
