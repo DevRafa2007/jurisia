@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export default function LandingNova() {
@@ -278,7 +277,7 @@ export default function LandingNova() {
                   <div className="absolute bottom-4 right-4 text-primary-400 text-5xl opacity-20">❞</div>
                   
                   <p className="text-gray-700 dark:text-gray-200 text-lg italic mb-6 relative z-10 leading-relaxed px-4">
-                    "{testimonials[currentTestimonial].quote}"
+                    &quot;{testimonials[currentTestimonial].quote}&quot;
                   </p>
                   <div className="flex items-center">
                     <div className="w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center text-2xl">
