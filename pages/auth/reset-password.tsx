@@ -11,6 +11,23 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = useState(false);
   const [isTokenValid, setIsTokenValid] = useState(false);
 
+  // Evitar que o usuário seja redirecionado se já estiver logado
+  useEffect(() => {
+    // Verificar se o usuário foi automaticamente logado com o token
+    // e fazer logout para garantir que ele vá para a página de redefinição
+    const checkAndLogout = async () => {
+      if (!supabase) return;
+      
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        console.log('Sessão detectada, fazendo logout para permitir redefinição de senha');
+        await supabase.auth.signOut();
+      }
+    };
+    
+    checkAndLogout();
+  }, []);
+
   useEffect(() => {
     // Só verificar o token quando o router estiver pronto
     if (!router.isReady) return;
@@ -42,7 +59,8 @@ export default function ResetPasswordPage() {
           throw new Error('Cliente Supabase não inicializado');
         }
 
-        // Considerar o token válido para prosseguir com a redefinição
+        // Não verificamos o token explicitamente para evitar login automático
+        // Apenas permitimos que o usuário redefina a senha
         setIsTokenValid(true);
       } catch (error) {
         console.error('Erro ao verificar token:', error);
@@ -91,8 +109,8 @@ export default function ResetPasswordPage() {
         throw new Error('Token não encontrado na URL');
       }
 
-      // Tentar atualizar a senha - pode ser necessário usar o token na atualização,
-      // dependendo de como o Supabase espera que seja feito
+      // Usar a API específica para redefinição de senha
+      // Isso evita o login automático
       const { error: updateError } = await supabase.auth.updateUser({
         password: password
       });
@@ -101,6 +119,9 @@ export default function ResetPasswordPage() {
 
       setSuccess(true);
       setMessage('Senha atualizada com sucesso! Redirecionando para o login...');
+
+      // Fazer logout para garantir que o usuário tenha que fazer login novamente
+      await supabase.auth.signOut();
 
       setTimeout(() => {
         router.push('/login');

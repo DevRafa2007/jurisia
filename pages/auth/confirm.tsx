@@ -17,6 +17,29 @@ export default function ConfirmPage() {
         // Imprimir todos os parâmetros da URL para diagnóstico
         console.log('Todos os parâmetros da URL:', router.query);
 
+        // Verificar se estamos em um fluxo de recuperação de senha
+        const isPasswordRecovery = 
+          router.query.type === 'recovery' || 
+          router.query.recovery === 'true' || 
+          window.location.href.includes('recovery');
+
+        // Se for recuperação de senha, ir direto para a página de redefinição
+        if (isPasswordRecovery) {
+          // Direcionar para a página de redefinição de senha sem verificar o token
+          // pois a verificação do token pode estar causando login automático
+          setStatus('success');
+          setMessage('Link de recuperação detectado! Redirecionando para redefinição de senha...');
+          
+          setTimeout(() => {
+            router.push({
+              pathname: '/auth/reset-password',
+              query: router.query
+            });
+          }, 1000);
+          return;
+        }
+
+        // Continuamos com o fluxo normal de confirmação para outros tipos
         // Analisar como o Supabase está enviando os parâmetros
         const token = router.query.token_hash || router.query.token || '';
         const type = router.query.type || '';
@@ -40,9 +63,8 @@ export default function ConfirmPage() {
           throw new Error('Cliente Supabase não inicializado');
         }
 
-        // Determinar o tipo de ação com base nos parâmetros disponíveis
+        // Para sign up, usar a API de confirmação
         if (type === 'signup' || router.query.confirmation === 'true') {
-          // Para sign up, usar a API de confirmação
           const { error } = await supabase.auth.verifyOtp({
             token_hash: token as string,
             type: 'signup',
@@ -57,36 +79,9 @@ export default function ConfirmPage() {
           setTimeout(() => {
             router.push('/login');
           }, 2000);
-        } else if (type === 'recovery' || router.query.recovery === 'true') {
-          // Para recovery, apenas redirecionar para a página de redefinição de senha
-          setStatus('success');
-          setMessage('Link de recuperação válido! Redirecionando para redefinição de senha...');
-          
-          // Passar todos os parâmetros para a página de redefinição de senha
-          const queryParams = { ...router.query };
-          
-          setTimeout(() => {
-            router.push({
-              pathname: '/auth/reset-password',
-              query: queryParams
-            });
-          }, 2000);
         } else {
-          // Tentar identificar o tipo pelo URL
-          if (window.location.href.includes('recovery')) {
-            setStatus('success');
-            setMessage('Link de recuperação detectado! Redirecionando para redefinição de senha...');
-            
-            setTimeout(() => {
-              router.push({
-                pathname: '/auth/reset-password',
-                query: router.query
-              });
-            }, 2000);
-          } else {
-            setStatus('error');
-            setMessage('Tipo de confirmação não identificado. Por favor, verifique seu email e tente novamente.');
-          }
+          setStatus('error');
+          setMessage('Tipo de confirmação não identificado. Por favor, verifique seu email e tente novamente.');
         }
       } catch (error) {
         console.error('Erro na confirmação:', error);
