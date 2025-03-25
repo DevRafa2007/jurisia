@@ -1,0 +1,75 @@
+<svg width="800" height="450" viewBox="0 0 800 450" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="800" height="450" rx="8" fill="#1E293B" />
+  
+  <!-- Sidebar -->
+  <rect x="0" y="0" width="200" height="450" fill="#0F172A" />
+  
+  <!-- Logo -->
+  <text x="30" y="40" font-family="Arial" font-weight="bold" font-size="22" fill="#38BDF8">JurisIA</text>
+  
+  <!-- Sidebar Menu Items -->
+  <rect x="20" y="70" width="160" height="40" rx="6" fill="#1E40AF" />
+  <text x="50" y="95" font-family="Arial" font-size="14" fill="white">Dashboard</text>
+  <rect x="20" width="4" height="40" y="70" fill="#38BDF8" rx="2" />
+  
+  <text x="50" y="145" font-family="Arial" font-size="14" fill="#94A3B8">Documentos</text>
+  <text x="50" y="185" font-family="Arial" font-size="14" fill="#94A3B8">Processos</text>
+  <text x="50" y="225" font-family="Arial" font-size="14" fill="#94A3B8">Consultas</text>
+  <text x="50" y="265" font-family="Arial" font-size="14" fill="#94A3B8">Clientes</text>
+  
+  <!-- Header -->
+  <rect x="200" y="0" width="600" height="60" fill="#1E293B" />
+  <circle cx="760" cy="30" r="20" fill="#0F172A" />
+  <circle cx="760" cy="30" r="18" stroke="#38BDF8" stroke-width="2" fill="none" />
+  <text x="754" y="35" font-family="Arial" font-size="14" fill="white">DR</text>
+  
+  <!-- Search Bar -->
+  <rect x="220" y="15" width="300" height="30" rx="6" fill="#0F172A" />
+  <text x="245" y="35" font-family="Arial" font-size="14" fill="#94A3B8">Pesquisar...</text>
+  
+  <!-- Main Content -->
+  <text x="230" y="100" font-family="Arial" font-weight="bold" font-size="24" fill="white">Bem-vindo, Dr. Rafael</text>
+  
+  <!-- Stats Cards -->
+  <rect x="230" y="120" width="165" height="100" rx="8" fill="#0F172A" />
+  <text x="250" y="150" font-family="Arial" font-weight="bold" font-size="14" fill="#38BDF8">Documentos</text>
+  <text x="250" y="180" font-family="Arial" font-weight="bold" font-size="28" fill="white">42</text>
+  
+  <rect x="415" y="120" width="165" height="100" rx="8" fill="#0F172A" />
+  <text x="435" y="150" font-family="Arial" font-weight="bold" font-size="14" fill="#38BDF8">Processos</text>
+  <text x="435" y="180" font-family="Arial" font-weight="bold" font-size="28" fill="white">18</text>
+  
+  <rect x="600" y="120" width="165" height="100" rx="8" fill="#0F172A" />
+  <text x="620" y="150" font-family="Arial" font-weight="bold" font-size="14" fill="#38BDF8">Consultas</text>
+  <text x="620" y="180" font-family="Arial" font-weight="bold" font-size="28" fill="white">7</text>
+  
+  <!-- Recent Documents Table -->
+  <rect x="230" y="240" width="535" height="190" rx="8" fill="#0F172A" />
+  <text x="250" y="270" font-family="Arial" font-weight="bold" font-size="16" fill="white">Documentos recentes</text>
+  
+  <!-- Table Headers -->
+  <rect x="250" y="290" width="495" height="1" fill="#334155" />
+  <text x="250" y="315" font-family="Arial" font-size="14" fill="#94A3B8">Nome</text>
+  <text x="520" y="315" font-family="Arial" font-size="14" fill="#94A3B8">Data</text>
+  <text x="650" y="315" font-family="Arial" font-size="14" fill="#94A3B8">Tipo</text>
+  
+  <!-- Table Rows -->
+  <rect x="250" y="325" width="495" height="1" fill="#334155" />
+  <text x="250" y="350" font-family="Arial" font-size="14" fill="white">Petição Inicial - Caso Silva</text>
+  <text x="520" y="350" font-family="Arial" font-size="14" fill="white">18/06/2023</text>
+  <rect x="650" y="335" width="80" height="24" rx="12" fill="#1E40AF55" />
+  <text x="667" y="350" font-family="Arial" font-size="12" fill="#38BDF8">Petição</text>
+  
+  <rect x="250" y="360" width="495" height="1" fill="#334155" />
+  <text x="250" y="385" font-family="Arial" font-size="14" fill="white">Contrato de Locação</text>
+  <text x="520" y="385" font-family="Arial" font-size="14" fill="white">15/06/2023</text>
+  <rect x="650" y="370" width="80" height="24" rx="12" fill="#15803D55" />
+  <text x="662" y="385" font-family="Arial" font-size="12" fill="#4ADE80">Contrato</text>
+  
+  <rect x="250" y="395" width="495" height="1" fill="#334155" />
+  <text x="250" y="420" font-family="Arial" font-size="14" fill="white">Recurso - Processo nº 5021...</text>
+  <text x="520" y="420" font-family="Arial" font-size="14" fill="white">10/06/2023</text>
+  <rect x="650" y="405" width="80" height="24" rx="12" fill="#9F123155" />
+  <text x="667" y="420" font-family="Arial" font-size="12" fill="#F87171">Recurso</text>
+</svg> 

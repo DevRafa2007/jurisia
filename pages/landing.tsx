@@ -4,6 +4,20 @@ import Head from 'next/head';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+// Importação dinâmica do componente DashboardPreview para evitar problemas de SSR
+const DashboardPreview = dynamic(() => import('../components/DashboardPreview'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[400px] bg-slate-800 rounded-xl flex items-center justify-center">
+      <div className="flex flex-col items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
+        <p className="mt-4 text-sky-500">Carregando preview...</p>
+      </div>
+    </div>
+  ),
+});
 
 // Componente para botão animado
 const AnimatedButton = ({ 
@@ -126,7 +140,7 @@ export default function Landing() {
   }, [user, isLoading, router]);
 
   return (
-    <div className="bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 min-h-screen">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       <Head>
         <title>JurisIA - Assistente Jurídico com Inteligência Artificial</title>
         <meta name="description" content="JurisIA: A plataforma definitiva para profissionais do direito otimizarem seu trabalho com tecnologias de inteligência artificial." />
@@ -135,7 +149,7 @@ export default function Landing() {
       </Head>
 
       {/* Header com animação */}
-      <header className="py-6 px-4 sm:px-6 lg:px-8 mb-6">
+      <header className="py-6 px-4 sm:px-6 lg:px-8 mb-6 relative z-10">
         <div className="container mx-auto flex justify-between items-center">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -143,7 +157,7 @@ export default function Landing() {
             transition={{ duration: 0.5 }}
             className="flex items-center"
           >
-            <div className="text-3xl font-serif font-bold text-primary-700 dark:text-primary-400">
+            <div className="text-3xl font-serif font-bold bg-gradient-to-r from-primary-600 to-sky-500 dark:from-primary-400 dark:to-sky-400 text-transparent bg-clip-text">
               JurisIA
             </div>
           </motion.div>
@@ -153,12 +167,12 @@ export default function Landing() {
             transition={{ duration: 0.5 }}
           >
             <Link href="/login" legacyBehavior>
-              <AnimatedButton href="/login" className="hidden sm:inline-block mr-4">
+              <AnimatedButton href="/login" className="hidden sm:inline-block mr-4 bg-white text-primary-600 border border-primary-600 hover:bg-primary-50 dark:bg-transparent dark:text-primary-400 dark:border-primary-400 dark:hover:bg-primary-900/30">
                 Entrar
               </AnimatedButton>
             </Link>
             <Link href="/login#auth-sign-up" legacyBehavior>
-              <AnimatedButton href="/login#auth-sign-up">
+              <AnimatedButton href="/login#auth-sign-up" className="bg-gradient-to-r from-primary-600 to-sky-500 hover:from-primary-700 hover:to-sky-600 dark:from-primary-500 dark:to-sky-400">
                 Cadastrar
               </AnimatedButton>
             </Link>
@@ -166,17 +180,45 @@ export default function Landing() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 pb-24">
+      {/* Círculos decorativos de fundo */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
+        <motion.div 
+          className="absolute top-[-15%] right-[-10%] w-[500px] h-[500px] rounded-full bg-gradient-to-b from-primary-500/10 to-primary-500/5 dark:from-primary-500/20 dark:to-primary-500/10"
+          animate={{ 
+            y: [0, 20, 0],
+            scale: [1, 1.05, 1],
+          }}
+          transition={{ 
+            duration: 15, 
+            repeat: Infinity,
+            repeatType: "reverse" 
+          }}
+        />
+        <motion.div 
+          className="absolute bottom-[-10%] left-[-10%] w-[300px] h-[300px] rounded-full bg-gradient-to-t from-sky-500/10 to-sky-500/5 dark:from-sky-500/20 dark:to-sky-500/10"
+          animate={{ 
+            y: [0, -20, 0],
+            scale: [1, 1.05, 1],
+          }}
+          transition={{ 
+            duration: 10, 
+            repeat: Infinity,
+            repeatType: "reverse" 
+          }}
+        />
+      </div>
+
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 pb-24 relative z-0">
         {/* Hero Section */}
-        <section className="text-center mb-20">
+        <section className="text-center mb-32">
           <AnimatedSection>
             <motion.h1 
-              className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6 font-serif"
+              className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6 font-serif leading-tight"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-              <span className="text-primary-600 dark:text-primary-400">Tecnologia jurídica</span> ao <br className="hidden sm:block"/> seu alcance
+              <span className="bg-gradient-to-r from-primary-600 to-sky-500 dark:from-primary-400 dark:to-sky-400 text-transparent bg-clip-text">Tecnologia jurídica</span> ao <br className="hidden sm:block"/> seu alcance
             </motion.h1>
           </AnimatedSection>
           
@@ -189,7 +231,10 @@ export default function Landing() {
           <AnimatedSection delay={0.6}>
             <div className="flex flex-col sm:flex-row justify-center gap-4 mb-8">
               <Link href="/login" legacyBehavior>
-                <AnimatedButton href="/login" className="w-full sm:w-auto">
+                <AnimatedButton 
+                  href="/login" 
+                  className="w-full sm:w-auto bg-gradient-to-r from-primary-600 to-sky-500 hover:from-primary-700 hover:to-sky-600 dark:from-primary-500 dark:to-sky-400"
+                >
                   Começar Agora
                 </AnimatedButton>
               </Link>
@@ -208,31 +253,34 @@ export default function Landing() {
           </AnimatedSection>
           
           <AnimatedSection delay={0.8}>
-            <motion.div
-              className="relative rounded-xl overflow-hidden shadow-2xl max-w-4xl mx-auto mt-12 bg-white dark:bg-gray-800"
-              initial={{ y: 100, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.8, delay: 1 }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-primary-600/30 to-primary-400/30 z-10 rounded-xl"></div>
-              <img 
-                src="https://placehold.co/800x400/0369a1/FFFFFF?text=JurisIA+Dashboard" 
-                alt="JurisIA Dashboard Preview"
-                className="w-full h-auto object-cover"
+            <div className="relative mt-16">
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-primary-600/30 to-sky-500/30 dark:from-primary-600/20 dark:to-sky-500/20 rounded-xl blur-2xl"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 1, delay: 1 }}
               />
-            </motion.div>
+              <motion.div
+                className="relative z-10"
+                initial={{ y: 100, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.8, delay: 1 }}
+              >
+                <DashboardPreview />
+              </motion.div>
+            </div>
           </AnimatedSection>
         </section>
 
         {/* Benefits Section */}
-        <section id="features" className="mb-20">
+        <section id="features" className="mb-32">
           <AnimatedSection>
-            <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-12 font-serif">
-              Benefícios da nossa <span className="text-primary-600 dark:text-primary-400">Plataforma</span>
+            <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-16 font-serif">
+              Benefícios da nossa <span className="bg-gradient-to-r from-primary-600 to-sky-500 dark:from-primary-400 dark:to-sky-400 text-transparent bg-clip-text">Plataforma</span>
             </h2>
           </AnimatedSection>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
             <FeatureCard 
               icon="⚖️"
               title="Assistente Jurídico IA"
@@ -254,43 +302,52 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* How It Works Section */}
-        <section className="mb-20">
-          <AnimatedSection>
-            <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-12 font-serif">
-              Como <span className="text-primary-600 dark:text-primary-400">Funciona</span>
-            </h2>
-          </AnimatedSection>
+        {/* How It Works Section - updated to be more visually appealing */}
+        <section className="mb-32 relative">
+          <div className="absolute left-0 right-0 h-full bg-primary-50 dark:bg-primary-900/20 -mx-4 sm:-mx-6 lg:-mx-8 -z-10 rounded-3xl"></div>
+          <div className="py-16">
+            <AnimatedSection>
+              <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-16 font-serif">
+                Como <span className="bg-gradient-to-r from-primary-600 to-sky-500 dark:from-primary-400 dark:to-sky-400 text-transparent bg-clip-text">Funciona</span>
+              </h2>
+            </AnimatedSection>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-12">
-            {[
-              {
-                number: "01",
-                title: "Faça seu cadastro",
-                description: "Crie sua conta gratuitamente e tenha acesso imediato à plataforma.",
-                delay: 0.2
-              },
-              {
-                number: "02",
-                title: "Utilize o assistente IA",
-                description: "Faça perguntas jurídicas, peça análises ou gere documentos através de nossa interface intuitiva.",
-                delay: 0.4
-              },
-              {
-                number: "03",
-                title: "Otimize seu trabalho",
-                description: "Economize tempo, reduza erros e aumente sua produtividade com nossas ferramentas inteligentes.",
-                delay: 0.6
-              }
-            ].map((step, index) => (
-              <AnimatedSection key={index} delay={step.delay} className="relative pl-12">
-                <div className="absolute left-0 top-0 w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center text-primary-600 dark:text-primary-400 font-bold">
-                  {step.number}
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{step.title}</h3>
-                <p className="text-gray-600 dark:text-gray-300">{step.description}</p>
-              </AnimatedSection>
-            ))}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-12 px-4">
+              {[
+                {
+                  number: "01",
+                  title: "Faça seu cadastro",
+                  description: "Crie sua conta gratuitamente e tenha acesso imediato à plataforma.",
+                  delay: 0.2,
+                  icon: "🔐"
+                },
+                {
+                  number: "02",
+                  title: "Utilize o assistente IA",
+                  description: "Faça perguntas jurídicas, peça análises ou gere documentos através de nossa interface intuitiva.",
+                  delay: 0.4,
+                  icon: "💬"
+                },
+                {
+                  number: "03",
+                  title: "Otimize seu trabalho",
+                  description: "Economize tempo, reduza erros e aumente sua produtividade com nossas ferramentas inteligentes.",
+                  delay: 0.6,
+                  icon: "🚀"
+                }
+              ].map((step, index) => (
+                <AnimatedSection key={index} delay={step.delay} className="relative pl-12">
+                  <motion.div 
+                    className="absolute left-0 top-0 w-10 h-10 rounded-full bg-gradient-to-r from-primary-500 to-sky-500 dark:from-primary-500 dark:to-sky-400 flex items-center justify-center text-white font-bold"
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                  >
+                    {step.icon}
+                  </motion.div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{step.title}</h3>
+                  <p className="text-gray-600 dark:text-gray-300">{step.description}</p>
+                </AnimatedSection>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -460,43 +517,67 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* Call to Action */}
+        {/* Call to Action - enhanced */}
         <section id="contact">
           <motion.div
-            className="bg-primary-600 dark:bg-primary-700 rounded-xl p-8 sm:p-12 shadow-xl text-center"
+            className="bg-gradient-to-r from-primary-600 to-sky-500 dark:from-primary-700 dark:to-sky-600 rounded-xl p-8 sm:p-12 shadow-2xl text-center overflow-hidden relative"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6 }}
           >
-            <h2 className="text-3xl font-bold text-white mb-4 font-serif">
+            {/* Decorative elements */}
+            <motion.div 
+              className="absolute top-0 left-0 w-40 h-40 bg-white/10 rounded-full -translate-x-1/2 -translate-y-1/2"
+              animate={{ 
+                scale: [1, 1.2, 1],
+                opacity: [0.3, 0.2, 0.3] 
+              }}
+              transition={{ duration: 8, repeat: Infinity }}
+            />
+            <motion.div 
+              className="absolute bottom-0 right-0 w-60 h-60 bg-white/10 rounded-full translate-x-1/4 translate-y-1/4"
+              animate={{ 
+                scale: [1, 1.1, 1],
+                opacity: [0.2, 0.3, 0.2] 
+              }}
+              transition={{ duration: 6, repeat: Infinity }}
+            />
+            
+            <h2 className="text-3xl font-bold text-white mb-4 font-serif relative z-10">
               Pronto para transformar sua prática jurídica?
             </h2>
-            <p className="text-primary-100 mb-8 max-w-2xl mx-auto">
+            <p className="text-primary-100 mb-8 max-w-2xl mx-auto relative z-10">
               Junte-se a milhares de profissionais que já estão economizando tempo e aumentando sua produtividade com o JurisIA.
             </p>
             <Link href="/login" legacyBehavior>
               <motion.button
-                className="bg-white text-primary-700 px-8 py-3 rounded-lg font-bold shadow-md"
+                className="relative z-10 bg-white text-primary-700 px-8 py-3 rounded-lg font-bold shadow-md overflow-hidden group"
                 whileHover={{ scale: 1.05, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}
                 whileTap={{ scale: 0.95 }}
               >
-                Cadastre-se Gratuitamente
+                <span className="relative z-10">Cadastre-se Gratuitamente</span>
+                <motion.span 
+                  className="absolute inset-0 bg-gradient-to-r from-sky-400 to-primary-400"
+                  initial={{ x: '-100%' }}
+                  whileHover={{ x: 0 }}
+                  transition={{ duration: 0.4 }}
+                />
               </motion.button>
             </Link>
           </motion.div>
         </section>
       </main>
 
-      <footer className="bg-gray-100 dark:bg-gray-800 py-12 px-4">
+      <footer className="bg-white dark:bg-slate-800 py-12 px-4 shadow-inner">
         <div className="container mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-            <div className="text-2xl font-serif font-bold text-primary-700 dark:text-primary-400 mb-4 md:mb-0">
+            <div className="text-2xl font-serif font-bold bg-gradient-to-r from-primary-600 to-sky-500 dark:from-primary-400 dark:to-sky-400 text-transparent bg-clip-text mb-4 md:mb-0">
               JurisIA
             </div>
             <div className="flex space-x-6">
-              <a href="#" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400">Termos</a>
-              <a href="#" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400">Privacidade</a>
-              <a href="#" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400">Contato</a>
+              <a href="#" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition">Termos</a>
+              <a href="#" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition">Privacidade</a>
+              <a href="#" className="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition">Contato</a>
             </div>
           </div>
           <div className="text-center text-gray-500 dark:text-gray-400 text-sm">
