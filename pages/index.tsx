@@ -86,7 +86,7 @@ export default function Home() {
   // Redirecionar para login se não estiver autenticado
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push('/login');
+      router.push('/landing');
     }
   }, [user, isLoading, router]);
 

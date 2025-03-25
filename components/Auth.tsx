@@ -3,6 +3,7 @@ import { Auth as SupabaseAuth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '../utils/supabase';
 import { useTheme } from '../contexts/ThemeContext';
+import Link from 'next/link';
 
 const Auth = () => {
   const [errorMessage] = useState<string | null>(null);
@@ -153,9 +154,17 @@ const Auth = () => {
 
   return (
     <div className="flex flex-col space-y-4 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold text-primary-700 dark:text-primary-400 text-center mb-4">
-        Acesse sua conta
-      </h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold text-primary-700 dark:text-primary-400">
+          Acesse sua conta
+        </h2>
+        <Link 
+          href="/landing" 
+          className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300"
+        >
+          Voltar
+        </Link>
+      </div>
       
       {errorMessage && (
         <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded relative mb-4">

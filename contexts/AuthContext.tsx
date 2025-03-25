@@ -94,6 +94,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Type assertion para evitar erros de TypeScript
       const supabaseClient = supabase as SupabaseClient;
       await supabaseClient.auth.signOut();
+      
+      // Redirecionar para a landing page após o logout
+      if (typeof window !== 'undefined') {
+        window.location.href = '/landing';
+      }
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     }
