@@ -10,20 +10,35 @@ export async function middleware(req: NextRequest) {
   // Verificar se a URL atual está na lista de URLs públicas
   const isPublicUrl = publicUrls.some(publicUrl => pathname.startsWith(publicUrl));
   
-  // Verificar existência do token (simplificado)
-  const authCookie = req.cookies.get('sb-access-token') || req.cookies.get('sb:token');
-  const refreshToken = req.cookies.get('sb-refresh-token');
-  const hasToken = !!authCookie?.value || !!refreshToken?.value;
+  // Verificar existência do token (verificação mais robusta)
+  const possibleAuthCookies = [
+    'sb-access-token',
+    'sb:token',
+    'sb-refresh-token',
+    'supabase-auth-token'
+  ];
+  
+  let hasToken = false;
+  
+  // Verificar todos os possíveis cookies de autenticação
+  for (const cookieName of possibleAuthCookies) {
+    const cookie = req.cookies.get(cookieName);
+    if (cookie?.value) {
+      hasToken = true;
+      break;
+    }
+  }
   
   // Adicionar um cookie especial para evitar loops de redirecionamento
   const redirectAttempt = req.cookies.get('redirect_attempt');
   const redirectCount = redirectAttempt ? parseInt(redirectAttempt.value, 10) : 0;
 
   // Se já tentamos redirecionar muitas vezes, permitir o acesso para evitar loops
-  if (redirectCount > 3) {
+  if (redirectCount > 5) {
     // Resetar o contador de redirecionamentos
     const response = NextResponse.next();
     response.cookies.set('redirect_attempt', '0', { path: '/' });
+    console.log('Limite de redirecionamentos atingido, permitindo acesso:', pathname);
     return response;
   }
   

@@ -13,7 +13,25 @@ const LoginPage = () => {
     // Redirecionar para a página inicial se o usuário já estiver logado
     if (authChecked && !isLoading && user) {
       console.log('Redirecionando para homepage...');
-      router.push('/');
+      
+      // Verificar se já estamos em um processo de redirecionamento para evitar ciclos
+      const redirectsInProgress = sessionStorage.getItem('redirects_in_progress');
+      const redirectCount = redirectsInProgress ? parseInt(redirectsInProgress, 10) : 0;
+      
+      if (redirectCount < 3) {
+        // Incrementar o contador de redirecionamentos
+        sessionStorage.setItem('redirects_in_progress', (redirectCount + 1).toString());
+        router.push('/');
+      } else {
+        console.log('Limite de redirecionamentos atingido, permanecendo na página atual');
+        // Resetar contador após alguns segundos
+        setTimeout(() => {
+          sessionStorage.setItem('redirects_in_progress', '0');
+        }, 5000);
+      }
+    } else if (!user) {
+      // Resetar contador quando o usuário não estiver autenticado
+      sessionStorage.setItem('redirects_in_progress', '0');
     }
   }, [user, isLoading, authChecked, router]);
 

@@ -18,7 +18,7 @@ function AuthenticatedApp({ Component, pageProps }: AppProps) {
   const { isLoading, authChecked } = useAuth();
   
   // Mostrar tela de carregamento enquanto verifica a autenticação
-  if (isLoading && !authChecked) {
+  if (isLoading) {
     return <LoadingScreen />;
   }
   

@@ -47,9 +47,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Buscar sessão inicial
     const getInitialSession = async () => {
+      // Adicionar timeout para evitar espera infinita
+      const sessionTimeout = setTimeout(() => {
+        console.log('Timeout ao verificar sessão');
+        setIsLoading(false);
+        setAuthChecked(true);
+      }, 5000); // 5 segundos de timeout
+      
       try {
         console.log('Verificando sessão de autenticação');
         const { data, error } = await supabaseClient.auth.getSession();
+        
+        // Limpar o timeout pois a resposta foi recebida
+        clearTimeout(sessionTimeout);
         
         if (error) {
           console.error('Erro ao obter sessão:', error.message);
@@ -58,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         if (data.session) {
           console.log('Sessão encontrada:', !!data.session);
+          console.log('Usuário ID:', data.session.user.id);
         } else {
           console.log('Nenhuma sessão ativa encontrada');
         }
@@ -66,6 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(data.session?.user ?? null);
       } catch (error) {
         console.error('Erro ao buscar sessão inicial:', error);
+        // Limpar o timeout em caso de erro
+        clearTimeout(sessionTimeout);
       } finally {
         setIsLoading(false);
         setAuthChecked(true);
