@@ -18,6 +18,15 @@ const nextConfig = {
     // Ignorando erros de linting durante o build para permitir o deploy
     ignoreDuringBuilds: true,
   },
+  webpack: (config, { isServer }) => {
+    // Ignorar o arquivo landing.fix.tsx durante o build
+    config.module.rules.push({
+      test: /landing\.fix\.tsx$/,
+      loader: 'ignore-loader',
+    });
+    
+    return config;
+  },
 }
 
 module.exports = nextConfig 
