@@ -2,29 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Força cores básicas para garantir visibilidade */
-.text-primary-800 {
-  color: #1f3666 !important;
-}
-.dark .dark\:text-primary-300 {
-  color: #92b9e3 !important;
-}
-.text-secondary-600 {
-  color: #bd842f !important;
-}
-.dark .dark\:text-secondary-400 {
-  color: #dcb765 !important;
-}
-.text-gray-700 {
-  color: #374151 !important;
-}
-.dark .dark\:text-gray-300 {
-  color: #d1d5db !important;
-}
-.text-white {
-  color: #ffffff !important;
-}
-
 /* Estilos globais */
 html,
 body {
@@ -272,27 +249,6 @@ body {
     background-size: 200px;
     background-repeat: repeat;
     @apply bg-opacity-[0.03] dark:bg-opacity-[0.02];
-  }
-  
-  /* Animações para a landing page */
-  @keyframes float {
-    0% { transform: translateY(0px); }
-    50% { transform: translateY(-10px); }
-    100% { transform: translateY(0px); }
-  }
-  
-  @keyframes float-slow {
-    0% { transform: translateY(0px); }
-    50% { transform: translateY(-5px); }
-    100% { transform: translateY(0px); }
-  }
-  
-  .animate-float {
-    animation: float 4s ease-in-out infinite;
-  }
-  
-  .animate-float-slow {
-    animation: float-slow 6s ease-in-out infinite;
   }
 }
 
