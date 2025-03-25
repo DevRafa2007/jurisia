@@ -1231,67 +1231,87 @@ ${camposDoc.map(campo => {
   };
 
   return (
-    <Layout title="Documentos | JurisIA" className="h-full">
+    <Layout title="Documentos | JurisIA">
       <Head>
-        <style jsx global>{`
-          /* Estilos para o editor de documentos */
-          .ql-editor {
-            min-height: 300px;
-            font-size: 16px;
-            line-height: 1.5;
-            padding: 1.5rem;
-            background-color: white;
-            color: #333;
-          }
-          
-          .dark .ql-editor {
-            background-color: #1a202c;
-            color: #e2e8f0;
-          }
-          
-          .ql-toolbar {
-            border-top-left-radius: 0.375rem;
-            border-top-right-radius: 0.375rem;
-            background-color: #f7fafc;
-          }
-          
-          .dark .ql-toolbar {
-            background-color: #2d3748;
-          }
-          
-          .dark .ql-toolbar .ql-stroke {
-            stroke: #a0aec0;
-          }
-          
-          .dark .ql-toolbar .ql-fill {
-            fill: #a0aec0;
-          }
-          
-          .dark .ql-toolbar .ql-picker {
-            color: #a0aec0;
-          }
-          
-          .titulo-centralizado {
-            text-align: center;
-            font-weight: bold;
-            margin-bottom: 1rem;
-            font-size: 1.2rem;
-          }
-          
+        <style>{`
           @media print {
-            body {
-              font-size: 12pt;
-              line-height: 1.5;
+            body * {
+              visibility: hidden;
             }
-            
-            .ql-editor {
-              padding: 0 !important;
-              margin: 0 !important;
+            .print-content .ql-editor, .print-content .ql-editor * {
+              visibility: visible;
             }
-            
+            .print-content .ql-editor {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 21cm;
+              height: auto;
+              margin: 0;
+              padding: 2.54cm;
+              box-sizing: border-box;
+              overflow: visible;
+              page-break-inside: avoid;
+            }
+            .ql-toolbar {
+              display: none !important;
+            }
             @page {
-              margin: 2cm;
+              size: A4;
+              margin: 0;
             }
+            html, body {
+              width: 21cm;
+              height: 29.7cm;
+              background-color: white;
+            }
+            .no-print {
+              display: none !important;
+            }
+          }
+          
+          /* Estilos Quill personalizados */
+          .ql-editor {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 12pt;
+            line-height: 1.5;
+            padding: 1.5cm;
+            text-align: justify;
+          }
+          
+          .ql-editor p, .ql-editor ol, .ql-editor ul, .ql-editor pre, .ql-editor blockquote {
+            margin-bottom: 1em;
+          }
+          
+          /* Estilos para impressão */
+          .print-content .ql-editor {
+            height: auto !important;
+            min-height: 29.7cm;
+            box-shadow: none;
+          }
+          
+          .ql-snow .ql-toolbar {
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+            background-color: #f9fafb;
+          }
+          
+          .dark .ql-snow .ql-toolbar {
+            background-color: #1e293b;
+            border-color: #334155;
+          }
+          
+          .dark .ql-snow .ql-editor {
+            color: black; /* Mantém o texto preto mesmo no modo escuro */
+          }
+          
+          .dark .ql-snow.ql-container {
+            border-color: #334155;
+          }
+          
+          /* Ajusta altura do container para incluir a barra de ferramentas */
+          .ql-container {
+            min-height: calc(29.7cm - 42px);
           }
         `}</style>
       </Head>
@@ -1342,17 +1362,16 @@ ${camposDoc.map(campo => {
           }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
         >
-          {/* Botão flutuante para abrir a sidebar que acompanha o scroll */}
-          {user && !sidebarAberta && (
-            <div className="fixed top-4 left-4 z-50">
+          {/* Botão para abrir sidebar (estilo igual ao do chat) */}
+          {user && (
+            <div className="absolute top-4 left-4 z-30">
               <button
-                onClick={() => setSidebarAberta(true)}
-                className="bg-primary-600 hover:bg-primary-700 text-white p-3 rounded-full shadow-lg transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50"
-                aria-label="Abrir menu de documentos"
-                title="Documentos"
+                onClick={() => setSidebarAberta(!sidebarAberta)}
+                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-law-800 transition-colors focus:outline-none"
+                aria-label={sidebarAberta ? "Fechar menu" : "Abrir menu"}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-gray-700 dark:text-gray-300">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                 </svg>
               </button>
             </div>
