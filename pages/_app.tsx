@@ -12,20 +12,30 @@ import { useRouter } from 'next/router';
 function AuthWrapper({ Component, pageProps }: AppProps) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const [redirectionChecked, setRedirectionChecked] = useState(false);
   
   useEffect(() => {
-    // Se o usuário não estiver logado e tentar acessar a página inicial, redirecionar para landing
-    if (!isLoading && !user && router.pathname === '/') {
-      router.replace('/landing');
-    }
+    if (isLoading) return; // Aguarda a conclusão do carregamento da autenticação
     
-    // Se o usuário estiver logado e tentar acessar a landing page, redirecionar para home
-    if (!isLoading && user && router.pathname === '/landing') {
-      router.replace('/');
-    }
+    // Atrasa ligeiramente o redirecionamento para garantir que a página tenha tempo de carregar
+    const redirectionTimeout = setTimeout(() => {
+      // Se o usuário não estiver logado e tentar acessar a página inicial, redirecionar para landing
+      if (!user && router.pathname === '/') {
+        router.replace('/landing');
+      }
+      
+      // Se o usuário estiver logado e tentar acessar a landing page, redirecionar para home
+      if (user && router.pathname === '/landing') {
+        router.replace('/');
+      }
+      
+      setRedirectionChecked(true);
+    }, 200);
+    
+    return () => clearTimeout(redirectionTimeout);
   }, [user, isLoading, router]);
 
-  // Renderizando o componente normalmente
+  // Renderizar a página normalmente
   return <Component {...pageProps} />;
 }
 

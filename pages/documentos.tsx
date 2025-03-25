@@ -580,16 +580,36 @@ ${camposDoc.map(campo => {
     documentoModificado.current = true;
   };
 
-  // Efeito para salvar o documento automaticamente a cada 30 segundos
+  // Salvamento automático
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (documentoAtual && documentoGerado && tituloDocumento && salvando) {
-        salvarDocumentoAutomatico();
+    // Configurar salvamento automático a cada 30 segundos se houver alterações
+    const configurarSalvamentoAutomatico = () => {
+      // Limpar qualquer timer existente
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
       }
-    }, 30000);
-    
-    return () => clearInterval(interval);
-  }, [documentoAtual, documentoGerado, tituloDocumento, salvando, salvarDocumentoAutomatico]);
+      
+      // Configurar novo timer
+      timerRef.current = setInterval(() => {
+        if (documentoModificado.current && user && documentoGerado && tipoDocumentoSelecionado) {
+          salvarDocumentoAutomatico();
+        }
+      }, 30000); // 30 segundos
+    };
+
+    // Iniciar o temporizador quando o documento estiver no modo de edição
+    if (etapa === 'editor') {
+      configurarSalvamentoAutomatico();
+    }
+
+    // Limpar temporizador ao desmontar o componente ou mudar de etapa
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [etapa, user, documentoGerado, tipoDocumentoSelecionado]);
 
   // Função para salvamento automático (sem feedback visual de toast)
   const salvarDocumentoAutomatico = async () => {
