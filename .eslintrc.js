@@ -9,6 +9,7 @@ module.exports = {
       argsIgnorePattern: '^_',
       varsIgnorePattern: '^_'
     }],
-    'react-hooks/exhaustive-deps': 'warn'
+    'react-hooks/exhaustive-deps': 'warn',
+    'react/no-unescaped-entities': 'off'
   }
 } 
