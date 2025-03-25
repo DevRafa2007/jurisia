@@ -9,11 +9,15 @@ export default function ConfirmPage() {
   const [message, setMessage] = useState('Verificando seu email...');
 
   useEffect(() => {
+    // Aguardar o router estar pronto
+    if (!router.isReady) return;
+    
     const handleEmailConfirmation = async () => {
       try {
-        const { searchParams } = new URL(window.location.href);
-        const token = searchParams.get('token');
-        const type = searchParams.get('type');
+        // Obter parâmetros da URL usando o router
+        const token = router.query.token as string;
+        const type = router.query.type as string;
+        console.log('Token:', token, 'Type:', type);
 
         if (!token || !type) {
           setStatus('error');
@@ -26,6 +30,7 @@ export default function ConfirmPage() {
         }
 
         if (type === 'signup') {
+          // Para sign up, usar a API de confirmação
           const { error } = await supabase.auth.verifyOtp({
             token_hash: token,
             type: 'signup'
@@ -40,11 +45,15 @@ export default function ConfirmPage() {
             router.push('/login');
           }, 2000);
         } else if (type === 'recovery') {
+          // Para recovery, apenas redirecionar para a página de redefinição de senha
           setStatus('success');
           setMessage('Link de recuperação válido! Redirecionando para redefinição de senha...');
           
           setTimeout(() => {
-            router.push('/auth/reset-password');
+            router.push({
+              pathname: '/auth/reset-password',
+              query: { token }
+            });
           }, 2000);
         }
       } catch (error) {
@@ -55,7 +64,7 @@ export default function ConfirmPage() {
     };
 
     handleEmailConfirmation();
-  }, [router]);
+  }, [router.isReady, router.query, router]);
 
   return (
     <AuthLayout 

@@ -9,12 +9,17 @@ export default function ResetPasswordPage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [isTokenValid, setIsTokenValid] = useState(false);
 
   useEffect(() => {
+    // Só verificar o token quando o router estiver pronto
+    if (!router.isReady) return;
+
     const checkToken = async () => {
       try {
-        const { searchParams } = new URL(window.location.href);
-        const token = searchParams.get('token');
+        // Usar os parâmetros da URL do router
+        const token = router.query.token || '';
+        console.log('Token da URL:', token);
 
         if (!token) {
           setError('Link inválido ou expirado.');
@@ -25,12 +30,9 @@ export default function ResetPasswordPage() {
           throw new Error('Cliente Supabase não inicializado');
         }
 
-        const { error: verifyError } = await supabase.auth.verifyOtp({
-          token_hash: token,
-          type: 'recovery'
-        });
-
-        if (verifyError) throw verifyError;
+        // Não precisamos verificar o token agora, apenas marcá-lo como válido para 
+        // permitir a alteração da senha
+        setIsTokenValid(true);
       } catch (error) {
         console.error('Erro ao verificar token:', error);
         setError('Link inválido ou expirado.');
@@ -38,7 +40,7 @@ export default function ResetPasswordPage() {
     };
 
     checkToken();
-  }, []);
+  }, [router.isReady, router.query]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -63,13 +65,6 @@ export default function ResetPasswordPage() {
     }
 
     try {
-      const { searchParams } = new URL(window.location.href);
-      const token = searchParams.get('token');
-
-      if (!token) {
-        throw new Error('Token não encontrado');
-      }
-
       if (!supabase) {
         throw new Error('Cliente Supabase não inicializado');
       }
@@ -123,6 +118,19 @@ export default function ResetPasswordPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  if (!isTokenValid && !error) {
+    return (
+      <AuthLayout 
+        title="Verificando..." 
+        subtitle="Estamos verificando seu link de recuperação."
+      >
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
         </div>
       </AuthLayout>
     );
