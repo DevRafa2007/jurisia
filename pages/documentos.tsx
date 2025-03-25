@@ -609,6 +609,7 @@ ${camposDoc.map(campo => {
         timerRef.current = null;
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [etapa, user, documentoGerado, tipoDocumentoSelecionado]);
 
   // Função para salvamento automático (sem feedback visual de toast)
