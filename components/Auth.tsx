@@ -7,7 +7,6 @@ import { useTheme } from '../contexts/ThemeContext';
 const Auth = () => {
   const [errorMessage] = useState<string | null>(null);
   const [isSignUp, setIsSignUp] = useState(false);
-  const [name, setName] = useState('');
   const { theme } = useTheme();
 
   // Função para interceptar o evento de envio do formulário
@@ -59,6 +58,11 @@ const Auth = () => {
             const userName = nameInput ? nameInput.value : '';
             
             try {
+              // Verificar se o cliente Supabase foi inicializado
+              if (!supabase) {
+                throw new Error('Cliente Supabase não inicializado');
+              }
+              
               // Registrar o usuário no Supabase
               const { data, error } = await supabase.auth.signUp({
                 email,
@@ -74,6 +78,9 @@ const Auth = () => {
               
               // Se o registro for bem-sucedido, também salvar na tabela de perfis
               if (data.user) {
+                if (!supabase) {
+                  throw new Error('Cliente Supabase não inicializado');
+                }
                 await supabase.from('perfis').upsert({
                   usuario_id: data.user.id,
                   nome_completo: userName,
@@ -94,54 +101,59 @@ const Auth = () => {
         }
       };
 
-      // Monitorar mudanças no DOM para detectar troca de formulários
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-            checkURLForSignUp();
+      // Função para adicionar o campo de nome ao formulário de cadastro
+      const addNameField = (signUpForm: Element) => {
+        // Verificar se o campo já existe para evitar duplicação
+        if (document.getElementById('user-name')) return;
+        
+        const emailField = signUpForm.querySelector('div:has(input[name="email"])');
+        if (!emailField) return;
+        
+        // Criar o container do campo nome com o mesmo estilo do email
+        const nameFieldContainer = document.createElement('div');
+        nameFieldContainer.className = emailField.className;
+        
+        // Obter classes dos elementos do campo email para manter consistência
+        const labelClass = (emailField.querySelector('label') as HTMLElement)?.className || '';
+        const inputClass = (emailField.querySelector('input') as HTMLElement)?.className || '';
+        
+        // Criar o HTML do campo de nome
+        nameFieldContainer.innerHTML = `
+          <label for="user-name" class="${labelClass}">
+            Nome completo
+          </label>
+          <input
+            id="user-name"
+            name="user-name"
+            type="text"
+            placeholder="Seu nome completo"
+            class="${inputClass}"
+            required
+          />
+        `;
+        
+        // Inserir o campo ANTES do campo de email
+        emailField.parentNode?.insertBefore(nameFieldContainer, emailField);
+      };
 
-            // Verificar se o formulário de cadastro foi adicionado
+      // Monitorar mudanças no DOM para detectar o formulário de cadastro
+      const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          if (mutation.type === 'childList') {
+            // Atualizar o estado com base na URL
+            checkURLForSignUp();
+            
+            // Verificar se o formulário de cadastro está presente
             const signUpForm = document.querySelector('form[id*="auth-sign-up"]');
-            if (signUpForm) {
-              // Adicionar campo de nome entre o email e a senha
-              const emailField = signUpForm.querySelector('div:has(input[name="email"])');
-              const passwordField = signUpForm.querySelector('div:has(input[name="password"])');
-              
-              if (emailField && passwordField && !document.getElementById('user-name')) {
-                const nameFieldContainer = document.createElement('div');
-                nameFieldContainer.className = emailField.className;
-                nameFieldContainer.innerHTML = `
-                  <label for="user-name" class="${(emailField.querySelector('label') as HTMLElement).className}">
-                    Nome completo
-                  </label>
-                  <input
-                    id="user-name"
-                    name="user-name"
-                    type="text"
-                    placeholder="Seu nome completo"
-                    class="${(emailField.querySelector('input') as HTMLElement).className}"
-                    value="${name}"
-                    required
-                  />
-                `;
-                
-                // Adicionar o campo entre o email e a senha
-                emailField.insertAdjacentElement('afterend', nameFieldContainer);
-                
-                // Adicionar evento para atualizar o estado
-                const nameInput = nameFieldContainer.querySelector('input');
-                if (nameInput) {
-                  nameInput.addEventListener('input', (e) => {
-                    setName((e.target as HTMLInputElement).value);
-                  });
-                }
-              }
+            if (signUpForm && !document.getElementById('user-name')) {
+              // Adicionar o campo de nome
+              addNameField(signUpForm);
               
               // Adicionar listener de envio ao formulário
               signUpForm.addEventListener('submit', handleFormSubmit);
             }
           }
-        });
+        }
       });
 
       // Iniciar observação do DOM
@@ -150,38 +162,8 @@ const Auth = () => {
       // Verificar imediatamente se o formulário já existe
       const signUpForm = document.querySelector('form[id*="auth-sign-up"]');
       if (signUpForm) {
-        const emailField = signUpForm.querySelector('div:has(input[name="email"])');
-        const passwordField = signUpForm.querySelector('div:has(input[name="password"])');
-        
-        if (emailField && passwordField && !document.getElementById('user-name')) {
-          const nameFieldContainer = document.createElement('div');
-          nameFieldContainer.className = emailField.className;
-          nameFieldContainer.innerHTML = `
-            <label for="user-name" class="${(emailField.querySelector('label') as HTMLElement).className}">
-              Nome completo
-            </label>
-            <input
-              id="user-name"
-              name="user-name"
-              type="text"
-              placeholder="Seu nome completo"
-              class="${(emailField.querySelector('input') as HTMLElement).className}"
-              value="${name}"
-              required
-            />
-          `;
-          
-          // Adicionar o campo entre o email e a senha
-          emailField.insertAdjacentElement('afterend', nameFieldContainer);
-          
-          // Adicionar evento para atualizar o estado
-          const nameInput = nameFieldContainer.querySelector('input');
-          if (nameInput) {
-            nameInput.addEventListener('input', (e) => {
-              setName((e.target as HTMLInputElement).value);
-            });
-          }
-        }
+        addNameField(signUpForm);
+        signUpForm.addEventListener('submit', handleFormSubmit);
       }
       
       return () => {
@@ -193,7 +175,18 @@ const Auth = () => {
         }
       };
     }
-  }, [isSignUp, name]);
+  }, [isSignUp]);
+
+  // Se o cliente Supabase não estiver disponível, mostrar mensagem de erro
+  if (!supabase) {
+    return (
+      <div className="flex flex-col space-y-4 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+        <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded relative mb-4">
+          <span className="block sm:inline">Erro ao inicializar autenticação. Por favor, tente novamente.</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col space-y-4 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
@@ -217,7 +210,8 @@ const Auth = () => {
                 brand: theme === 'dark' ? '#0ea5e9' : '#0369a1', // primary-500 : primary-700
                 brandAccent: theme === 'dark' ? '#38bdf8' : '#0284c7', // primary-400 : primary-600
               },
-              borderRadii: {
+              // Propriedades de border-radius
+              radii: {
                 borderRadiusButton: '0.375rem',
                 buttonBorderRadius: '0.375rem',
                 inputBorderRadius: '0.375rem',
@@ -248,39 +242,48 @@ const Auth = () => {
           },
         }}
         theme={theme}
-        providers={[]}
-        redirectTo={`${typeof window !== 'undefined' ? window.location.origin : ''}/auth/confirm`}
         localization={{
           variables: {
-            sign_in: {
-              email_label: 'Email',
-              password_label: 'Senha',
-              button_label: 'Entrar',
-              loading_button_label: 'Entrando...',
-              link_text: 'Já tenho uma conta',
-              email_input_placeholder: 'Seu endereço de email',
-              password_input_placeholder: 'Sua senha',
-            },
             sign_up: {
               email_label: 'Email',
               password_label: 'Senha',
               button_label: 'Criar conta',
-              loading_button_label: 'Criando conta...',
-              link_text: 'Criar uma nova conta',
+              link_text: 'Não tem uma conta? Registre-se',
               email_input_placeholder: 'Seu endereço de email',
-              password_input_placeholder: 'Crie uma senha',
+              password_input_placeholder: 'Sua senha',
             },
-            forgotten_password: {
+            sign_in: {
               email_label: 'Email',
               password_label: 'Senha',
-              button_label: 'Recuperar senha',
-              loading_button_label: 'Enviando instruções...',
-              link_text: 'Esqueceu sua senha?',
-              confirmation_text: 'Verifique seu email para o link de recuperação',
+              button_label: 'Entrar',
+              link_text: 'Já tem uma conta? Entre',
+              email_input_placeholder: 'Seu endereço de email',
+              password_input_placeholder: 'Sua senha',
             },
           },
         }}
+        providers={[]}
+        redirectTo={typeof window !== 'undefined' ? `${window.location.origin}/auth/confirm` : undefined}
+        onlyThirdPartyProviders={false}
       />
+
+      <div className="mt-4 text-center text-gray-600 dark:text-gray-400">
+        <p>
+          {isSignUp ? 'Já tem uma conta? ' : 'Não tem uma conta? '}
+          <button
+            onClick={() => {
+              if (isSignUp) {
+                window.location.hash = '#auth-sign-in';
+              } else {
+                window.location.hash = '#auth-sign-up';
+              }
+            }}
+            className="text-primary-600 dark:text-primary-400 font-medium underline"
+          >
+            {isSignUp ? 'Entre agora' : 'Crie uma conta'}
+          </button>
+        </p>
+      </div>
     </div>
   );
 };
