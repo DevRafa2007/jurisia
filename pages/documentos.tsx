@@ -1342,16 +1342,17 @@ ${camposDoc.map(campo => {
           }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
         >
-          {/* Botão para abrir sidebar no topo (estilo igual ao do chat) */}
-          {user && (
-            <div className="absolute top-4 left-4 z-30">
+          {/* Botão flutuante para abrir a sidebar que acompanha o scroll */}
+          {user && !sidebarAberta && (
+            <div className="fixed top-4 left-4 z-50">
               <button
-                onClick={() => setSidebarAberta(!sidebarAberta)}
-                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-law-800 transition-colors focus:outline-none"
-                aria-label={sidebarAberta ? "Fechar menu" : "Abrir menu"}
+                onClick={() => setSidebarAberta(true)}
+                className="bg-primary-600 hover:bg-primary-700 text-white p-3 rounded-full shadow-lg transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50"
+                aria-label="Abrir menu de documentos"
+                title="Documentos"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-gray-700 dark:text-gray-300">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </button>
             </div>
@@ -1368,22 +1369,6 @@ ${camposDoc.map(campo => {
               {etapa === 'editor' && renderEditor()}
             </AnimatePresence>
           </div>
-          
-          {/* Botão flutuante para abrir a sidebar que acompanha o scroll */}
-          {user && !sidebarAberta && (
-            <div className="fixed bottom-4 left-4 z-50">
-              <button
-                onClick={() => setSidebarAberta(true)}
-                className="bg-primary-600 hover:bg-primary-700 text-white p-3 rounded-full shadow-lg transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50"
-                aria-label="Abrir menu de documentos"
-                title="Documentos"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </button>
-            </div>
-          )}
         </motion.div>
       </div>
     </Layout>
