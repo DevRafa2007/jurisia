@@ -18,7 +18,12 @@ export default function ConfirmPage() {
         console.log('URL completa da confirmação:', fullUrl);
 
         // Verificar se há erro na URL
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const hashFragment = window.location.hash;
+        const hashParams = new URLSearchParams(hashFragment.substring(1));
+        
+        console.log('Hash fragment completo:', hashFragment);
+        console.log('Parâmetros do hash:', Object.fromEntries(hashParams.entries()));
+        
         if (hashParams.get('error')) {
           const errorCode = hashParams.get('error_code');
           const errorDescription = hashParams.get('error_description');
@@ -38,30 +43,46 @@ export default function ConfirmPage() {
         // Tentar extrair o token e o tipo
         let token = '';
         let type = 'signup';
+        let email = router.query.email as string || '';
 
-        // 1. Verificar query params
-        if (router.query.token) {
+        // 1. Verificar access_token no fragmento da URL (formato do Supabase Auth UI)
+        if (hashFragment.includes('access_token=')) {
+          console.log('Detectado access_token no fragmento');
+          // O token pode estar no formato #access_token=xyz ou como parte do URLSearchParams
+          token = hashParams.get('access_token') || 
+                 hashFragment.split('access_token=')[1]?.split('&')[0] || '';
+          
+          // Se o token contém caracteres de URL encoding, decodifique-o
+          if (token.includes('%')) {
+            token = decodeURIComponent(token);
+          }
+          
+          console.log('Access token extraído:', token.substring(0, 20) + '...');
+          type = 'signup'; // Assumimos signup para confirmação
+        }
+
+        // 2. Verificar query params
+        if (!token && router.query.token) {
           token = router.query.token as string;
           type = (router.query.type as string) || 'signup';
         }
 
-        // 2. Verificar hash fragment
+        // 3. Verificar token no hash (formato antigo)
         if (!token && hashParams.get('token')) {
           token = hashParams.get('token') || '';
           type = hashParams.get('type') || 'signup';
         }
 
-        // 3. Se não encontrou o token, verificar parâmetros alternativos
-        if (!token) {
-          // Formato específico do Supabase
-          if (router.query.token_hash) {
-            token = router.query.token_hash as string;
-            type = 'signup';
-          }
+        // 4. Verificar token_hash (formato específico do Supabase)
+        if (!token && router.query.token_hash) {
+          token = router.query.token_hash as string;
+          type = 'signup';
+          email = router.query.email as string;
         }
 
-        console.log('Token encontrado:', token);
+        console.log('Token encontrado:', token ? 'Sim (primeiro 10 chars: ' + token.substring(0, 10) + '...)' : 'Não');
         console.log('Tipo:', type);
+        console.log('Email:', email || 'Não encontrado');
 
         if (!token) {
           throw new Error('Link de confirmação inválido. Token não encontrado.');
@@ -72,15 +93,50 @@ export default function ConfirmPage() {
         }
 
         // Verificar o token com o Supabase
-        const { error } = await supabase.auth.verifyOtp({
-          token,
-          type: 'signup',
-          email: router.query.email as string
-        });
+        let verifyError;
+        
+        // Se temos um access_token, tentamos usar a sessão
+        if (hashFragment.includes('access_token=')) {
+          try {
+            // Tentativa 1: Usar o token para definir a sessão
+            const { error: sessionError } = await supabase.auth.setSession({
+              access_token: token,
+              refresh_token: ''
+            });
+            
+            if (sessionError) {
+              console.error('Erro ao definir sessão:', sessionError);
+              verifyError = sessionError;
+            } else {
+              // Se a sessão foi definida com sucesso, verificamos a autenticação
+              const { data: { user }, error: authError } = await supabase.auth.getUser();
+              
+              if (authError) {
+                console.error('Erro ao obter usuário após definir sessão:', authError);
+                verifyError = authError;
+              } else if (user) {
+                console.log('Usuário autenticado com sucesso:', user.id);
+                verifyError = null; // Confirmação bem-sucedida
+              }
+            }
+          } catch (error) {
+            console.error('Erro ao processar access_token:', error);
+            verifyError = error;
+          }
+        } else {
+          // Método padrão: verifyOtp com token e email
+          const { error } = await supabase.auth.verifyOtp({
+            token,
+            type: 'signup',
+            email: email
+          });
+          
+          verifyError = error;
+        }
 
-        if (error) {
-          console.error('Erro ao verificar token:', error);
-          throw error;
+        if (verifyError) {
+          console.error('Erro ao verificar token:', verifyError);
+          throw verifyError;
         }
 
         // Sucesso na confirmação
