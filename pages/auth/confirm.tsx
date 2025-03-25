@@ -14,14 +14,25 @@ export default function ConfirmPage() {
     
     const handleEmailConfirmation = async () => {
       try {
-        // Obter parâmetros da URL usando o router
-        const token = router.query.token as string;
-        const type = router.query.type as string;
-        console.log('Token:', token, 'Type:', type);
+        // Imprimir todos os parâmetros da URL para diagnóstico
+        console.log('Todos os parâmetros da URL:', router.query);
 
-        if (!token || !type) {
+        // Analisar como o Supabase está enviando os parâmetros
+        const token = router.query.token_hash || router.query.token || '';
+        const type = router.query.type || '';
+        const email = router.query.email || '';
+        
+        console.log('Token:', token);
+        console.log('Type:', type);
+        console.log('Email:', email);
+        
+        // Verificar também se existem outros parâmetros que podem conter o token
+        const allParams = Object.keys(router.query).join(', ');
+        console.log('Todos os nomes de parâmetros:', allParams);
+
+        if (!token) {
           setStatus('error');
-          setMessage('Link inválido ou expirado.');
+          setMessage('Link inválido ou expirado. Token não encontrado.');
           return;
         }
 
@@ -29,11 +40,13 @@ export default function ConfirmPage() {
           throw new Error('Cliente Supabase não inicializado');
         }
 
-        if (type === 'signup') {
+        // Determinar o tipo de ação com base nos parâmetros disponíveis
+        if (type === 'signup' || router.query.confirmation === 'true') {
           // Para sign up, usar a API de confirmação
           const { error } = await supabase.auth.verifyOtp({
-            token_hash: token,
-            type: 'signup'
+            token_hash: token as string,
+            type: 'signup',
+            email: email as string
           });
 
           if (error) throw error;
@@ -44,22 +57,41 @@ export default function ConfirmPage() {
           setTimeout(() => {
             router.push('/login');
           }, 2000);
-        } else if (type === 'recovery') {
+        } else if (type === 'recovery' || router.query.recovery === 'true') {
           // Para recovery, apenas redirecionar para a página de redefinição de senha
           setStatus('success');
           setMessage('Link de recuperação válido! Redirecionando para redefinição de senha...');
           
+          // Passar todos os parâmetros para a página de redefinição de senha
+          const queryParams = { ...router.query };
+          
           setTimeout(() => {
             router.push({
               pathname: '/auth/reset-password',
-              query: { token }
+              query: queryParams
             });
           }, 2000);
+        } else {
+          // Tentar identificar o tipo pelo URL
+          if (window.location.href.includes('recovery')) {
+            setStatus('success');
+            setMessage('Link de recuperação detectado! Redirecionando para redefinição de senha...');
+            
+            setTimeout(() => {
+              router.push({
+                pathname: '/auth/reset-password',
+                query: router.query
+              });
+            }, 2000);
+          } else {
+            setStatus('error');
+            setMessage('Tipo de confirmação não identificado. Por favor, verifique seu email e tente novamente.');
+          }
         }
       } catch (error) {
         console.error('Erro na confirmação:', error);
         setStatus('error');
-        setMessage('Erro ao confirmar email. Por favor, tente novamente.');
+        setMessage('Erro ao processar o link. Por favor, tente novamente ou solicite um novo link.');
       }
     };
 

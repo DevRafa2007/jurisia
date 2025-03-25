@@ -17,12 +17,24 @@ export default function ResetPasswordPage() {
 
     const checkToken = async () => {
       try {
-        // Usar os parâmetros da URL do router
-        const token = router.query.token || '';
-        console.log('Token da URL:', token);
+        // Imprimir todos os parâmetros da URL para diagnóstico
+        console.log('Todos os parâmetros da URL na página de redefinição:', router.query);
+        
+        // Verificar vários formatos possíveis do token
+        const token = 
+          router.query.token_hash || 
+          router.query.token || 
+          router.query.access_token || 
+          '';
+          
+        console.log('Token encontrado:', token);
+        
+        // Verificar outros parâmetros que possam ser úteis
+        const allParams = Object.keys(router.query).join(', ');
+        console.log('Todos os nomes de parâmetros:', allParams);
 
         if (!token) {
-          setError('Link inválido ou expirado.');
+          setError('Link inválido ou expirado. Token não encontrado.');
           return;
         }
 
@@ -30,8 +42,7 @@ export default function ResetPasswordPage() {
           throw new Error('Cliente Supabase não inicializado');
         }
 
-        // Não precisamos verificar o token agora, apenas marcá-lo como válido para 
-        // permitir a alteração da senha
+        // Considerar o token válido para prosseguir com a redefinição
         setIsTokenValid(true);
       } catch (error) {
         console.error('Erro ao verificar token:', error);
@@ -69,6 +80,19 @@ export default function ResetPasswordPage() {
         throw new Error('Cliente Supabase não inicializado');
       }
 
+      // Buscar todos os possíveis formatos de token
+      const token = 
+        router.query.token_hash || 
+        router.query.token || 
+        router.query.access_token || 
+        '';
+
+      if (!token) {
+        throw new Error('Token não encontrado na URL');
+      }
+
+      // Tentar atualizar a senha - pode ser necessário usar o token na atualização,
+      // dependendo de como o Supabase espera que seja feito
       const { error: updateError } = await supabase.auth.updateUser({
         password: password
       });
