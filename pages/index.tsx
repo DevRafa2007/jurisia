@@ -37,7 +37,7 @@ const containerVariants = {
 };
 
 export default function Home() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, authChecked } = useAuth();
   const router = useRouter();
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [isCarregando, setIsCarregando] = useState(false);
@@ -85,10 +85,12 @@ export default function Home() {
 
   // Redirecionar para login se não estiver autenticado
   useEffect(() => {
-    if (!isLoading && !user) {
+    console.log('Index page auth check:', { isLoading, authChecked, hasUser: !!user });
+    if (authChecked && !isLoading && !user) {
+      console.log('Redirecionando para landing page...');
       router.push('/landing');
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading, authChecked, router]);
 
   // Forçar scroll para o topo na carga inicial da página
   useEffect(() => {

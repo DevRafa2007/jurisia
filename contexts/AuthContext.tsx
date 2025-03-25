@@ -6,6 +6,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
+  authChecked: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -14,6 +15,7 @@ const initialAuthContext: AuthContextType = {
   user: null,
   session: null,
   isLoading: true,
+  authChecked: false,
   signOut: async () => {}
 };
 
@@ -23,6 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     // Verifica se o código está rodando no cliente
@@ -35,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!supabase) {
       console.error('Supabase não está disponível no contexto atual');
       setIsLoading(false);
+      setAuthChecked(true);
       return;
     }
 
@@ -44,10 +48,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Buscar sessão inicial
     const getInitialSession = async () => {
       try {
+        console.log('Verificando sessão de autenticação');
         const { data, error } = await supabaseClient.auth.getSession();
         
         if (error) {
+          console.error('Erro ao obter sessão:', error.message);
           throw error;
+        }
+        
+        if (data.session) {
+          console.log('Sessão encontrada:', !!data.session);
+        } else {
+          console.log('Nenhuma sessão ativa encontrada');
         }
         
         setSession(data.session);
@@ -56,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('Erro ao buscar sessão inicial:', error);
       } finally {
         setIsLoading(false);
+        setAuthChecked(true);
       }
     };
 
@@ -66,15 +79,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     try {
       const { data } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+        console.log('Evento de mudança de autenticação:', _event);
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false);
+        setAuthChecked(true);
       });
       
       subscription = data.subscription;
     } catch (error) {
       console.error('Erro ao configurar ouvinte de autenticação:', error);
       setIsLoading(false);
+      setAuthChecked(true);
     }
 
     return () => {
@@ -108,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     session,
     isLoading,
+    authChecked,
     signOut,
   };
 

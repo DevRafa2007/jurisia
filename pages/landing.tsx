@@ -129,15 +129,17 @@ const Testimonial = ({
 );
 
 export default function Landing() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, authChecked } = useAuth();
   const router = useRouter();
 
   // Redirecionar para página principal se estiver autenticado
   useEffect(() => {
-    if (!isLoading && user) {
+    console.log('Landing page auth check:', { isLoading, authChecked, hasUser: !!user });
+    if (authChecked && !isLoading && user) {
+      console.log('Redirecionando para homepage...');
       router.push('/');
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading, authChecked, router]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">

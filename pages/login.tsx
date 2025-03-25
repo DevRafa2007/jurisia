@@ -5,15 +5,17 @@ import Auth from '../components/Auth';
 import { useAuth } from '../contexts/AuthContext';
 
 const LoginPage = () => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, authChecked } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
+    console.log('Login page auth check:', { isLoading, authChecked, hasUser: !!user });
     // Redirecionar para a página inicial se o usuário já estiver logado
-    if (!isLoading && user) {
+    if (authChecked && !isLoading && user) {
+      console.log('Redirecionando para homepage...');
       router.push('/');
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading, authChecked, router]);
 
   return (
     <Layout
