@@ -1,13 +1,17 @@
 module.exports = {
   extends: [
+    'eslint:recommended',
+    'plugin:@typescript-eslint/recommended',
     'next/core-web-vitals',
-    'next/typescript'
   ],
+  parser: '@typescript-eslint/parser',
+  plugins: ['@typescript-eslint'],
   rules: {
-    '@typescript-eslint/no-explicit-any': 'off',
+    'react/no-unescaped-entities': 'off',
+    '@next/next/no-img-element': 'off',
+    'react-hooks/exhaustive-deps': 'warn',
     '@typescript-eslint/no-unused-vars': ['error', { 
-      argsIgnorePattern: '^_',
-      varsIgnorePattern: '^_'
-    }]
-  }
-} 
+      'varsIgnorePattern': '^(isDark|_)' 
+    }],
+  },
+}; 

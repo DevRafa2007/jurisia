@@ -20,6 +20,11 @@ const Auth = () => {
           setIsSignUp(true);
         } else if (hash && hash.includes('#auth-sign-in')) {
           setIsSignUp(false);
+        } else {
+          // Se não houver hash, verificar o formulário atual
+          const signUpForm = document.querySelector('form[id*="auth-sign-up"]');
+          const signInForm = document.querySelector('form[id*="auth-sign-in"]');
+          setIsSignUp(!!signUpForm && !signInForm);
         }
       };
 
@@ -89,16 +94,20 @@ const Auth = () => {
         }
       };
 
-      // Monitorar dinamicamente quando o formulário for renderizado
+      // Monitorar mudanças no DOM para detectar troca de formulários
       const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
           if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+            checkURLForSignUp();
+
             // Verificar se o formulário de cadastro foi adicionado
             const signUpForm = document.querySelector('form[id*="auth-sign-up"]');
-            if (signUpForm && !document.getElementById('user-name')) {
+            if (signUpForm) {
               // Adicionar campo de nome entre o email e a senha
               const emailField = signUpForm.querySelector('div:has(input[name="email"])');
-              if (emailField) {
+              const passwordField = signUpForm.querySelector('div:has(input[name="password"])');
+              
+              if (emailField && passwordField && !document.getElementById('user-name')) {
                 const nameFieldContainer = document.createElement('div');
                 nameFieldContainer.className = emailField.className;
                 nameFieldContainer.innerHTML = `
@@ -112,10 +121,11 @@ const Auth = () => {
                     placeholder="Seu nome completo"
                     class="${(emailField.querySelector('input') as HTMLElement).className}"
                     value="${name}"
+                    required
                   />
                 `;
                 
-                // Adicionar o campo após o campo de email
+                // Adicionar o campo entre o email e a senha
                 emailField.insertAdjacentElement('afterend', nameFieldContainer);
                 
                 // Adicionar evento para atualizar o estado
@@ -126,19 +136,53 @@ const Auth = () => {
                   });
                 }
               }
-            }
-            
-            // Adicionar listener de envio ao formulário
-            const form = document.querySelector('form[id*="auth-sign-up"]');
-            if (form) {
-              form.addEventListener('submit', handleFormSubmit);
+              
+              // Adicionar listener de envio ao formulário
+              signUpForm.addEventListener('submit', handleFormSubmit);
             }
           }
         });
       });
-      
+
       // Iniciar observação do DOM
       observer.observe(document.body, { childList: true, subtree: true });
+      
+      // Verificar imediatamente se o formulário já existe
+      const signUpForm = document.querySelector('form[id*="auth-sign-up"]');
+      if (signUpForm) {
+        const emailField = signUpForm.querySelector('div:has(input[name="email"])');
+        const passwordField = signUpForm.querySelector('div:has(input[name="password"])');
+        
+        if (emailField && passwordField && !document.getElementById('user-name')) {
+          const nameFieldContainer = document.createElement('div');
+          nameFieldContainer.className = emailField.className;
+          nameFieldContainer.innerHTML = `
+            <label for="user-name" class="${(emailField.querySelector('label') as HTMLElement).className}">
+              Nome completo
+            </label>
+            <input
+              id="user-name"
+              name="user-name"
+              type="text"
+              placeholder="Seu nome completo"
+              class="${(emailField.querySelector('input') as HTMLElement).className}"
+              value="${name}"
+              required
+            />
+          `;
+          
+          // Adicionar o campo entre o email e a senha
+          emailField.insertAdjacentElement('afterend', nameFieldContainer);
+          
+          // Adicionar evento para atualizar o estado
+          const nameInput = nameFieldContainer.querySelector('input');
+          if (nameInput) {
+            nameInput.addEventListener('input', (e) => {
+              setName((e.target as HTMLInputElement).value);
+            });
+          }
+        }
+      }
       
       return () => {
         observer.disconnect();
@@ -154,7 +198,7 @@ const Auth = () => {
   return (
     <div className="flex flex-col space-y-4 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
       <h2 className="text-2xl font-bold text-primary-700 dark:text-primary-400 text-center mb-4">
-        Acesse sua conta
+        {isSignUp ? 'Criar nova conta' : 'Acesse sua conta'}
       </h2>
       
       {errorMessage && (
@@ -205,7 +249,7 @@ const Auth = () => {
         }}
         theme={theme}
         providers={[]}
-        redirectTo={typeof window !== 'undefined' ? window.location.origin : undefined}
+        redirectTo={`${typeof window !== 'undefined' ? window.location.origin : ''}/auth/confirm`}
         localization={{
           variables: {
             sign_in: {
@@ -213,16 +257,16 @@ const Auth = () => {
               password_label: 'Senha',
               button_label: 'Entrar',
               loading_button_label: 'Entrando...',
-              link_text: 'Não tem uma conta? Cadastre-se',
+              link_text: 'Já tenho uma conta',
               email_input_placeholder: 'Seu endereço de email',
               password_input_placeholder: 'Sua senha',
             },
             sign_up: {
               email_label: 'Email',
               password_label: 'Senha',
-              button_label: 'Cadastrar',
-              loading_button_label: 'Cadastrando...',
-              link_text: 'Já tem uma conta? Entre',
+              button_label: 'Criar conta',
+              loading_button_label: 'Criando conta...',
+              link_text: 'Criar uma nova conta',
               email_input_placeholder: 'Seu endereço de email',
               password_input_placeholder: 'Crie uma senha',
             },

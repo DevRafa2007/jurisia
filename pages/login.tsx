@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
-import Layout from '../components/Layout';
-import Auth from '../components/Auth';
 import { useAuth } from '../contexts/AuthContext';
+import Auth from '../components/Auth';
+import AuthLayout from '../components/AuthLayout';
 
-const LoginPage = () => {
+export default function LoginPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
@@ -15,18 +15,22 @@ const LoginPage = () => {
     }
   }, [user, isLoading, router]);
 
-  return (
-    <Layout
-      title="Login | JurisIA - Assistente Jurídico com IA"
-      description="Acesse sua conta no JurisIA, assistente jurídico inteligente para advogados brasileiros"
-    >
-      <div className="container-custom py-10">
-        <div className="max-w-md mx-auto">
-          <Auth />
+  if (isLoading) {
+    return (
+      <AuthLayout title="Carregando...">
+        <div className="flex justify-center items-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
         </div>
-      </div>
-    </Layout>
-  );
-};
+      </AuthLayout>
+    );
+  }
 
-export default LoginPage; 
+  return (
+    <AuthLayout 
+      title="Bem-vindo de volta" 
+      subtitle="Entre com sua conta para continuar"
+    >
+      <Auth />
+    </AuthLayout>
+  );
+} 

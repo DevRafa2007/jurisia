@@ -74,18 +74,21 @@ const Layout: React.FC<LayoutProps> = ({
   }, [isHomePage]);
 
   return (
-    <div className="flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300 min-h-screen">
+    <div className="flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 text-gray-900 dark:text-gray-100 transition-colors duration-300 min-h-screen">
       <Head>
         <title>{title}</title>
         <meta name="description" content={description} />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
+      
+      {/* Padrão de fundo */}
+      <div className="absolute inset-0 bg-grid-pattern opacity-5 pointer-events-none"></div>
 
       <Header sidebarAberta={sidebarAberta} toggleSidebar={toggleSidebar} />
 
       <main 
-        className="w-full mx-auto px-1 sm:px-2 md:px-4 max-w-[98%] xl:max-w-[95%] 2xl:max-w-[90%] flex-grow"
+        className="relative w-full mx-auto px-1 sm:px-2 md:px-4 max-w-[98%] xl:max-w-[95%] 2xl:max-w-[90%] flex-grow"
         style={{ 
           marginTop: `calc(${headerHeight}px + 0.75rem)`,
           paddingTop: '0.25rem',

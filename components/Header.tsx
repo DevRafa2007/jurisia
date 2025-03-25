@@ -151,7 +151,7 @@ const Header: React.FC<HeaderProps> = ({ sidebarAberta, toggleSidebar }) => {
             )}
             
             <Link href="/" className="flex items-center group">
-              <span className="text-xl sm:text-2xl font-serif font-bold text-primary-800 dark:text-primary-300 transition-colors duration-300 group-hover:text-primary-600 dark:group-hover:text-primary-200">
+              <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-primary-600 dark:text-primary-400 font-display transition-colors duration-300 group-hover:text-primary-700 dark:group-hover:text-primary-300">
                 JurisIA
               </span>
               <span className="ml-1 sm:ml-2 text-xs sm:text-sm bg-secondary-100 dark:bg-secondary-800 text-secondary-800 dark:text-secondary-300 px-1 sm:px-2 py-0.5 sm:py-1 rounded-full font-medium transition-colors duration-300">

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -91,15 +93,19 @@ body {
 
 @layer components {
   .btn {
-    @apply px-4 py-2 rounded-md transition duration-200 font-medium focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply px-4 py-2 rounded-md transition-all duration-200 font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 shadow-sm hover:shadow-md;
   }
   
   .btn-primary {
-    @apply bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-500;
+    @apply bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-500 border border-primary-600 hover:border-primary-700 hover:-translate-y-0.5;
   }
   
   .btn-secondary {
-    @apply bg-secondary-100 hover:bg-secondary-200 text-secondary-800 focus:ring-secondary-500;
+    @apply bg-secondary-500 hover:bg-secondary-600 text-white focus:ring-secondary-400 border border-secondary-500 hover:border-secondary-600 hover:-translate-y-0.5;
+  }
+
+  .btn-outline {
+    @apply bg-transparent border border-primary-500 text-primary-600 hover:bg-primary-50 dark:border-primary-400 dark:text-primary-400 dark:hover:bg-gray-800 hover:-translate-y-0.5;
   }
   
   .container-custom {
@@ -107,7 +113,7 @@ body {
   }
   
   .input {
-    @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500;
+    @apply block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white transition-all duration-200;
   }
   
   /* Animação melhorada para loading dots */
@@ -250,6 +256,22 @@ body {
     background-repeat: repeat;
     @apply bg-opacity-[0.03] dark:bg-opacity-[0.02];
   }
+
+  .card {
+    @apply bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden transition-all duration-300;
+  }
+
+  .card-header {
+    @apply p-6 border-b border-gray-100 dark:border-gray-700;
+  }
+
+  .card-body {
+    @apply p-6;
+  }
+
+  .card-footer {
+    @apply p-6 border-t border-gray-100 dark:border-gray-700;
+  }
 }
 
 /* Melhorias de acessibilidade */
@@ -309,6 +331,12 @@ body {
   
   .scrollbar-hide::-webkit-scrollbar {
     display: none; /* Chrome, Safari e Opera */
+  }
+
+  .bg-grid-pattern {
+    background-image: linear-gradient(to right, rgba(0, 0, 0, 0.1) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(0, 0, 0, 0.1) 1px, transparent 1px);
+    background-size: 24px 24px;
   }
 }
 

@@ -50,6 +50,7 @@ module.exports = {
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
         serif: ['Libre Baskerville', 'Georgia', 'serif'],
+        display: ['Playfair Display', 'serif'],
       },
       boxShadow: {
         'elegant': '0 4px 20px -2px rgba(0, 0, 0, 0.1)',
