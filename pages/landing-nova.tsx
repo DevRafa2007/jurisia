@@ -4,21 +4,7 @@ import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export default function LandingNova() {
-  const [isDark, setIsDark] = useState(false);
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
-
-  // Detectar tema escuro
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      setIsDark(darkModeMediaQuery.matches);
-      
-      const handleChange = (e: MediaQueryListEvent) => setIsDark(e.matches);
-      darkModeMediaQuery.addEventListener('change', handleChange);
-      
-      return () => darkModeMediaQuery.removeEventListener('change', handleChange);
-    }
-  }, []);
 
   // Array de depoimentos
   const testimonials = [
@@ -84,13 +70,8 @@ export default function LandingNova() {
     }
   });
 
-  // Aplicar classes dependendo do tema
-  const themeClasses = isDark 
-    ? "dark:from-slate-900 dark:to-slate-800"
-    : "from-slate-50 to-slate-100";
-
   return (
-    <div className={`min-h-screen bg-gradient-to-b ${themeClasses}`}>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       <Head>
         <title>JurisIA - Assistente Jurídico com Inteligência Artificial</title>
         <meta name="description" content="JurisIA: A plataforma definitiva para profissionais do direito otimizarem seu trabalho com tecnologias de inteligência artificial." />
