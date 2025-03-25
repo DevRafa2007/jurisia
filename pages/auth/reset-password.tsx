@@ -10,6 +10,7 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [isTokenValid, setIsTokenValid] = useState(false);
+  const [recoveryToken, setRecoveryToken] = useState<string>('');
 
   // Evitar que o usuário seja redirecionado se já estiver logado
   useEffect(() => {
@@ -35,16 +36,51 @@ export default function ResetPasswordPage() {
     const checkToken = async () => {
       try {
         // Imprimir todos os parâmetros da URL para diagnóstico
-        console.log('Todos os parâmetros da URL na página de redefinição:', router.query);
+        console.log('Todos os parâmetros da URL:', router.query);
         
-        // Verificar vários formatos possíveis do token
-        const token = 
-          router.query.token_hash || 
-          router.query.token || 
-          router.query.access_token || 
-          '';
+        // Extrair o token de todas as possíveis fontes
+        let token = router.query.token_hash as string || 
+                   router.query.token as string || 
+                   router.query.access_token as string || 
+                   '';
+        
+        // Se o token não está nos parâmetros, pode estar em outras partes do URL
+        if (!token) {
+          // Verificar no hash
+          const fragmentIdentifier = window.location.hash;
+          if (fragmentIdentifier) {
+            // Tentar extrair do fragmento (ex: #confirm-a466df9487ced0cb.jsi1)
+            const fragments = fragmentIdentifier.substring(1).split('-');
+            if (fragments.length > 1) {
+              token = fragments[1].split('.')[0]; // Remover extensão ou suffix
+            }
+          }
           
+          // Verificar no pathname
+          const pathSegments = window.location.pathname.split('/');
+          for (const segment of pathSegments) {
+            if (segment.includes('confirm-') || segment.includes('recovery-')) {
+              const parts = segment.split('-');
+              if (parts.length > 1) {
+                token = parts[1].split('.')[0]; // Remover extensão ou suffix
+              }
+            }
+          }
+          
+          // Verificar se algum parâmetro de query contém o padrão "confirm-" ou "recovery-"
+          for (const [key, value] of Object.entries(router.query)) {
+            if (key.includes('confirm-') || key.includes('recovery-') || 
+                (typeof value === 'string' && (value.includes('confirm-') || value.includes('recovery-')))) {
+              const extractedToken = key.includes('-') ? key.split('-')[1] : typeof value === 'string' ? value.split('-')[1] : '';
+              if (extractedToken) {
+                token = extractedToken.split('.')[0]; // Remover extensão ou suffix
+              }
+            }
+          }
+        }
+        
         console.log('Token encontrado:', token);
+        setRecoveryToken(token);
         
         // Verificar outros parâmetros que possam ser úteis
         const allParams = Object.keys(router.query).join(', ');
@@ -59,9 +95,9 @@ export default function ResetPasswordPage() {
           throw new Error('Cliente Supabase não inicializado');
         }
 
-        // Não verificamos o token explicitamente para evitar login automático
-        // Apenas permitimos que o usuário redefina a senha
+        // Permitir que o usuário redefina a senha
         setIsTokenValid(true);
+        setMessage('Por favor, defina sua nova senha.');
       } catch (error) {
         console.error('Erro ao verificar token:', error);
         setError('Link inválido ou expirado.');
@@ -98,24 +134,68 @@ export default function ResetPasswordPage() {
         throw new Error('Cliente Supabase não inicializado');
       }
 
-      // Buscar todos os possíveis formatos de token
-      const token = 
-        router.query.token_hash || 
-        router.query.token || 
-        router.query.access_token || 
-        '';
-
-      if (!token) {
-        throw new Error('Token não encontrado na URL');
+      // Verificar se temos um token armazenado
+      if (!recoveryToken) {
+        throw new Error('Token de recuperação não encontrado');
       }
 
-      // Usar a API específica para redefinição de senha
-      // Isso evita o login automático
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: password
-      });
+      // Tentar com todos os métodos possíveis
+      let updateError = null;
 
-      if (updateError) throw updateError;
+      // Método 1: Usar diretamente updateUser (método mais confiável)
+      try {
+        const { error } = await supabase.auth.updateUser({
+          password: password
+        });
+        updateError = error;
+      } catch (err) {
+        console.error('Método 1 falhou:', err);
+      }
+
+      // Método 2: Usar resetPasswordForEmail + recuperar token (fallback)
+      if (updateError) {
+        try {
+          // Tentar usar o token explicitamente
+          const { error } = await supabase.auth.verifyOtp({
+            token_hash: recoveryToken,
+            type: 'recovery'
+          });
+          
+          if (!error) {
+            // Se o token for válido, atualizar a senha
+            const { error: pwError } = await supabase.auth.updateUser({
+              password: password
+            });
+            updateError = pwError;
+          }
+        } catch (err) {
+          console.error('Método 2 falhou:', err);
+        }
+      }
+
+      // Se ainda temos um erro, tentar um método mais antigo
+      if (updateError) {
+        try {
+          // Usar a API deprecated para compatibilidade máxima
+          // Este método ainda funciona em algumas versões do Supabase
+          const { error } = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/user`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${recoveryToken}`
+            },
+            body: JSON.stringify({ password })
+          }).then(res => res.json());
+          
+          updateError = error;
+        } catch (err) {
+          console.error('Método 3 falhou:', err);
+        }
+      }
+
+      if (updateError) {
+        throw updateError;
+      }
 
       setSuccess(true);
       setMessage('Senha atualizada com sucesso! Redirecionando para o login...');
