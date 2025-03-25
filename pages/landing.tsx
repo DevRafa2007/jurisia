@@ -2,9 +2,14 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
-import { motion, useAnimation, useInView, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from 'next-themes';
+
+// Importar outros componentes do framer-motion individualmente para evitar problemas de compatibilidade
+const useAnimation = motion.useAnimation;
+const useInView = motion.useInView;
+const AnimatePresence = motion.AnimatePresence;
 
 export default function LandingPage() {
   const { user, isLoading } = useAuth();
