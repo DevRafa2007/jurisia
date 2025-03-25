@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../utils/supabase';
 import AuthLayout from '../../components/AuthLayout';
 
 export default function ResetPasswordPage() {
@@ -19,6 +19,10 @@ export default function ResetPasswordPage() {
         if (!token) {
           setError('Link inválido ou expirado.');
           return;
+        }
+
+        if (!supabase) {
+          throw new Error('Cliente Supabase não inicializado');
         }
 
         const { error: verifyError } = await supabase.auth.verifyOtp({
@@ -64,6 +68,10 @@ export default function ResetPasswordPage() {
 
       if (!token) {
         throw new Error('Token não encontrado');
+      }
+
+      if (!supabase) {
+        throw new Error('Cliente Supabase não inicializado');
       }
 
       const { error: updateError } = await supabase.auth.updateUser({

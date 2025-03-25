@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../utils/supabase';
 import AuthLayout from '../../components/AuthLayout';
 
 export default function ConfirmPage() {
@@ -19,6 +19,10 @@ export default function ConfirmPage() {
           setStatus('error');
           setMessage('Link inválido ou expirado.');
           return;
+        }
+
+        if (!supabase) {
+          throw new Error('Cliente Supabase não inicializado');
         }
 
         if (type === 'signup') {
