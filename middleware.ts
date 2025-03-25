@@ -2,10 +2,23 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(req: NextRequest) {
+  // Temporariamente desabilitar todo o middleware para depuração
+  console.log('Middleware desabilitado temporariamente');
+  return NextResponse.next();
+  
+  /* Código original comentado
   // URLs que não requerem autenticação
   const publicUrls = ['/landing', '/login', '/auth'];
   const url = req.nextUrl.clone();
   const { pathname } = url;
+
+  // Ignorar requisições para arquivos de dados do Next.js
+  if (pathname.includes('/_next/data/') || pathname.includes('.json')) {
+    return NextResponse.next();
+  }
+
+  // Log para depuração
+  console.log(`Middleware executando para: ${pathname}`);
 
   // Verificar se a URL atual está na lista de URLs públicas
   const isPublicUrl = publicUrls.some(publicUrl => pathname.startsWith(publicUrl));
@@ -29,41 +42,23 @@ export async function middleware(req: NextRequest) {
     }
   }
   
-  // Adicionar um cookie especial para evitar loops de redirecionamento
-  const redirectAttempt = req.cookies.get('redirect_attempt');
-  const redirectCount = redirectAttempt ? parseInt(redirectAttempt.value, 10) : 0;
-
-  // Se já tentamos redirecionar muitas vezes, permitir o acesso para evitar loops
-  if (redirectCount > 5) {
-    // Resetar o contador de redirecionamentos
-    const response = NextResponse.next();
-    response.cookies.set('redirect_attempt', '0', { path: '/' });
-    console.log('Limite de redirecionamentos atingido, permitindo acesso:', pathname);
-    return response;
-  }
-  
-  // Lógica de redirecionamento com contador
+  // Lógica de redirecionamento simplificada
+  // Redirecionar para landing apenas se tentar acessar uma página protegida sem autenticação
   if (!isPublicUrl && !hasToken) {
-    const response = NextResponse.redirect(new URL('/landing', req.url));
-    response.cookies.set('redirect_attempt', (redirectCount + 1).toString(), { path: '/' });
-    return response;
+    console.log('Redirecionando para landing (usuário não autenticado tentando acessar rota protegida)');
+    return NextResponse.redirect(new URL('/landing', req.url));
   }
 
-  if (pathname === '/landing' && hasToken) {
-    const response = NextResponse.redirect(new URL('/', req.url));
-    response.cookies.set('redirect_attempt', (redirectCount + 1).toString(), { path: '/' });
-    return response;
-  }
+  // Remover redirecionamento de landing para home
+  // if (pathname === '/landing' && hasToken) {
+  //   return NextResponse.redirect(new URL('/', req.url));
+  // }
 
-  // Resetar o contador de redirecionamentos quando não for necessário redirecionar
-  const response = NextResponse.next();
-  if (redirectCount > 0) {
-    response.cookies.set('redirect_attempt', '0', { path: '/' });
-  }
-  return response;
+  return NextResponse.next();
+  */
 }
 
 // Configurar as rotas que o middleware deve executar
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\.svg).*)'],
+  matcher: ['/((?!api|_next/static|_next/image|_next/data|favicon.ico|.*\\.svg).*)'],
 }; 

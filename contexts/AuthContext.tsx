@@ -6,7 +6,6 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
-  authChecked: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -15,7 +14,6 @@ const initialAuthContext: AuthContextType = {
   user: null,
   session: null,
   isLoading: true,
-  authChecked: false,
   signOut: async () => {}
 };
 
@@ -25,7 +23,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     // Verifica se o código está rodando no cliente
@@ -38,7 +35,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!supabase) {
       console.error('Supabase não está disponível no contexto atual');
       setIsLoading(false);
-      setAuthChecked(true);
       return;
     }
 
@@ -47,41 +43,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Buscar sessão inicial
     const getInitialSession = async () => {
-      // Adicionar timeout para evitar espera infinita
-      const sessionTimeout = setTimeout(() => {
-        console.log('Timeout ao verificar sessão');
-        setIsLoading(false);
-        setAuthChecked(true);
-      }, 5000); // 5 segundos de timeout
-      
       try {
-        console.log('Verificando sessão de autenticação');
         const { data, error } = await supabaseClient.auth.getSession();
         
-        // Limpar o timeout pois a resposta foi recebida
-        clearTimeout(sessionTimeout);
-        
         if (error) {
-          console.error('Erro ao obter sessão:', error.message);
           throw error;
-        }
-        
-        if (data.session) {
-          console.log('Sessão encontrada:', !!data.session);
-          console.log('Usuário ID:', data.session.user.id);
-        } else {
-          console.log('Nenhuma sessão ativa encontrada');
         }
         
         setSession(data.session);
         setUser(data.session?.user ?? null);
       } catch (error) {
         console.error('Erro ao buscar sessão inicial:', error);
-        // Limpar o timeout em caso de erro
-        clearTimeout(sessionTimeout);
       } finally {
         setIsLoading(false);
-        setAuthChecked(true);
       }
     };
 
@@ -92,18 +66,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     try {
       const { data } = supabaseClient.auth.onAuthStateChange((_event, session) => {
-        console.log('Evento de mudança de autenticação:', _event);
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false);
-        setAuthChecked(true);
       });
       
       subscription = data.subscription;
     } catch (error) {
       console.error('Erro ao configurar ouvinte de autenticação:', error);
       setIsLoading(false);
-      setAuthChecked(true);
     }
 
     return () => {
@@ -123,11 +94,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Type assertion para evitar erros de TypeScript
       const supabaseClient = supabase as SupabaseClient;
       await supabaseClient.auth.signOut();
-      
-      // Redirecionar para a landing page após o logout
-      if (typeof window !== 'undefined') {
-        window.location.href = '/landing';
-      }
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     }
@@ -137,7 +103,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     session,
     isLoading,
-    authChecked,
     signOut,
   };
 

@@ -14,20 +14,6 @@ const nextConfig = {
     // Otimizações de compilação
     optimizePackageImports: ['@supabase/supabase-js'],
   },
-  eslint: {
-    // Ignorando erros de linting durante o build para permitir o deploy
-    ignoreDuringBuilds: true,
-  },
-  // Excluindo arquivos problemáticos do processo de build
-  webpack: (config, { isServer }) => {
-    // Ignorando o arquivo com problemas de codificação UTF-8
-    config.module.rules.push({
-      test: /landing\.fix\.tsx$/,
-      loader: 'ignore-loader',
-    });
-    
-    return config;
-  },
 }
 
 module.exports = nextConfig 

@@ -37,7 +37,7 @@ const containerVariants = {
 };
 
 export default function Home() {
-  const { user, isLoading, authChecked } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [isCarregando, setIsCarregando] = useState(false);
@@ -85,30 +85,11 @@ export default function Home() {
 
   // Redirecionar para login se não estiver autenticado
   useEffect(() => {
-    console.log('Index page auth check:', { isLoading, authChecked, hasUser: !!user });
-    if (authChecked && !isLoading && !user) {
-      console.log('Redirecionando para landing page...');
-      
-      // Verificar se já estamos em um processo de redirecionamento para evitar ciclos
-      const redirectsInProgress = sessionStorage.getItem('redirects_in_progress');
-      const redirectCount = redirectsInProgress ? parseInt(redirectsInProgress, 10) : 0;
-      
-      if (redirectCount < 3) {
-        // Incrementar o contador de redirecionamentos
-        sessionStorage.setItem('redirects_in_progress', (redirectCount + 1).toString());
-        router.push('/landing');
-      } else {
-        console.log('Limite de redirecionamentos atingido, permanecendo na página atual');
-        // Resetar contador após alguns segundos
-        setTimeout(() => {
-          sessionStorage.setItem('redirects_in_progress', '0');
-        }, 5000);
-      }
-    } else if (user) {
-      // Resetar contador quando o usuário estiver autenticado
-      sessionStorage.setItem('redirects_in_progress', '0');
+    if (!isLoading && !user) {
+      // Redirecionar para a nova landing page em vez da landing antiga
+      router.push('/landing-nova');
     }
-  }, [user, isLoading, authChecked, router]);
+  }, [isLoading, user, router]);
 
   // Forçar scroll para o topo na carga inicial da página
   useEffect(() => {
