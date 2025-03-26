@@ -99,12 +99,12 @@ export const supabase = isBrowser && supabaseUrl && supabaseAnonKey
 let cachedConversas: { [userId: string]: { data: Conversa[], timestamp: number } } = {};
 const CACHE_DURATION = 60000; // 1 minuto em milissegundos
 
-export async function carregarConversas(usuarioId: string, forceUpdate = false): Promise<Conversa[]> {
+export async function buscarConversas(usuarioId: string, forceUpdate = true): Promise<Conversa[]> {
   // Extrair o ID do usuário sem o parâmetro nocache, se presente
   const userId = usuarioId.split('?')[0];
   
-  // Verificar se devemos forçar a atualização
-  forceUpdate = forceUpdate || usuarioId.includes('nocache');
+  // Sempre forçar atualização para garantir dados atualizados
+  forceUpdate = true;
 
   if (!supabase) {
     console.error('Cliente Supabase não inicializado');
@@ -112,13 +112,7 @@ export async function carregarConversas(usuarioId: string, forceUpdate = false):
   }
 
   try {
-    // Verificar se temos cache válido
-    const now = Date.now();
-    const cached = cachedConversas[userId];
-    if (!forceUpdate && cached && (now - cached.timestamp < CACHE_DURATION)) {
-      console.log('Usando conversas em cache para o usuário', userId);
-      return cached.data;
-    }
+    console.log('Carregando conversas do banco de dados para o usuário', userId);
 
     const { data, error } = await supabase
       .from('conversas')
@@ -131,19 +125,13 @@ export async function carregarConversas(usuarioId: string, forceUpdate = false):
       throw error;
     }
 
+    console.log('Conversas carregadas:', data ? data.length : 0);
+    
     // Armazenar no cache
-    cachedConversas[userId] = { data: data || [], timestamp: now };
+    cachedConversas[userId] = { data: data || [], timestamp: Date.now() };
     return data || [];
   } catch (error) {
     console.error('Erro inesperado ao carregar conversas:', error);
-    
-    // Retornar cache antigo se existir
-    const cached = cachedConversas[userId];
-    if (cached) {
-      console.log('Usando cache antigo devido a erro');
-      return cached.data;
-    }
-    
     return [];
   }
 }

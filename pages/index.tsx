@@ -376,7 +376,7 @@ Como posso auxiliar você hoje?`,
       </Head>
 
       <Layout title="JurisIA - Assistente Jurídico com IA" sidebarAberta={sidebarAberta} toggleSidebar={() => setSidebarAberta(!sidebarAberta)}>
-        <div className="h-full flex flex-col sm:flex-row">
+        <div className="h-full flex flex-col sm:flex-row chat-area-container">
           {/* Sidebar de conversas para mobile e versão desktop */}
           <AnimatePresence>
             {sidebarAberta && (
@@ -385,8 +385,8 @@ Como posso auxiliar você hoje?`,
                 initial={{ x: "-100%", opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: "-100%", opacity: 0 }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="fixed inset-0 z-40 bg-white dark:bg-law-900 overflow-hidden sm:relative sm:w-full sm:max-w-[280px] border-r border-gray-200 dark:border-law-700"
+                transition={{ type: "spring", stiffness: 200, damping: 25 }}
+                className="fixed inset-0 z-40 bg-white dark:bg-law-900 overflow-hidden sm:relative sm:w-full sm:max-w-[280px] border-r border-gray-200 dark:border-law-700 sidebar-animation-container"
               >
                 <ConversasSidebar 
                   conversaAtual={conversaAtual}
@@ -401,12 +401,12 @@ Como posso auxiliar você hoje?`,
 
           {/* Área principal de chat */}
           <motion.div 
-            className="flex-grow h-full overflow-hidden flex flex-col relative"
+            className="flex-grow h-full overflow-hidden flex flex-col relative bg-transparent centered-chat"
             animate={{ 
-              marginLeft: isMobile ? 0 : sidebarAberta ? "0" : "-280px",
+              marginLeft: isMobile ? 0 : sidebarAberta ? "0" : "auto",
               width: isMobile ? "100%" : sidebarAberta ? "calc(100% - 280px)" : "100%"
             }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            transition={{ type: "spring", stiffness: 200, damping: 25 }}
           >
             {!user && !isLoading && (
               <div className="flex-grow flex flex-col justify-center items-center p-4 text-center">
@@ -427,34 +427,21 @@ Como posso auxiliar você hoje?`,
 
             {user && (
               <>
-                {/* Botões de acesso rápido */}
-                <div className="flex justify-center space-x-4 my-4 px-4">
-                  <Link
-                    href="/documentos"
-                    className="flex items-center px-4 py-2 bg-primary-50 dark:bg-law-800 text-primary-700 dark:text-primary-300 rounded-lg hover:bg-primary-100 dark:hover:bg-law-700 transition-colors duration-300 border border-primary-200 dark:border-law-600"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Criar Documentos
-                  </Link>
-                </div>
-                
                 {/* Chat existente */}
                 <div 
                   ref={chatContainerRef}
-                  className="flex-grow overflow-y-auto scrollbar-custom pb-32 pt-4 px-2 sm:px-4"
+                  className="flex-grow overflow-y-auto scrollbar-custom pb-24 pt-4 px-2 sm:px-4 md:px-6 bg-transparent chat-messages-container"
                   id="chat-messages"
                 >
                   <motion.div 
-                    className="max-w-2xl mx-auto space-y-6"
+                    className="max-w-3xl mx-auto space-y-6"
                     variants={containerVariants}
                     initial="hidden"
                     animate="visible"
                   >
                     {erro && (
                       <motion.div 
-                        className="bg-red-100 dark:bg-red-900 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg mb-4"
+                        className="bg-red-100/90 dark:bg-red-900/90 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg mb-4 backdrop-blur-sm"
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3 }}
@@ -484,7 +471,7 @@ Como posso auxiliar você hoje?`,
                   <AnimatePresence>
                     {isCarregando && (
                       <motion.div 
-                        className="flex items-center space-x-2 text-law-500 dark:text-law-400 text-sm mt-4 max-w-2xl mx-auto"
+                        className="flex items-center space-x-2 text-law-500 dark:text-law-400 text-sm mt-4 max-w-3xl mx-auto"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
@@ -501,9 +488,9 @@ Como posso auxiliar você hoje?`,
                   </AnimatePresence>
                 </div>
                 
-                {/* Área de input */}
-                <div className={`border-t border-law-200 dark:border-law-700 bg-white dark:bg-law-800 p-4 ${isMobile ? 'mobile-typing-area' : ''} rounded-b-lg`}>
-                  <div className="max-w-2xl mx-auto">
+                {/* Área de input - adaptada para versão desktop e mobile */}
+                <div className={`chat-input-container ${isMobile ? 'fixed bottom-0 left-0 right-0' : 'sticky bottom-0'} backdrop-blur-sm bg-transparent dark:bg-transparent ${isMobile ? 'pb-safe' : ''} z-10`}>
+                  <div className="max-w-3xl mx-auto">
                     <ChatInput 
                       onEnviar={handleEnviarMensagem} 
                       isCarregando={isCarregando} 

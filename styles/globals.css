@@ -13,6 +13,8 @@ body {
     Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue,
     sans-serif;
   scroll-behavior: smooth;
+  overflow: hidden; /* Impede scroll na página */
+  height: 100vh; /* Força altura total da viewport */
 }
 
 /* Estilos para o tema jurídico */
@@ -23,16 +25,16 @@ body {
   
   html {
     @apply min-h-full;
-    height: -webkit-fill-available;
-    overflow-x: hidden;
+    height: 100vh;
+    overflow: hidden;
   }
   
   body {
     @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100;
     min-height: 100vh;
-    min-height: -webkit-fill-available;
+    height: 100vh;
     position: relative;
-    overflow-x: hidden;
+    overflow: hidden;
   }
 
   /* Garante que não há gaps brancos em nenhum lugar */
@@ -41,6 +43,8 @@ body {
     display: flex;
     flex-direction: column;
     flex-grow: 1;
+    height: 100vh;
+    overflow: hidden;
   }
 
   /* Previne problemas com áreas fixas em telas móveis com barras de navegação dinâmicas */
@@ -66,6 +70,37 @@ body {
     }
   }
 
+  /* Estilos para chat moderno e minimalista */
+  .chat-container {
+    @apply bg-transparent backdrop-blur-sm;
+    background-image: radial-gradient(circle at center, rgba(225, 235, 245, 0.05) 0%, transparent 70%);
+    height: calc(100vh - 60px); /* Ajusta altura considerando o header */
+    display: flex;
+    flex-direction: column;
+  }
+
+  .message-container {
+    @apply max-w-3xl mx-auto;
+    width: 100%;
+  }
+
+  /* Melhorias para scrollbar personalizada */
+  .scrollbar-custom::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .scrollbar-custom::-webkit-scrollbar-thumb {
+    @apply bg-law-300/40 dark:bg-law-700/40 rounded-full;
+  }
+
+  .scrollbar-custom:hover::-webkit-scrollbar-thumb {
+    @apply bg-law-400/60 dark:bg-law-600/60;
+  }
+
   .dark {
     color-scheme: dark;
   }
@@ -89,6 +124,156 @@ body {
   code {
     @apply font-mono text-sm bg-law-100 dark:bg-law-800 py-0.5 px-1 rounded;
   }
+}
+
+/* Estilos para interfaces elegantes tanto para o chat quanto para documentos */
+.chat-area-container,
+.documentos-area-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chat-messages-container,
+.documentos-content-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+}
+
+.chat-input-container,
+.documentos-input-container {
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  background-color: transparent;
+  z-index: 10;
+  padding: 0.75rem 1rem;
+}
+
+/* Garantir centralização mesmo quando a sidebar está fechada */
+.centered-chat,
+.centered-documentos {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  height: 100%;
+  max-width: 1400px;
+  width: 100%;
+  transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Transição suave para sidebar e container principal */
+@media (min-width: 640px) {
+  .chat-area-container,
+  .documentos-area-container {
+    transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  
+  .sidebar-animation-container {
+    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), 
+                opacity 0.3s ease-in-out;
+  }
+}
+
+/* Estilo minimalista para o editor de documentos */
+.documentos-editor {
+  border: 1px solid rgba(209, 213, 219, 0.5);
+  border-radius: 0.75rem;
+  transition: all 0.3s ease;
+  background-color: transparent;
+}
+
+.documentos-editor:focus-within {
+  border-color: rgba(79, 70, 229, 0.5);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+}
+
+/* Estilos para ocultar bordas e fundos desnecessários nas ferramentas do editor */
+.ql-toolbar.ql-snow {
+  border: none !important;
+  border-bottom: 1px solid rgba(209, 213, 219, 0.3) !important;
+  background-color: rgba(249, 250, 251, 0.5) !important;
+  border-top-left-radius: 0.75rem !important;
+  border-top-right-radius: 0.75rem !important;
+}
+
+.dark .ql-toolbar.ql-snow {
+  background-color: rgba(31, 41, 55, 0.5) !important;
+  border-bottom: 1px solid rgba(55, 65, 81, 0.3) !important;
+}
+
+.ql-container.ql-snow {
+  border: none !important;
+  background-color: transparent !important;
+}
+
+/* Estilos para botões de ação em documentos */
+.documentos-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  background-color: transparent;
+  border: 1px solid rgba(209, 213, 219, 0.7);
+  color: rgba(55, 65, 81, 0.9);
+}
+
+.dark .documentos-action-button {
+  border-color: rgba(75, 85, 99, 0.5);
+  color: rgba(229, 231, 235, 0.9);
+}
+
+.documentos-action-button:hover {
+  background-color: rgba(243, 244, 246, 0.7);
+}
+
+.dark .documentos-action-button:hover {
+  background-color: rgba(55, 65, 81, 0.5);
+}
+
+.documentos-action-button.primary {
+  background-color: rgba(79, 70, 229, 0.9);
+  border-color: rgba(79, 70, 229, 0.9);
+  color: white;
+}
+
+.documentos-action-button.primary:hover {
+  background-color: rgba(67, 56, 202, 1);
+}
+
+/* Melhorias para scrollbars */
+.scrollbar-custom::-webkit-scrollbar {
+  width: 5px;
+}
+
+.scrollbar-custom::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+.scrollbar-custom::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.4);
+  border-radius: 9999px;
+}
+
+.dark .scrollbar-custom::-webkit-scrollbar-thumb {
+  background-color: rgba(75, 85, 99, 0.4);
+}
+
+.scrollbar-custom::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(107, 114, 128, 0.6);
+}
+
+.dark .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(107, 114, 128, 0.6);
 }
 
 @layer components {
@@ -342,4 +527,29 @@ body {
 
 * {
   box-sizing: border-box;
+}
+
+/* Estilos para o editor de documentos */
+.documentos-content-container {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+  max-height: none !important;
+  height: auto !important;
+}
+
+/* Garantir que os dropdowns fiquem sempre no topo */
+.dropdown-menu {
+  z-index: 9999 !important;
+  position: relative;
+}
+
+/* Regra para todos os dropdowns e menus suspensos */
+[role="menu"],
+[role="listbox"],
+.absolute,
+.dropdown,
+.popover,
+.dropdown-menu {
+  z-index: 9999 !important;
 } 

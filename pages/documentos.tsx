@@ -183,7 +183,7 @@ export default function Documentos() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const [tipoDocumentoSelecionado, setTipoDocumentoSelecionado] = useState<string>('');
-  const [etapa, setEtapa] = useState<'selecao' | 'formulario' | 'editor'>('selecao');
+  const [etapa, setEtapa] = useState<'selecao' | 'formulario' | 'verificacao' | 'editor'>('selecao');
   const [valoresFormulario, setValoresFormulario] = useState<Record<string, any>>({});
   const [documentoGerado, setDocumentoGerado] = useState<string>('');
   const [isGerandoDocumento, setIsGerandoDocumento] = useState(false);
@@ -196,11 +196,20 @@ export default function Documentos() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const documentoModificado = useRef(false);
   const [dicaExibida, setDicaExibida] = useState(false);
+  // Estados para a verificação de usabilidade
+  const [fontesRecomendadas, setFontesRecomendadas] = useState<string[]>([]);
+  const [jurisprudenciasRecomendadas, setJurisprudenciasRecomendadas] = useState<string[]>([]);
+  const [leisRecomendadas, setLeisRecomendadas] = useState<string[]>([]);
+  const [isAnalisandoReferencias, setIsAnalisandoReferencias] = useState(false);
+  const [analiseReferencias, setAnaliseReferencias] = useState<string>('');
 
   // Detectar se é dispositivo móvel
   useEffect(() => {
     const checkIsMobile = () => {
       setIsMobile(window.innerWidth < 768);
+      
+      // Sidebar sempre aberta em desktop, fechada por padrão em mobile
+      setSidebarAberta(window.innerWidth >= 768);
     };
     
     // Verificar inicialmente
@@ -271,11 +280,106 @@ export default function Documentos() {
       }
     }
     
-    // Gerar documento
-    await gerarDocumento();
+    // Analisar referências antes de gerar o documento
+    await analisarReferencias();
   };
 
-  // Função para gerar o documento com a IA
+  // Nova função para analisar referências e fontes
+  const analisarReferencias = async () => {
+    setIsAnalisandoReferencias(true);
+    
+    try {
+      const tipoDoc = CONFIGURACOES_FORMULARIOS[tipoDocumentoSelecionado].nome;
+      const camposDoc = CONFIGURACOES_FORMULARIOS[tipoDocumentoSelecionado].campos;
+      
+      // Preparar mensagem para a API
+      const promptTexto = `Analise e recomende fontes jurídicas para um documento "${tipoDoc}" com os seguintes dados:
+${camposDoc.map(campo => {
+  const valor = valoresFormulario[campo.id] || '';
+  return `${campo.label}: ${valor}`;
+}).join('\n')}
+
+Por favor, responda apenas com uma análise jurídica clara e bem estruturada, dividida exatamente nas seguintes seções:
+
+LEIS E ARTIGOS:
+(Liste as principais leis e artigos aplicáveis a este caso, com número da lei, artigo específico e uma breve explicação)
+
+JURISPRUDÊNCIA:
+(Liste jurisprudências relevantes sobre o tema, indicando o tribunal, número do processo ou súmula, e o entendimento principal)
+
+DOUTRINA:
+(Indique fontes doutrinárias recomendadas, com autor, obra e ano)
+
+ANÁLISE JURÍDICA:
+(Análise breve de como essas fontes se aplicam ao caso concreto)
+
+Mantenha cada seção claramente separada para facilitar a extração das informações.`;
+      
+      // Chamar a API
+      const response = await axios.post('/api/juridica', {
+        consulta: promptTexto,
+        historico: []
+      });
+      
+      if (response.data && response.data.resposta) {
+        const analise = response.data.resposta;
+        setAnaliseReferencias(analise);
+        
+        // Expressões regulares melhoradas para extração
+        
+        // Leis - captura leis como "Lei nº 8.112/90", "Artigo 5º da Constituição Federal", etc.
+        const leisRegex = /(?:Lei(?:\s+n[º°.]?\s*\d+[\d.,/\s]*(?:\/\d+)?)|Artigo\s+\d+[°º,.]?(?:\s*(?:d[aoe]|,|\s)\s*[\wÀ-ú\s]+)?|C(?:ódigo|F|PC|PP|DC|LT)\s+[\wÀ-ú\s,.]+\d+|Decreto[\w\d\s-]+)/gi;
+        const leisMatch = Array.from(new Set(analise.match(leisRegex) || []));
+        
+        // Jurisprudência - captura referências a decisões de tribunais
+        const jurisprudenciaRegex = /(?:(?:STF|STJ|TST|TSE|TRF\d?|TJ[A-Z]{2}|TRT\d{1,2})[\s:-]+(?:.*?)(?=\n|$)|Súmula(?:\s+n[°º.]?)?\s*\d+(?:\s*d[oe]\s*[\wÀ-ú\s]+)?|(?:Recurso|Agravo|Apelação|Habeas|Mandado)\s+[\w\d\s-]+\d+)/gi;
+        const jurisprudenciaMatch = Array.from(new Set(analise.match(jurisprudenciaRegex) || []));
+        
+        // Doutrina - captura referências a autores e obras
+        const doutrinaRegex = /(?:[A-ZÀ-Ú][a-zà-ú]+,\s+[A-ZÀ-Ú][a-zà-ú]+(?: [A-ZÀ-Ú][a-zà-ú]+)*\.?(?:\s+[\wÀ-ú\s,.:()]+)?(?:\(\d{4}\)|\d{4}))/gi;
+        const doutrinaMatch = Array.from(new Set(analise.match(doutrinaRegex) || []));
+        
+        // Extrair também pela estrutura do texto (seções)
+        const leisSection = analise.match(/LEIS E ARTIGOS:[\s\S]*?(?=JURISPRUDÊNCIA:|DOUTRINA:|ANÁLISE JURÍDICA:|$)/i);
+        const jurisprudenciaSection = analise.match(/JURISPRUDÊNCIA:[\s\S]*?(?=DOUTRINA:|ANÁLISE JURÍDICA:|LEIS E ARTIGOS:|$)/i);
+        const doutrinaSection = analise.match(/DOUTRINA:[\s\S]*?(?=ANÁLISE JURÍDICA:|LEIS E ARTIGOS:|JURISPRUDÊNCIA:|$)/i);
+        
+        // Processar seções para extrair itens por linha
+        const processSection = (section: RegExpMatchArray | null): string[] => {
+          if (!section) return [];
+          return section[0]
+            .split('\n')
+            .slice(1) // Remover a linha do título da seção
+            .map((line: string) => line.trim())
+            .filter((line: string) => line.length > 5); // Filtrar linhas muito curtas/vazias
+        };
+        
+        // Combinar resultados das expressões regulares com a extração por seção
+        const leis = [...leisMatch, ...processSection(leisSection)];
+        const jurisprudencias = [...jurisprudenciaMatch, ...processSection(jurisprudenciaSection)];
+        const doutrinas = [...doutrinaMatch, ...processSection(doutrinaSection)];
+        
+        // Remover duplicatas e itens vazios
+        setLeisRecomendadas(Array.from(new Set(leis.filter(item => typeof item === 'string' && item.trim().length > 0))) as string[]);
+        setJurisprudenciasRecomendadas(Array.from(new Set(jurisprudencias.filter(item => typeof item === 'string' && item.trim().length > 0))) as string[]);
+        setFontesRecomendadas(Array.from(new Set(doutrinas.filter(item => typeof item === 'string' && item.trim().length > 0))) as string[]);
+        
+        // Avançar para a etapa de verificação
+        setEtapa('verificacao');
+      } else {
+        throw new Error('Resposta inválida da API');
+      }
+    } catch (error) {
+      console.error('Erro ao analisar referências:', error);
+      toast.error('Erro ao analisar referências. Tentando gerar o documento diretamente...');
+      // Em caso de erro, prossegue diretamente para geração do documento
+      await gerarDocumento();
+    } finally {
+      setIsAnalisandoReferencias(false);
+    }
+  };
+
+  // Modificar a função gerarDocumento para aceitar parâmetros
   const gerarDocumento = async () => {
     setIsGerandoDocumento(true);
     
@@ -344,9 +448,11 @@ ${camposDoc.map(campo => {
     }
   };
 
-  // Função para voltar à etapa anterior
+  // Atualizar função voltarEtapa para incluir a nova etapa
   const voltarEtapa = () => {
     if (etapa === 'editor') {
+      setEtapa('verificacao');
+    } else if (etapa === 'verificacao') {
       setEtapa('formulario');
     } else if (etapa === 'formulario') {
       setEtapa('selecao');
@@ -709,57 +815,55 @@ ${camposDoc.map(campo => {
     }
   };
 
-  // Função para carregar um documento
+  // Função para carregar um documento existente
   const carregarDocumento = async (documentoId: string) => {
     try {
-      setIsGerandoDocumento(true);
-      
       const documento = await fetchDocumento(documentoId);
       
       if (documento) {
-        // Encontrar o tipo de documento com base no nome
-        const tipoEncontrado = Object.keys(CONFIGURACOES_FORMULARIOS).find(
-          key => CONFIGURACOES_FORMULARIOS[key].nome === documento.tipo
-        );
-        
-        if (tipoEncontrado) {
-          setTipoDocumentoSelecionado(tipoEncontrado);
-        } else {
-          // Se não encontrar, usar o primeiro tipo como fallback
-          setTipoDocumentoSelecionado(TIPOS_DOCUMENTOS[0].id);
-        }
-        
-        setTituloDocumento(documento.titulo);
-        setDocumentoGerado(documento.conteudo);
+        setTituloDocumento(documento.titulo || 'Documento sem título');
+        setDocumentoGerado(documento.conteudo || '');
         setDocumentoAtual(documentoId);
+        
+        // Configurar o tipo de documento com base no documento carregado
+        setTipoDocumentoSelecionado(documento.tipo || '');
+        
+        // Ir diretamente para a etapa de editor (sem passar pela verificação)
         setEtapa('editor');
         
-        // Fechar sidebar automaticamente em dispositivos móveis após carregar o documento
+        // Fechar a sidebar em dispositivos móveis
         if (isMobile) {
           setSidebarAberta(false);
         }
+        
+        // Notificar usuário
+        toast.success('Documento carregado com sucesso!');
       } else {
-        throw new Error('Documento não encontrado');
+        toast.error('Não foi possível carregar o documento.');
       }
     } catch (error) {
       console.error('Erro ao carregar documento:', error);
-      toast.error('Erro ao carregar documento. Tente novamente.');
-    } finally {
-      setIsGerandoDocumento(false);
+      toast.error('Erro ao carregar o documento. Tente novamente.');
     }
   };
 
   // Função para criar um novo documento
   const criarNovoDocumento = () => {
     // Resetar estados
-    setDocumentoAtual(null);
     setDocumentoGerado('');
-    setTituloDocumento('');
-    setValoresFormulario({});
     setTipoDocumentoSelecionado('');
+    setValoresFormulario({});
+    setDocumentoAtual(null);
+    setTituloDocumento('');
     setEtapa('selecao');
     
-    // Fechar sidebar em dispositivos móveis
+    // Resetar estados de verificação
+    setFontesRecomendadas([]);
+    setJurisprudenciasRecomendadas([]);
+    setLeisRecomendadas([]);
+    setAnaliseReferencias('');
+    
+    // Fechar a sidebar em dispositivos móveis
     if (isMobile) {
       setSidebarAberta(false);
     }
@@ -899,18 +1003,18 @@ ${camposDoc.map(campo => {
           <div className="mt-6 flex justify-end">
             <button
               type="submit"
-              disabled={isGerandoDocumento}
+              disabled={isAnalisandoReferencias}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isGerandoDocumento ? (
+              {isAnalisandoReferencias ? (
                 <>
                   <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Gerando...
+                  Analisando Referências...
                 </>
-              ) : 'Gerar Documento'}
+              ) : 'Prosseguir'}
             </button>
           </div>
         </form>
@@ -918,10 +1022,139 @@ ${camposDoc.map(campo => {
     );
   };
 
+  // Renderiza a etapa de verificação de usabilidade
+  const renderVerificacao = () => (
+    <motion.div 
+      className="max-w-4xl mx-auto p-4 sm:p-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <div className="flex items-center mb-6">
+        <button 
+          onClick={voltarEtapa}
+          className="mr-4 p-2 rounded-full hover:bg-law-100 dark:hover:bg-law-800 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary-700 dark:text-primary-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h2 className="text-xl sm:text-2xl font-serif font-bold text-primary-800 dark:text-primary-300">
+          Verificação de Referências Jurídicas
+        </h2>
+      </div>
+      
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+        <p className="text-gray-700 dark:text-gray-300 mb-4">
+          Revise as referências jurídicas que a IA sugere utilizar para este documento. 
+          Você pode continuar com estas referências ou voltar para ajustar os dados do formulário.
+        </p>
+        
+        <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-400 dark:border-yellow-600">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-yellow-400 dark:text-yellow-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700 dark:text-yellow-200">
+                <strong>Atenção:</strong> A IA pode sugerir referências que precisam ser verificadas. Como profissional do direito, é sua responsabilidade confirmar a aplicabilidade e atualidade das fontes jurídicas antes de utilizá-las em documentos oficiais.
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Leis e Artigos */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-primary-700 dark:text-primary-300 mb-2">
+            Leis e Artigos Aplicáveis
+          </h3>
+          {leisRecomendadas.length > 0 ? (
+            <ul className="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">
+              {leisRecomendadas.map((lei, idx) => (
+                <li key={idx} className="ml-2">{lei}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-gray-500 dark:text-gray-400 italic">Nenhuma referência específica identificada</p>
+          )}
+        </div>
+        
+        {/* Jurisprudências */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-primary-700 dark:text-primary-300 mb-2">
+            Jurisprudências Relevantes
+          </h3>
+          {jurisprudenciasRecomendadas.length > 0 ? (
+            <ul className="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">
+              {jurisprudenciasRecomendadas.map((jurisprudencia, idx) => (
+                <li key={idx} className="ml-2">{jurisprudencia}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-gray-500 dark:text-gray-400 italic">Nenhuma jurisprudência específica identificada</p>
+          )}
+        </div>
+        
+        {/* Fontes Doutrinárias */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-primary-700 dark:text-primary-300 mb-2">
+            Fontes Doutrinárias
+          </h3>
+          {fontesRecomendadas.length > 0 ? (
+            <ul className="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">
+              {fontesRecomendadas.map((fonte, idx) => (
+                <li key={idx} className="ml-2">{fonte}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-gray-500 dark:text-gray-400 italic">Nenhuma fonte doutrinária específica identificada</p>
+          )}
+        </div>
+        
+        {/* Análise Completa */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-primary-700 dark:text-primary-300 mb-2">
+            Análise Jurídica Completa
+          </h3>
+          <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-md text-gray-700 dark:text-gray-300 whitespace-pre-line text-sm">
+            {analiseReferencias}
+          </div>
+        </div>
+      </div>
+      
+      <div className="flex justify-between mt-6">
+        <button
+          onClick={voltarEtapa}
+          className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+        >
+          Ajustar Formulário
+        </button>
+        
+        <button
+          onClick={gerarDocumento}
+          disabled={isGerandoDocumento}
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isGerandoDocumento ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Gerando...
+            </>
+          ) : 'Continuar com Essas Referências'}
+        </button>
+      </div>
+    </motion.div>
+  );
+
   // Renderiza o editor de documento estilo A4
   const renderEditor = () => (
     <motion.div 
-      className="h-full flex flex-col"
+      className="min-h-full flex flex-col overflow-visible"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -1023,7 +1256,7 @@ ${camposDoc.map(campo => {
       
       {/* Editor Quill */}
       <div className="bg-white shadow-lg mx-auto rounded-sm overflow-hidden print:shadow-none mb-10">
-        <div id="documento-para-impressao" className="min-h-[29.7cm] w-full max-w-[21cm] mx-auto bg-white border border-gray-200 outline-none">
+        <div id="documento-para-impressao" className="min-h-[29.7cm] w-full max-w-[21cm] mx-auto bg-white border border-gray-200 outline-none md:min-h-[29.7cm] min-h-auto">
           <ReactQuill
             value={documentoGerado}
             onChange={handleDocumentoChange}
@@ -1034,7 +1267,7 @@ ${camposDoc.map(campo => {
             style={{
               width: '100%',
               maxWidth: '21cm',
-              minHeight: '27cm',  // Menor para compensar a barra de ferramentas
+              minHeight: isMobile ? 'auto' : '27cm',  // Remover altura mínima fixa em dispositivos móveis
               fontFamily: 'Times New Roman, Times, serif'
             }}
           />
@@ -1230,8 +1463,9 @@ ${camposDoc.map(campo => {
     }
   };
 
+  // Modificar o layout para exibir a barra lateral fixa
   return (
-    <Layout title="Documentos | JurisIA">
+    <Layout title="Gerador de Documentos">
       <Head>
         <style>{`
           @media print {
@@ -1313,82 +1547,91 @@ ${camposDoc.map(campo => {
           .ql-container {
             min-height: calc(29.7cm - 42px);
           }
+          
+          /* Melhorias para dispositivos móveis */
+          @media screen and (max-width: 768px) {
+            .ql-editor {
+              padding: 1cm;
+              overflow-y: auto !important;
+              -webkit-overflow-scrolling: touch !important;
+              touch-action: auto !important;
+            }
+            
+            .print-content {
+              overflow-y: auto !important;
+              -webkit-overflow-scrolling: touch !important;
+              touch-action: auto !important;
+              max-height: calc(100vh - 200px) !important;
+            }
+            
+            .ql-container {
+              min-height: auto !important;
+              height: auto !important;
+              overflow: visible !important;
+            }
+            
+            #documento-para-impressao {
+              min-height: auto !important;
+              overflow: visible !important;
+            }
+            
+            .bg-white.shadow-lg {
+              overflow: visible !important;
+              max-height: none !important;
+            }
+          }
         `}</style>
       </Head>
       
-      <div className="h-full flex flex-col sm:flex-row">
-        {/* Sidebar de documentos */}
-        <AnimatePresence>
-          {sidebarAberta && user && (
-            <motion.div
-              key="sidebar"
-              initial={{ x: "-100%", opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: "-100%", opacity: 0 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className={`
-                fixed inset-y-0 left-0 z-40 w-full sm:w-80 max-w-full sm:max-w-[280px] 
-                bg-white dark:bg-law-900 border-r border-gray-200 dark:border-law-700
-              `}
-              style={{ top: isMobile ? "0" : "64px" }}
-            >
-              <div className="w-full h-16 flex items-center justify-between px-4 border-b border-gray-200 dark:border-law-700">
-                <h2 className="font-medium text-lg text-primary-700 dark:text-primary-200">Documentos</h2>
-                <button 
-                  onClick={() => setSidebarAberta(false)}
-                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-law-800"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              <DocumentosSidebar 
-                documentoAtual={documentoAtual}
-                onSelecionarDocumento={carregarDocumento}
-                onNovoDocumento={criarNovoDocumento}
-                onFecharSidebar={() => setSidebarAberta(false)}
-                isMobile={isMobile}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+      <div className="h-full flex flex-col md:flex-row">
+        {/* Overlay para fechar a sidebar em mobile (deve vir antes no DOM para ficar abaixo da sidebar) */}
+        {isMobile && sidebarAberta && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={() => setSidebarAberta(false)}
+          />
+        )}
         
-        {/* Área principal de conteúdo */}
-        <motion.div 
-          className="flex-grow h-full overflow-y-auto flex flex-col relative"
-          animate={{ 
-            opacity: isMobile && sidebarAberta ? 0.5 : 1
-          }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        >
-          {/* Botão para abrir sidebar (estilo igual ao do chat) */}
-          {user && (
-            <div className="absolute top-4 left-4 z-30">
-              <button
-                onClick={() => setSidebarAberta(!sidebarAberta)}
-                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-law-800 transition-colors focus:outline-none"
-                aria-label={sidebarAberta ? "Fechar menu" : "Abrir menu"}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-gray-700 dark:text-gray-300">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-                </svg>
-              </button>
-            </div>
-          )}
+        {/* Sidebar com documentos salvos - versão mobile gerenciada pelo próprio componente */}
+        {(sidebarAberta || !isMobile) && (
+          <div className={isMobile ? '' : 'w-72 min-w-[18rem] max-w-xs'}>
+            <DocumentosSidebar 
+              documentoAtual={documentoAtual}
+              onSelecionarDocumento={carregarDocumento}
+              onNovoDocumento={criarNovoDocumento}
+              onFecharSidebar={() => setSidebarAberta(false)}
+              isMobile={isMobile}
+            />
+          </div>
+        )}
+        
+        {/* Conteúdo principal */}
+        <div className="flex-1 flex flex-col h-full overflow-visible">
+          {/* Toggle sidebar apenas em dispositivos móveis */}
+          <div className="md:hidden p-4 border-b border-law-200 dark:border-law-700 bg-white dark:bg-gray-900">
+            <button
+              onClick={() => setSidebarAberta(!sidebarAberta)}
+              className="flex items-center text-primary-600 dark:text-primary-400"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+              </svg>
+              Documentos
+            </button>
+          </div>
           
-          <div className="container mx-auto py-6 pb-20 pt-16">
-            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-primary-800 dark:text-primary-300 mb-6 text-center">
-              Gerador de Documentos Jurídicos
-            </h1>
-            
+          {/* Remover botão toggle da sidebar no desktop, já que ela será fixa */}
+          
+          {/* Área de conteúdo principal */}
+          <div className="flex-1 overflow-auto p-0 documentos-content-container scrollbar-custom">
             <AnimatePresence mode="wait">
               {etapa === 'selecao' && renderSeletorTipoDocumento()}
               {etapa === 'formulario' && renderFormulario()}
+              {etapa === 'verificacao' && renderVerificacao()}
               {etapa === 'editor' && renderEditor()}
             </AnimatePresence>
           </div>
-        </motion.div>
+        </div>
       </div>
     </Layout>
   );
