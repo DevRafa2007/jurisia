@@ -221,7 +221,7 @@ const ConversasSidebar: React.FC<ConversasSidebarProps> = ({
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: -10 }}
                         transition={{ duration: 0.1 }}
-                        className="absolute right-0 top-9 mt-1 z-50 bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 rounded-md py-1 min-w-[150px]"
+                        className="absolute right-0 top-9 mt-1 z-[1000] bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 rounded-md py-1 min-w-[150px]"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <button
