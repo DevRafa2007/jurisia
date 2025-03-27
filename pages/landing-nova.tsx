@@ -84,7 +84,7 @@ export default function LandingNova() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 overflow-y-auto">
+    <div className="flex flex-col min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 overflow-y-auto">
       <Head>
         <title>JurisIA - Assistente Jurídico com Inteligência Artificial</title>
         <meta name="description" content="JurisIA: A plataforma definitiva para profissionais do direito otimizarem seu trabalho com tecnologias de inteligência artificial." />
@@ -99,7 +99,7 @@ export default function LandingNova() {
       </div>
 
       {/* Header elegante e minimalista */}
-      <header className="py-8 px-4 sm:px-6 lg:px-8 sticky top-0 z-50 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200/50 dark:border-slate-700/50 shadow-sm">
+      <header className="py-8 px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center">
             <div className="text-3xl font-serif font-bold bg-gradient-to-r from-primary-600 to-sky-500 dark:from-primary-400 dark:to-sky-400 text-transparent bg-clip-text">
@@ -142,7 +142,7 @@ export default function LandingNova() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 pb-32 relative z-10 overflow-visible mt-5">
+      <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 pb-32 relative z-10 overflow-visible">
         {/* Hero Section imersiva e elegante */}
         <section className="flex flex-col md:flex-row items-center justify-between py-16 mb-28">
           <motion.div 
@@ -557,7 +557,7 @@ export default function LandingNova() {
         </section>
       </main>
 
-      <footer className="bg-white dark:bg-slate-800 py-14 px-4 shadow-inner relative z-10 mt-20">
+      <footer className="w-full bg-white dark:bg-slate-800 py-14 px-4 shadow-inner relative z-10 mt-20">
         <div className="container mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center mb-10">
             <div className="text-2xl font-serif font-bold bg-gradient-to-r from-primary-600 to-sky-500 dark:from-primary-400 dark:to-sky-400 text-transparent bg-clip-text mb-6 md:mb-0">
@@ -597,6 +597,7 @@ export default function LandingNova() {
             overflow-x: hidden;
             overflow-y: auto !important;
             height: auto !important;
+            min-height: 100% !important;
             position: relative;
           }
           body {
@@ -608,18 +609,14 @@ export default function LandingNova() {
             min-height: 100vh;
             position: static;
           }
-          /* Correção para o posicionamento do header em dispositivos móveis */
-          header {
-            position: sticky !important;
-            top: 0 !important;
-            width: 100% !important;
-            z-index: 50 !important;
+          footer {
+            position: relative !important;
+            margin-top: 4rem !important;
+            bottom: auto !important;
+            z-index: 5 !important;
           }
-          
-          /* Garantir espaçamento correto após o header */
-          main {
-            margin-top: 0;
-            padding-top: 1rem;
+          .mb-28 {
+            margin-bottom: 5rem !important;
           }
         }
       `}</style>
