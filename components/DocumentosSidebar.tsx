@@ -68,6 +68,21 @@ const DocumentosSidebar: React.FC<DocumentosSidebarProps> = ({
     carregarDados();
   }, [user]);
 
+  // Fechar menu de opções quando clicar fora
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setMostraOpcoes(null);
+    };
+    
+    // Adicionar listener para clicks no documento
+    document.addEventListener('click', handleClickOutside);
+    
+    // Remover listener quando o componente for desmontado
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, []);
+
   // Função para atualizar manualmente os documentos
   const atualizarDocumentos = async () => {
     const userId = user?.id;
@@ -191,310 +206,314 @@ const DocumentosSidebar: React.FC<DocumentosSidebarProps> = ({
   };
 
   return (
-    <div 
-      className={`bg-white dark:bg-slate-800 h-full flex flex-col border-r border-gray-200 dark:border-slate-600 
-        ${isMobile ? 'fixed inset-0 w-full z-[2000]' : 'relative'}`}
-    >
-      <div className="p-4 border-b border-gray-200 dark:border-slate-600 flex justify-between items-center">
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-white flex items-center">
-          <svg 
-            className="w-5 h-5 mr-2 text-primary-600" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24" 
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={2} 
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
-            />
-          </svg>
-          Documentos
-        </h2>
+    <div className={`
+      h-full flex flex-col bg-gray-50 dark:bg-gray-900 shadow-sm overflow-hidden
+      ${isMobile ? 'fixed inset-0 z-50 rounded-none w-full' : 'rounded-r-lg relative w-72 min-w-[18rem] max-w-xs border-r border-gray-200/70 dark:border-gray-700/50'}
+    `}>
+      <div className="p-3 sm:p-4 border-b border-gray-200/70 dark:border-gray-700/50 flex items-center justify-between">
+        <div className="flex items-center">
+          {/* Botão para fechar o menu em dispositivos móveis */}
+          {onFecharSidebar && (
+            <button 
+              onClick={onFecharSidebar}
+              className="md:hidden mr-2 p-1.5 rounded-md hover:bg-gray-100/70 dark:hover:bg-gray-800/70 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:ring-opacity-50 transition-colors duration-300"
+              aria-label="Fechar menu de documentos"
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-5 w-5 text-gray-600 dark:text-gray-400" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          )}
+          <h2 className="text-lg font-medium text-gray-800 dark:text-gray-200">Documentos</h2>
+        </div>
         
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={onNovoDocumento}
-            className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-slate-700 
-              transition-colors duration-200 text-primary-600 dark:text-primary-400"
-            title="Novo documento"
+        <div className="flex items-center">
+          <button 
+            onClick={atualizarDocumentos}
+            className="p-1.5 rounded-md hover:bg-gray-100/70 dark:hover:bg-gray-800/70 transition-colors duration-200"
+            aria-label="Atualizar documentos"
+            title="Atualizar lista"
           >
             <svg 
-              className="w-5 h-5" 
+              xmlns="http://www.w3.org/2000/svg" 
+              className={`h-5 w-5 text-gray-600 dark:text-gray-400 ${carregando ? 'animate-spin' : ''}`}
               fill="none" 
-              stroke="currentColor" 
               viewBox="0 0 24 24" 
-              xmlns="http://www.w3.org/2000/svg"
+              stroke="currentColor"
             >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M12 6v6m0 0v6m0-6h6m-6 0H6" 
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           </button>
           
-          {isMobile && (
-            <button
-              onClick={onFecharSidebar}
-              className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-slate-700 
-                transition-colors duration-200 text-gray-600 dark:text-gray-300"
-              title="Fechar"
+          <button 
+            onClick={onNovoDocumento}
+            className="ml-1 p-1.5 rounded-md hover:bg-gray-100/70 dark:hover:bg-gray-800/70 transition-colors duration-200 text-primary-600 dark:text-primary-400"
+            aria-label="Criar novo documento"
+            title="Novo documento"
+          >
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              className="h-5 w-5" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
             >
-              <svg 
-                className="w-5 h-5" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24" 
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M6 18L18 6M6 6l12 12" 
-                />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      
+      {/* Barra de pesquisa e filtros */}
+      <div className="px-4 py-3 space-y-3 border-b border-gray-200/70 dark:border-gray-700/50">
+        {/* Botão de destaque para criar novo documento */}
+        <button
+          onClick={onNovoDocumento}
+          className="w-full flex items-center justify-center gap-2 p-3 bg-primary-100 hover:bg-primary-200 dark:bg-primary-900/40 dark:hover:bg-primary-800/60 text-primary-700 dark:text-primary-300 rounded-lg font-medium transition-colors duration-200 border border-primary-200 dark:border-primary-800"
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5" 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          <span>Criar Novo Documento</span>
+        </button>
+        
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg className="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <input 
+            type="text" 
+            value={filtro}
+            onChange={(e) => setFiltro(e.target.value)}
+            placeholder="Buscar documento..." 
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 focus:outline-none transition-colors duration-200"
+          />
+          {filtro && (
+            <button 
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              onClick={() => setFiltro('')}
+              aria-label="Limpar busca"
+            >
+              <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
             </button>
           )}
         </div>
+        
+        <div className="flex space-x-2">
+          <button 
+            onClick={() => setVisualizacao('todos')}
+            className={`flex-1 py-1.5 px-3 text-sm font-medium rounded-md transition-colors duration-200 ${
+              visualizacao === 'todos' 
+                ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100' 
+                : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+            }`}
+          >
+            Todos
+          </button>
+          <button 
+            onClick={() => setVisualizacao('favoritos')}
+            className={`flex-1 py-1.5 px-3 text-sm font-medium rounded-md transition-colors duration-200 ${
+              visualizacao === 'favoritos' 
+                ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100' 
+                : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+            }`}
+          >
+            Favoritos
+          </button>
+        </div>
       </div>
       
-      {/* Novo botão de criar documento, mais visível */}
-      <button
-        onClick={onNovoDocumento}
-        className="flex items-center justify-center w-full py-3 px-4 bg-primary-50 dark:bg-slate-700 
-          text-primary-700 dark:text-primary-300 font-medium border-b border-gray-200 dark:border-slate-600
-          hover:bg-primary-100 dark:hover:bg-slate-600 transition-colors duration-200"
-      >
-        <svg 
-          className="w-5 h-5 mr-2" 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24" 
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth={2} 
-            d="M12 6v6m0 0v6m0-6h6m-6 0H6" 
-          />
-        </svg>
-        Criar Novo Documento
-      </button>
-      
-      <div className="overflow-y-auto flex-1 py-1 px-1 bg-gray-50 dark:bg-slate-900">
-        {erro && (
-          <div className="bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 p-3 text-sm rounded-lg mb-3 mx-1">
+      {/* Lista de documentos */}
+      <div className="flex-grow overflow-y-auto p-2">
+        {carregando ? (
+          <div className="flex flex-col items-center justify-center h-32 text-gray-500 dark:text-gray-400 space-y-3">
+            <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-600 dark:border-primary-400"></div>
+            <p className="text-sm">Carregando documentos...</p>
+          </div>
+        ) : erro ? (
+          <div className="p-4 text-center text-red-600 dark:text-red-400 space-y-3">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
             <p>{erro}</p>
             <button 
               onClick={atualizarDocumentos}
-              className="text-red-700 dark:text-red-300 underline mt-1 text-xs font-medium"
+              className="px-4 py-1.5 bg-primary-600 dark:bg-primary-700 hover:bg-primary-700 dark:hover:bg-primary-600 text-white text-sm font-medium rounded-md transition-colors duration-200"
             >
               Tentar novamente
             </button>
           </div>
-        )}
-        
-        {/* Mensagem de carregamento */}
-        {carregando && documentos.length === 0 && (
-          <div className="flex justify-center items-center h-32">
-            <div className="animate-pulse flex flex-col items-center">
-              <div className="h-8 w-8 mb-2 rounded-full border-2 border-t-primary-500 dark:border-t-primary-400 border-gray-200 dark:border-gray-700 animate-spin"></div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Carregando documentos...</p>
-            </div>
-          </div>
-        )}
-        
-        {/* Mensagem de nenhum documento */}
-        {!carregando && documentosFiltrados.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-32 px-4 text-center">
-            {filtro || visualizacao === 'favoritos' ? (
+        ) : documentosFiltrados.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-32 text-gray-500 dark:text-gray-400 text-center space-y-3 p-4">
+            {filtro ? (
               <>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400 dark:text-gray-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 10h2"></path>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {visualizacao === 'favoritos' ? 'Nenhum documento favorito encontrado' : 'Nenhum resultado para esta busca'}
-                </p>
+                <p>Nenhum documento encontrado para: <strong>"{filtro}"</strong></p>
                 <button 
-                  onClick={() => {
-                    setFiltro('');
-                    setVisualizacao('todos');
-                  }}
-                  className="mt-2 text-xs text-primary-600 dark:text-primary-400 hover:underline"
+                  onClick={() => setFiltro('')}
+                  className="text-primary-600 dark:text-primary-400 text-sm hover:underline"
                 >
-                  Limpar filtros
+                  Limpar busca
+                </button>
+              </>
+            ) : visualizacao === 'favoritos' ? (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                </svg>
+                <p>Você ainda não tem documentos favoritos.</p>
+                <button 
+                  onClick={() => setVisualizacao('todos')}
+                  className="text-primary-600 dark:text-primary-400 text-sm hover:underline"
+                >
+                  Ver todos os documentos
                 </button>
               </>
             ) : (
               <>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400 dark:text-gray-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Nenhum documento criado</p>
+                <p>Você ainda não tem documentos. Crie seu primeiro documento agora!</p>
                 <button 
                   onClick={onNovoDocumento}
-                  className="mt-2 text-sm text-primary-600 dark:text-primary-400 hover:underline font-medium"
+                  className="px-4 py-1.5 bg-primary-600 dark:bg-primary-700 hover:bg-primary-700 dark:hover:bg-primary-600 text-white text-sm font-medium rounded-md transition-colors duration-200 flex items-center gap-1.5"
                 >
-                  Criar seu primeiro documento
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Criar documento
                 </button>
               </>
             )}
           </div>
-        )}
-        
-        {/* Lista de documentos */}
-        <div className="space-y-1">
-          {documentosFiltrados.map((documento) => (
-            <div 
-              key={documento.id}
-              onClick={() => onSelecionarDocumento(documento.id)}
-              className={`
-                relative rounded-lg p-3 cursor-pointer transition-all duration-200
-                ${documentoAtual === documento.id 
-                  ? 'bg-primary-50/60 dark:bg-primary-900/20 border-l-2 border-primary-500 dark:border-primary-400' 
-                  : 'hover:bg-gray-100/60 dark:hover:bg-gray-800/60 border-l-2 border-transparent'}
-              `}
-            >
-              <div className="flex justify-between">
-                <div className="pr-6 flex-1 min-w-0">
-                  <div className="flex items-center">
-                    {/* Ícone de tipo de documento */}
-                    <div className={`
-                      flex-shrink-0 mr-2 text-gray-600 dark:text-gray-400
-                      ${documento.favorito ? 'text-amber-500 dark:text-amber-400' : ''}
-                    `}>
+        ) : (
+          <div className="space-y-2">
+            {documentosFiltrados.map((documento) => (
+              <div 
+                key={documento.id} 
+                className={`relative p-3 rounded-lg cursor-pointer transition-all duration-200 group ${
+                  documentoAtual === documento.id
+                    ? 'bg-primary-50 dark:bg-primary-900/20 border-l-4 border-primary-500 dark:border-primary-400 pl-2'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-800 border-l-4 border-transparent pl-2'
+                }`}
+                onClick={() => documento.id && onSelecionarDocumento(documento.id)}
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex items-start space-x-3 overflow-hidden">
+                    {/* Ícone do tipo de documento */}
+                    <div className="flex-shrink-0 mt-0.5">
                       {documento.favorito ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" stroke="none">
-                          <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                        <svg className="h-5 w-5 text-yellow-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                         </svg>
                       ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                       )}
                     </div>
                     
-                    {/* Título e tipo do documento */}
-                    <div className="truncate">
-                      <h3 className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+                    {/* Título e detalhes */}
+                    <div className="min-w-0 flex-1">
+                      <h3 
+                        className={`text-sm font-medium truncate ${
+                          documentoAtual === documento.id 
+                            ? 'text-primary-700 dark:text-primary-300' 
+                            : 'text-gray-900 dark:text-gray-100'
+                        }`}
+                      >
                         {documento.titulo || 'Documento sem título'}
                       </h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {
-                          TIPOS_DOCUMENTOS.find(t => t.id === documento.tipo)?.nome || 
-                          documento.tipo?.charAt(0).toUpperCase() + documento.tipo?.slice(1) || 
-                          'Tipo desconhecido'
-                        }
-                      </p>
+                      <div className="flex items-center mt-1 space-x-2">
+                        <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                          {TIPOS_DOCUMENTOS.find(t => t.id === documento.tipo)?.nome || documento.tipo}
+                        </span>
+                        <span className="text-gray-300 dark:text-gray-600">•</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                          {formatarData(documento.atualizado_em || documento.criado_em)}
+                        </span>
+                      </div>
                     </div>
                   </div>
                   
-                  {/* Data de atualização */}
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {formatarData(documento.atualizado_em || documento.criado_em)}
-                  </p>
-                </div>
-                
-                {/* Botão de opções */}
-                <div className="absolute right-2 top-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setMostraOpcoes(mostraOpcoes === documento.id ? null : documento.id);
-                    }}
-                    className="p-1 rounded-full hover:bg-gray-200/70 dark:hover:bg-gray-700/70 transition-colors duration-200"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                    </svg>
-                  </button>
-                  
-                  {/* Menu de opções */}
-                  {mostraOpcoes === documento.id && (
-                    <>
-                      {/* Overlay para fechar o menu em dispositivos móveis */}
-                      {isMobile && (
-                        <div 
-                          className="fixed inset-0 bg-black/50 z-[999]"
-                          onClick={() => setMostraOpcoes(null)}
-                        />
-                      )}
-                      <div
-                        className={`
-                          absolute bg-white dark:bg-slate-700 rounded-md shadow-lg border border-gray-200 dark:border-slate-600
-                          ${isMobile 
-                            ? 'fixed left-[50%] -translate-x-[50%] top-[50%] -translate-y-[50%] z-[1000] w-44 sm:w-36' 
-                            : 'right-0 mt-1 z-50 w-36'
-                          }
-                        `}
+                  {/* Botão de opções */}
+                  <div className="ml-2 flex-shrink-0 relative">
+                    <button
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-opacity duration-200"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMostraOpcoes(mostraOpcoes === documento.id ? null : documento.id);
+                      }}
+                      aria-label="Opções do documento"
+                    >
+                      <svg className="h-4 w-4 text-gray-500 dark:text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                      </svg>
+                    </button>
+                    
+                    {/* Menu de opções */}
+                    {mostraOpcoes === documento.id && documento.id && (
+                      <div 
+                        className="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-[1000] border border-gray-200 dark:border-gray-700 py-1"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <ul className="py-1">
-                          <li>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleFavorito(e, documento.id, documento.favorito || false);
-                              }}
-                              className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-600 flex items-center"
-                            >
-                              <svg
-                                className={`w-4 h-4 mr-2 ${documento.favorito ? 'text-yellow-500' : 'text-gray-400 dark:text-gray-500'}`}
-                                fill={documento.favorito ? 'currentColor' : 'none'}
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={documento.favorito ? 0 : 2}
-                                  d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
-                                />
+                        <button
+                          className="w-full text-left block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 flex items-center"
+                          onClick={(e) => documento.id && handleFavorito(e, documento.id, !!documento.favorito)}
+                        >
+                          {documento.favorito ? (
+                            <>
+                              <svg className="h-4 w-4 mr-2 text-yellow-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                               </svg>
-                              {documento.favorito ? 'Remover favorito' : 'Marcar favorito'}
-                            </button>
-                          </li>
-                          <li>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleExcluirDocumento(e, documento.id);
-                              }}
-                              className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center"
-                            >
-                              <svg
-                                className="w-4 h-4 mr-2"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                />
+                              Remover dos favoritos
+                            </>
+                          ) : (
+                            <>
+                              <svg className="h-4 w-4 mr-2 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                               </svg>
-                              Excluir
-                            </button>
-                          </li>
-                        </ul>
+                              Adicionar aos favoritos
+                            </>
+                          )}
+                        </button>
+                        <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                        <button
+                          className="w-full text-left block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 flex items-center"
+                          onClick={(e) => documento.id && handleExcluirDocumento(e, documento.id)}
+                        >
+                          <svg className="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Excluir documento
+                        </button>
                       </div>
-                    </>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
