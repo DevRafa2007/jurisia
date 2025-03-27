@@ -499,7 +499,12 @@ Como posso auxiliar você hoje?`,
                         />
                       ))}
                     </AnimatePresence>
+                    
+                    {/* Referência para o final das mensagens */}
                     <div ref={messagesEndRef} />
+                    
+                    {/* Espaço adicional após a última mensagem para evitar sobreposição com o input */}
+                    <div className="h-[70px] sm:h-0 w-full" aria-hidden="true"></div>
                   </motion.div>
                   
                   {/* Indicador de digitação */}

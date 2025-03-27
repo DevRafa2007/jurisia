@@ -265,9 +265,14 @@ body {
   /* Chat messages container com altura ajustada e scroll próprio */
   .chat-messages-container {
     height: calc(100vh - 120px) !important; /* Altura total - header - input aproximados */
-    padding-bottom: 60px;
+    padding-bottom: 120px !important; /* Aumentado para garantir espaço suficiente para visualizar a última mensagem sem ser coberta pelo input */
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Espaço específico após a última mensagem para evitar que seja coberta pelo input */
+  .chat-messages-container .message:last-child {
+    margin-bottom: 70px !important; /* Altura aproximada do input de chat */
   }
   
   /* Evitar scroll da página inteira em mobile */
