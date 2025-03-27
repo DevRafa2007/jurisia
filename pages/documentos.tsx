@@ -1548,8 +1548,31 @@ ${camposDoc.map(campo => {
             border-color: #334155;
           }
           
+          /* Garantir que o texto seja sempre visível */
+          .ql-snow .ql-editor {
+            color: #111827 !important; /* Texto escuro para modo claro */
+          }
+          
           .dark .ql-snow .ql-editor {
-            color: black; /* Mantém o texto preto mesmo no modo escuro */
+            color: #111827 !important; /* Mantém o texto escuro mesmo no modo escuro */
+          }
+          
+          /* Consertar cores para os elementos dentro do editor */
+          .ql-snow .ql-editor h1, 
+          .ql-snow .ql-editor h2, 
+          .ql-snow .ql-editor h3, 
+          .ql-snow .ql-editor h4, 
+          .ql-snow .ql-editor h5, 
+          .ql-snow .ql-editor h6, 
+          .ql-snow .ql-editor p, 
+          .ql-snow .ql-editor span, 
+          .ql-snow .ql-editor strong, 
+          .ql-snow .ql-editor em, 
+          .ql-snow .ql-editor u, 
+          .ql-snow .ql-editor ol, 
+          .ql-snow .ql-editor ul, 
+          .ql-snow .ql-editor li {
+            color: #111827 !important;
           }
           
           .dark .ql-snow.ql-container {
