@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
@@ -179,7 +179,7 @@ const CONFIGURACOES_FORMULARIOS: Record<string, ConfiguracaoFormulario> = {
   },
 };
 
-export default function DocumentosPage() {
+export default function Documentos() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const [tipoDocumentoSelecionado, setTipoDocumentoSelecionado] = useState<string>('');
@@ -203,25 +203,23 @@ export default function DocumentosPage() {
   const [isAnalisandoReferencias, setIsAnalisandoReferencias] = useState(false);
   const [analiseReferencias, setAnaliseReferencias] = useState<string>('');
 
-  // Verificar se é dispositivo móvel
+  // Detectar se é dispositivo móvel
   useEffect(() => {
     const checkIsMobile = () => {
       setIsMobile(window.innerWidth < 768);
+      
+      // Sidebar sempre aberta em desktop, fechada por padrão em mobile
+      setSidebarAberta(window.innerWidth >= 768);
     };
     
-    // Verifica quando o componente monta
+    // Verificar inicialmente
     checkIsMobile();
     
-    // Fecha sidebar em mobile, mantém aberta em desktop
-    setSidebarAberta(window.innerWidth >= 768);
-    
-    // Adiciona listener para quando a janela é redimensionada
+    // Adicionar listener para redimensionamento
     window.addEventListener('resize', checkIsMobile);
     
-    // Limpa o listener quando o componente desmonta
-    return () => {
-      window.removeEventListener('resize', checkIsMobile);
-    };
+    // Limpar listener
+    return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
 
   // Redirecionar para login se não estiver autenticado
@@ -728,7 +726,14 @@ ${camposDoc.map(campo => {
     
     try {
       setSalvando(true);
-      const tipoDoc = CONFIGURACOES_FORMULARIOS[tipoDocumentoSelecionado].nome;
+      
+      // Verificar se a configuração do formulário existe antes de acessar a propriedade 'nome'
+      let tipoDoc = '';
+      if (CONFIGURACOES_FORMULARIOS[tipoDocumentoSelecionado]) {
+        tipoDoc = CONFIGURACOES_FORMULARIOS[tipoDocumentoSelecionado].nome;
+      } else {
+        tipoDoc = tipoDocumentoSelecionado; // Usar o ID como fallback
+      }
       
       if (documentoAtual) {
         // Atualizar documento existente
@@ -781,7 +786,13 @@ ${camposDoc.map(campo => {
     try {
       setSalvando(true);
       
-      const tipoDoc = CONFIGURACOES_FORMULARIOS[tipoDocumentoSelecionado].nome;
+      // Verificar se a configuração do formulário existe antes de acessar a propriedade 'nome'
+      let tipoDoc = '';
+      if (CONFIGURACOES_FORMULARIOS[tipoDocumentoSelecionado]) {
+        tipoDoc = CONFIGURACOES_FORMULARIOS[tipoDocumentoSelecionado].nome;
+      } else {
+        tipoDoc = tipoDocumentoSelecionado; // Usar o ID como fallback
+      }
       
       if (documentoAtual) {
         // Atualizar documento existente
@@ -1469,17 +1480,118 @@ ${camposDoc.map(campo => {
   return (
     <Layout title="Gerador de Documentos">
       <Head>
-        <title>JurisIA - Editor de Documentos</title>
-        <meta name="description" content="Editor de documentos jurídicos com inteligência artificial" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
-        <style jsx global>{`
-          .no-print {
-            @media print {
+        <style>{`
+          @media print {
+            body * {
+              visibility: hidden;
+            }
+            .print-content .ql-editor, .print-content .ql-editor * {
+              visibility: visible;
+            }
+            .print-content .ql-editor {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 21cm;
+              height: auto;
+              margin: 0;
+              padding: 2.54cm;
+              box-sizing: border-box;
+              overflow: visible;
+              page-break-inside: avoid;
+            }
+            .ql-toolbar {
+              display: none !important;
+            }
+            @page {
+              size: A4;
+              margin: 0;
+            }
+            html, body {
+              width: 21cm;
+              height: 29.7cm;
+              background-color: white;
+            }
+            .no-print {
               display: none !important;
             }
           }
-          .documentos-content-container {
-            overflow-y: auto !important;
+          
+          /* Estilos Quill personalizados */
+          .ql-editor {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 12pt;
+            line-height: 1.5;
+            padding: 1.5cm;
+            text-align: justify;
+          }
+          
+          .ql-editor p, .ql-editor ol, .ql-editor ul, .ql-editor pre, .ql-editor blockquote {
+            margin-bottom: 1em;
+          }
+          
+          /* Estilos para impressão */
+          .print-content .ql-editor {
+            height: auto !important;
+            min-height: 29.7cm;
+            box-shadow: none;
+          }
+          
+          .ql-snow .ql-toolbar {
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+            background-color: #f9fafb;
+          }
+          
+          .dark .ql-snow .ql-toolbar {
+            background-color: #1e293b;
+            border-color: #334155;
+          }
+          
+          .dark .ql-snow .ql-editor {
+            color: black; /* Mantém o texto preto mesmo no modo escuro */
+          }
+          
+          .dark .ql-snow.ql-container {
+            border-color: #334155;
+          }
+          
+          /* Ajusta altura do container para incluir a barra de ferramentas */
+          .ql-container {
+            min-height: calc(29.7cm - 42px);
+          }
+          
+          /* Melhorias para dispositivos móveis */
+          @media screen and (max-width: 768px) {
+            .ql-editor {
+              padding: 1cm;
+              overflow-y: auto !important;
+              -webkit-overflow-scrolling: touch !important;
+              touch-action: auto !important;
+            }
+            
+            .print-content {
+              overflow-y: auto !important;
+              -webkit-overflow-scrolling: touch !important;
+              touch-action: auto !important;
+              max-height: calc(100vh - 200px) !important;
+            }
+            
+            .ql-container {
+              min-height: auto !important;
+              height: auto !important;
+              overflow: visible !important;
+            }
+            
+            #documento-para-impressao {
+              min-height: auto !important;
+              overflow: visible !important;
+            }
+            
+            .bg-white.shadow-lg {
+              overflow: visible !important;
+              max-height: none !important;
+            }
           }
         `}</style>
       </Head>
