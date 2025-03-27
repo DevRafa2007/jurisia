@@ -385,6 +385,21 @@ Como posso auxiliar você hoje?`,
     setErro(null);
   };
 
+  // Expor a função de nova conversa globalmente para que o botão
+  // no cabeçalho possa acessá-la
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).handleNovaConversa = handleNovaConversa;
+    }
+    
+    // Cleanup ao desmontar o componente
+    return () => {
+      if (typeof window !== 'undefined') {
+        delete (window as any).handleNovaConversa;
+      }
+    };
+  }, []);
+
   const handleSelecionarConversa = (conversaId: string) => {
     setConversaAtual(conversaId);
     setErro(null);

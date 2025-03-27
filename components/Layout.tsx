@@ -1,4 +1,4 @@
-import React, { ReactNode, useEffect, useState } from 'react';
+import React, { ReactNode, useEffect, useState, useRef } from 'react';
 import Head from 'next/head';
 import Header from './Header';
 import { useRouter } from 'next/router';
@@ -29,6 +29,9 @@ const Layout: React.FC<LayoutProps> = ({
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
+  
+  // Referência para o header
+  const headerRef = useRef<HTMLDivElement>(null);
   
   // Verificar se estamos na página principal
   const isHomePage = router.pathname === '/';
@@ -112,6 +115,27 @@ const Layout: React.FC<LayoutProps> = ({
     router.push('/landing-nova');
   };
 
+  // Esta função será passada para o botão Nova Conversa no header
+  const handleNovaConversaClick = () => {
+    // Verificar se estamos na página de chat
+    if (router.pathname === '/') {
+      // Procuramos por uma função handleNovaConversa no contexto pai (página de chat)
+      if (window && typeof (window as any).handleNovaConversa === 'function') {
+        (window as any).handleNovaConversa();
+      } else {
+        // Fallback: se a função não existir, apenas recarregamos a página
+        router.push('/?new=true');
+      }
+    } else {
+      // Se não estamos na página de chat, navegamos para lá com parâmetro para nova conversa
+      router.push('/?new=true');
+    }
+  };
+
+  // Não renderizar o tema até que o componente esteja montado
+  // para evitar inconsistência entre servidor e cliente
+  if (!mounted) return null;
+
   return (
     <div className={`flex flex-col bg-gradient-to-b from-gray-50 via-gray-50 to-gray-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 text-gray-900 dark:text-gray-100 transition-colors duration-300 min-h-screen ${isHomePage ? 'h-screen overflow-hidden' : ''}`}>
       <Head>
@@ -153,7 +177,7 @@ const Layout: React.FC<LayoutProps> = ({
             {/* Texto "Nova conversa" (somente na página inicial) */}
             {router.pathname === '/' && (
               <button
-                onClick={() => router.push('/?new=true')}
+                onClick={handleNovaConversaClick}
                 className="flex items-center gap-2 py-2 px-3 text-sm rounded-md hover:bg-gray-200/70 dark:hover:bg-gray-800/70 text-gray-700 dark:text-gray-300 transition-colors duration-200 font-medium"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
