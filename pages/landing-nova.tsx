@@ -12,6 +12,14 @@ export default function LandingNova() {
   // Garantir que estamos no cliente antes de acessar o tema
   useEffect(() => {
     setMounted(true);
+    
+    // Fix para problemas de scroll em dispositivos móveis
+    document.documentElement.style.height = 'auto';
+    document.body.style.height = 'auto';
+    document.documentElement.style.position = 'static';
+    document.body.style.position = 'static';
+    document.documentElement.style.overflow = 'visible';
+    document.body.style.overflow = 'visible';
   }, []);
 
   // Array de depoimentos
@@ -84,22 +92,22 @@ export default function LandingNova() {
   });
 
   return (
-    <div className="bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+    <div className="w-full">
       <Head>
         <title>JurisIA - Assistente Jurídico com Inteligência Artificial</title>
         <meta name="description" content="JurisIA: A plataforma definitiva para profissionais do direito otimizarem seu trabalho com tecnologias de inteligência artificial." />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
       {/* Elementos de fundo decorativos para imersão */}
-      <div className="fixed inset-0 pointer-events-none z-0">
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div className="absolute -top-[30%] -right-[10%] w-[80%] h-[80%] rounded-full bg-gradient-to-br from-primary-400/10 to-sky-400/10 dark:from-primary-500/10 dark:to-sky-500/10 blur-3xl" />
         <div className="absolute -bottom-[10%] -left-[30%] w-[80%] h-[80%] rounded-full bg-gradient-to-tr from-sky-400/10 to-primary-400/10 dark:from-sky-500/10 dark:to-primary-500/10 blur-3xl" />
       </div>
 
       {/* Header elegante e minimalista */}
-      <header className="sticky top-0 z-50 py-4 px-4 sm:px-6 lg:px-8 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+      <header className="sticky top-0 z-50 py-4 px-4 sm:px-6 lg:px-8 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center">
             <div className="text-2xl sm:text-3xl font-serif font-bold bg-gradient-to-r from-primary-600 to-sky-500 dark:from-primary-400 dark:to-sky-400 text-transparent bg-clip-text">
@@ -142,8 +150,8 @@ export default function LandingNova() {
         </div>
       </header>
 
-      <main className="relative z-10">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+      <main className="w-full bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 pb-16 relative z-10">
           {/* Hero Section imersiva e elegante */}
           <section className="flex flex-col md:flex-row items-center justify-between py-8 md:py-16 mb-16">
             <motion.div 
@@ -559,13 +567,10 @@ export default function LandingNova() {
               </div>
             </motion.div>
           </section>
-
-          {/* Espaçador para garantir que todo o conteúdo seja visível */}
-          <div className="h-20"></div>
         </div>
       </main>
 
-      <footer className="bg-white dark:bg-slate-800 py-8 sm:py-14 px-4 shadow-inner relative z-10">
+      <footer className="w-full bg-white dark:bg-slate-800 py-8 sm:py-14 px-4 shadow-inner relative z-10">
         <div className="container mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center mb-6 sm:mb-10">
             <div className="text-xl sm:text-2xl font-serif font-bold bg-gradient-to-r from-primary-600 to-sky-500 dark:from-primary-400 dark:to-sky-400 text-transparent bg-clip-text mb-4 md:mb-0">
@@ -603,9 +608,23 @@ export default function LandingNova() {
         html,
         body {
           overflow-x: hidden;
-          height: auto;
+          overflow-y: auto !important;
+          height: auto !important;
+          min-height: 100% !important;
           width: 100%;
           position: relative;
+          margin: 0;
+          padding: 0;
+        }
+        
+        #__next {
+          min-height: 100% !important;
+          height: auto !important;
+          background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
+        }
+        
+        .dark #__next {
+          background: linear-gradient(to bottom, #0f172a, #1e293b);
         }
       `}</style>
     </div>
