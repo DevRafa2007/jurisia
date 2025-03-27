@@ -505,7 +505,7 @@ export default function LandingNova() {
         </section>
 
         {/* CTA Final com design imersivo */}
-        <section id="contato">
+        <section id="contato" className="mb-32">
           <motion.div 
             className="bg-gradient-to-r from-primary-600 to-sky-500 dark:from-primary-700 dark:to-sky-600 rounded-xl p-10 sm:p-14 shadow-2xl text-center relative"
             initial="hidden"
@@ -557,7 +557,7 @@ export default function LandingNova() {
         </section>
       </main>
 
-      <footer className="w-full bg-white dark:bg-slate-800 py-14 px-4 shadow-inner relative z-10 mt-20">
+      <footer className="relative w-full bg-white dark:bg-slate-800 py-14 px-4 shadow-inner z-10 mt-auto">
         <div className="container mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center mb-10">
             <div className="text-2xl font-serif font-bold bg-gradient-to-r from-primary-600 to-sky-500 dark:from-primary-400 dark:to-sky-400 text-transparent bg-clip-text mb-6 md:mb-0">
@@ -609,14 +609,27 @@ export default function LandingNova() {
             min-height: 100vh;
             position: static;
           }
-          footer {
-            position: relative !important;
-            margin-top: 4rem !important;
-            bottom: auto !important;
-            z-index: 5 !important;
-          }
           .mb-28 {
-            margin-bottom: 5rem !important;
+            margin-bottom: 4rem !important;
+          }
+          section {
+            display: block;
+            width: 100%;
+          }
+          footer {
+            display: block;
+            position: relative !important;
+            bottom: auto !important;
+            margin-top: 0 !important;
+            clear: both;
+          }
+          main {
+            display: block;
+            overflow: visible !important;
+            margin-bottom: 1rem !important;
+          }
+          section:last-of-type {
+            margin-bottom: 2rem !important;
           }
         }
       `}</style>
