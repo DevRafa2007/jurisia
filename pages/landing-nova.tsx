@@ -99,7 +99,7 @@ export default function LandingNova() {
       </div>
 
       {/* Header elegante e minimalista */}
-      <header className="py-8 px-4 sm:px-6 lg:px-8 relative z-10">
+      <header className="py-8 px-4 sm:px-6 lg:px-8 sticky top-0 z-50 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200/50 dark:border-slate-700/50 shadow-sm">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center">
             <div className="text-3xl font-serif font-bold bg-gradient-to-r from-primary-600 to-sky-500 dark:from-primary-400 dark:to-sky-400 text-transparent bg-clip-text">
@@ -142,7 +142,7 @@ export default function LandingNova() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 pb-32 relative z-10 overflow-visible">
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 pb-32 relative z-10 overflow-visible mt-5">
         {/* Hero Section imersiva e elegante */}
         <section className="flex flex-col md:flex-row items-center justify-between py-16 mb-28">
           <motion.div 
@@ -607,6 +607,19 @@ export default function LandingNova() {
             height: auto !important;
             min-height: 100vh;
             position: static;
+          }
+          /* Correção para o posicionamento do header em dispositivos móveis */
+          header {
+            position: sticky !important;
+            top: 0 !important;
+            width: 100% !important;
+            z-index: 50 !important;
+          }
+          
+          /* Garantir espaçamento correto após o header */
+          main {
+            margin-top: 0;
+            padding-top: 1rem;
           }
         }
       `}</style>
