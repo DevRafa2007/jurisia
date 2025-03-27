@@ -443,7 +443,7 @@ Como posso auxiliar você hoje?`,
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: "-100%", opacity: 0 }}
                 transition={{ type: "spring", stiffness: 200, damping: 25 }}
-                className="fixed inset-0 sm:absolute sm:inset-auto sm:top-0 sm:bottom-0 sm:left-0 z-[500] bg-white dark:bg-law-900 overflow-hidden sm:w-[280px] border-r border-gray-200 dark:border-law-700 sidebar-animation-container"
+                className="fixed inset-0 sm:absolute sm:inset-auto sm:top-0 sm:bottom-0 sm:left-0 z-[2000] bg-white dark:bg-law-900 overflow-hidden sm:w-[280px] border-r border-gray-200 dark:border-law-700 sidebar-animation-container"
               >
                 <ConversasSidebar 
                   conversaAtual={conversaAtual}

@@ -755,6 +755,12 @@ body {
   pointer-events: auto !important;
 }
 
+/* Garantir que o botão de copiar fique sob a sidebar em dispositivos móveis */
+.message button {
+  z-index: -1 !important;
+  position: relative;
+}
+
 .message * {
   pointer-events: auto !important;
   user-select: text !important;
