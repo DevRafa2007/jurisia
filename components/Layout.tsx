@@ -25,7 +25,7 @@ const Layout: React.FC<LayoutProps> = ({
   const [headerHeight, setHeaderHeight] = useState(0);
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
@@ -71,16 +71,24 @@ const Layout: React.FC<LayoutProps> = ({
 
     window.addEventListener('resize', handleResize);
 
-    // Prevenir rolagem na página inicial
+    // Prevenir rolagem na página inicial apenas se for a página principal
     const preventScrolling = () => {
       if (isHomePage) {
         window.scrollTo(0, 0);
       }
     };
 
-    // Adicione um evento para manter a página no topo
+    // Adicione um evento para manter a página no topo apenas se for a página principal
     if (isHomePage) {
       window.addEventListener('scroll', preventScrolling, { passive: false });
+      
+      // Adicionar classe no-scroll apenas na página principal
+      document.documentElement.classList.add('no-scroll');
+      document.body.classList.add('no-scroll');
+    } else {
+      // Remover classe no-scroll em outras páginas
+      document.documentElement.classList.remove('no-scroll');
+      document.body.classList.remove('no-scroll');
     }
 
     // Limpar o evento ao desmontar o componente
@@ -89,6 +97,9 @@ const Layout: React.FC<LayoutProps> = ({
       if (isHomePage) {
         window.removeEventListener('scroll', preventScrolling);
       }
+      // Remover classe no-scroll ao desmontar
+      document.documentElement.classList.remove('no-scroll');
+      document.body.classList.remove('no-scroll');
     };
   }, [isHomePage]);
 
@@ -97,12 +108,12 @@ const Layout: React.FC<LayoutProps> = ({
   };
 
   const handleLogout = async () => {
-    await logout();
-    router.push('/login');
+    await signOut();
+    router.push('/landing-nova');
   };
 
   return (
-    <div className="flex flex-col bg-gradient-to-b from-gray-50 via-gray-50 to-gray-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 text-gray-900 dark:text-gray-100 transition-colors duration-300 min-h-screen h-screen overflow-hidden">
+    <div className={`flex flex-col bg-gradient-to-b from-gray-50 via-gray-50 to-gray-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 text-gray-900 dark:text-gray-100 transition-colors duration-300 min-h-screen ${isHomePage ? 'h-screen overflow-hidden' : ''}`}>
       <Head>
         <title>{title}</title>
         <meta name="description" content={description} />
@@ -114,7 +125,7 @@ const Layout: React.FC<LayoutProps> = ({
       <div className="absolute inset-0 bg-grid-pattern opacity-5 pointer-events-none"></div>
 
       {router.pathname !== '/landing-nova' && router.pathname !== '/login' && router.pathname !== '/cadastro' && (
-        <header className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm border-b border-gray-200/40 dark:border-gray-800/40 py-2 px-4 flex items-center justify-between">
+        <header className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm border-b border-gray-200/40 dark:border-gray-800/40 py-2 px-4 flex items-center justify-between sticky top-0 left-0 right-0 z-50">
           <div className="flex items-center gap-2">
             {/* Botão de abrir/fechar sidebar (somente na página inicial) ou botão de voltar */}
             {router.pathname === '/' && toggleSidebar ? (
@@ -211,7 +222,7 @@ const Layout: React.FC<LayoutProps> = ({
                       transition={{ duration: 0.2 }}
                     >
                       <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.email}</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-[180px]">{user.email}</p>
                       </div>
                       <Link 
                         href="/perfil"
@@ -241,7 +252,7 @@ const Layout: React.FC<LayoutProps> = ({
         </header>
       )}
 
-      <main className="flex-grow flex flex-col overflow-hidden h-[calc(100vh-60px)] transition-all duration-300 ease-in-out">
+      <main className="flex-grow flex flex-col overflow-auto h-[calc(100vh-60px)] transition-all duration-300 ease-in-out relative">
         {children}
       </main>
     </div>

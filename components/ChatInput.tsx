@@ -87,7 +87,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onEnviar, isCarregando }) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="relative w-full bg-transparent dark:bg-transparent border border-gray-200/70 dark:border-gray-700/50 shadow-sm hover:shadow-sm focus-within:shadow-md focus-within:border-gray-300 dark:focus-within:border-gray-600 rounded-xl transition-all duration-200">
+      <div className="relative w-full bg-transparent border border-gray-200/70 dark:border-gray-700/50 shadow-sm hover:shadow-sm focus-within:shadow-md focus-within:border-gray-300 dark:focus-within:border-gray-600 rounded-xl transition-all duration-200">
         <textarea
           ref={inputRef}
           value={mensagem}

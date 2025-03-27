@@ -91,6 +91,21 @@ export default function Home() {
     }
   }, [isLoading, user, router]);
 
+  // Garantir que a classe no-scroll seja aplicada na página de chat
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Adicionar classe no-scroll à página de chat
+      document.documentElement.classList.add('no-scroll');
+      document.body.classList.add('no-scroll');
+      
+      return () => {
+        // Remover classe ao desmontar
+        document.documentElement.classList.remove('no-scroll');
+        document.body.classList.remove('no-scroll');
+      };
+    }
+  }, []);
+
   // Forçar scroll para o topo na carga inicial da página
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -162,11 +177,19 @@ export default function Home() {
         
         setMensagens(mensagensUI);
         
-        // Após carregar as mensagens, resetar o scroll da área de chat para o topo
+        // Após carregar as mensagens, rolar para a última mensagem
         if (chatContainerRef.current) {
           setTimeout(() => {
             if (chatContainerRef.current) {
-              chatContainerRef.current.scrollTop = 0;
+              // Rolar para o final da conversa para mostrar a mensagem mais recente
+              chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+              
+              // Alternativa: focar na última mensagem
+              const allMessages = chatContainerRef.current.querySelectorAll('.message');
+              if (allMessages.length > 0) {
+                const lastMessage = allMessages[allMessages.length - 1];
+                lastMessage.scrollIntoView({ behavior: 'auto', block: 'end' });
+              }
             }
           }, 100); // Pequeno atraso para garantir que a renderização seja concluída
         }
@@ -376,7 +399,7 @@ Como posso auxiliar você hoje?`,
       </Head>
 
       <Layout title="JurisIA - Assistente Jurídico com IA" sidebarAberta={sidebarAberta} toggleSidebar={() => setSidebarAberta(!sidebarAberta)}>
-        <div className="h-full flex flex-col sm:flex-row chat-area-container">
+        <div className="h-full flex flex-col sm:flex-row chat-area-container relative">
           {/* Sidebar de conversas para mobile e versão desktop */}
           <AnimatePresence>
             {sidebarAberta && (
@@ -386,7 +409,7 @@ Como posso auxiliar você hoje?`,
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: "-100%", opacity: 0 }}
                 transition={{ type: "spring", stiffness: 200, damping: 25 }}
-                className="fixed inset-0 z-40 bg-white dark:bg-law-900 overflow-hidden sm:relative sm:w-full sm:max-w-[280px] border-r border-gray-200 dark:border-law-700 sidebar-animation-container"
+                className="fixed inset-0 sm:absolute sm:inset-auto sm:top-0 sm:bottom-0 sm:left-0 z-40 bg-white dark:bg-law-900 overflow-hidden sm:w-[280px] border-r border-gray-200 dark:border-law-700 sidebar-animation-container"
               >
                 <ConversasSidebar 
                   conversaAtual={conversaAtual}
@@ -400,14 +423,7 @@ Como posso auxiliar você hoje?`,
           </AnimatePresence>
 
           {/* Área principal de chat */}
-          <motion.div 
-            className="flex-grow h-full overflow-hidden flex flex-col relative bg-transparent centered-chat"
-            animate={{ 
-              marginLeft: isMobile ? 0 : sidebarAberta ? "0" : "auto",
-              width: isMobile ? "100%" : sidebarAberta ? "calc(100% - 280px)" : "100%"
-            }}
-            transition={{ type: "spring", stiffness: 200, damping: 25 }}
-          >
+          <div className="flex-grow h-full overflow-hidden flex flex-col relative bg-transparent sm:ml-0">
             {!user && !isLoading && (
               <div className="flex-grow flex flex-col justify-center items-center p-4 text-center">
                 <h1 className="text-2xl sm:text-4xl font-serif text-primary-700 dark:text-primary-300 mb-4">
@@ -430,7 +446,7 @@ Como posso auxiliar você hoje?`,
                 {/* Chat existente */}
                 <div 
                   ref={chatContainerRef}
-                  className="flex-grow overflow-y-auto scrollbar-custom pb-24 pt-4 px-2 sm:px-4 md:px-6 bg-transparent chat-messages-container"
+                  className="flex-grow overflow-y-auto scrollbar-custom pb-4 pt-4 px-2 sm:px-4 md:px-6 bg-transparent chat-messages-container"
                   id="chat-messages"
                 >
                   <motion.div 
@@ -489,7 +505,7 @@ Como posso auxiliar você hoje?`,
                 </div>
                 
                 {/* Área de input - adaptada para versão desktop e mobile */}
-                <div className={`chat-input-container ${isMobile ? 'fixed bottom-0 left-0 right-0' : 'sticky bottom-0'} backdrop-blur-sm bg-transparent dark:bg-transparent ${isMobile ? 'pb-safe' : ''} z-10`}>
+                <div className="chat-input-container">
                   <div className="max-w-3xl mx-auto">
                     <ChatInput 
                       onEnviar={handleEnviarMensagem} 
@@ -499,7 +515,7 @@ Como posso auxiliar você hoje?`,
                 </div>
               </>
             )}
-          </motion.div>
+          </div>
         </div>
       </Layout>
     </>

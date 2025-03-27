@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from '../contexts/AuthContext';
 import Auth from '../components/Auth';
 import AuthLayout from '../components/AuthLayout';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const { user, isLoading } = useAuth();
@@ -31,6 +32,14 @@ export default function LoginPage() {
       subtitle="Entre com sua conta para continuar"
     >
       <Auth />
+      <div className="mt-4 text-center">
+        <Link 
+          href="/landing-nova"
+          className="text-primary-600 dark:text-primary-400 hover:underline text-sm"
+        >
+          Voltar para a página inicial
+        </Link>
+      </div>
     </AuthLayout>
   );
 } 

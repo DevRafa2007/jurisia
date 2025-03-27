@@ -372,9 +372,18 @@ const Auth = () => {
             input: {
               fontSize: '16px',
               padding: '10px 15px',
+              pointerEvents: 'auto',
+              opacity: '1',
             },
             label: {
               fontSize: '14px',
+            },
+            container: {
+              pointerEvents: 'auto',
+            },
+            message: {
+              fontSize: '14px',
+              padding: '10px 15px',
             },
           },
         }}

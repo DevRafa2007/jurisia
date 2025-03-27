@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -9,12 +9,10 @@ html,
 body {
   padding: 0;
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto,
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, Segoe UI, Roboto,
     Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue,
     sans-serif;
   scroll-behavior: smooth;
-  overflow: hidden; /* Impede scroll na página */
-  height: 100vh; /* Força altura total da viewport */
 }
 
 /* Estilos para o tema jurídico */
@@ -25,26 +23,26 @@ body {
   
   html {
     @apply min-h-full;
-    height: 100vh;
-    overflow: hidden;
   }
   
   body {
     @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100;
     min-height: 100vh;
-    height: 100vh;
     position: relative;
-    overflow: hidden;
   }
 
   /* Garante que não há gaps brancos em nenhum lugar */
-  html, body, #__next {
+  #__next {
     @apply min-h-screen;
     display: flex;
     flex-direction: column;
     flex-grow: 1;
-    height: 100vh;
+  }
+  
+  /* Restrições de scroll apenas para páginas específicas */
+  .no-scroll {
     overflow: hidden;
+    height: 100vh;
   }
 
   /* Previne problemas com áreas fixas em telas móveis com barras de navegação dinâmicas */
@@ -73,7 +71,9 @@ body {
   /* Estilos para chat moderno e minimalista */
   .chat-container {
     @apply bg-transparent backdrop-blur-sm;
-    background-image: radial-gradient(circle at center, rgba(225, 235, 245, 0.05) 0%, transparent 70%);
+    background-image: 
+      radial-gradient(circle at 20% 35%, rgba(225, 235, 245, 0.05) 0%, transparent 70%),
+      radial-gradient(circle at 75% 70%, rgba(190, 200, 255, 0.08) 0%, transparent 70%);
     height: calc(100vh - 60px); /* Ajusta altura considerando o header */
     display: flex;
     flex-direction: column;
@@ -124,6 +124,43 @@ body {
   code {
     @apply font-mono text-sm bg-law-100 dark:bg-law-800 py-0.5 px-1 rounded;
   }
+
+  /* Estilização de markdown para mensagens de chat */
+  .markdown h1 {
+    @apply text-xl font-semibold mb-3 mt-1;
+  }
+  
+  .markdown h2 {
+    @apply text-lg font-semibold mb-2 mt-4;
+  }
+  
+  .markdown h3 {
+    @apply text-base font-medium mb-2 mt-3;
+  }
+  
+  .markdown p {
+    @apply mb-3;
+  }
+  
+  .markdown ul {
+    @apply pl-5 mb-3 space-y-1;
+  }
+  
+  .markdown li {
+    @apply list-disc mb-1;
+  }
+  
+  .markdown a {
+    @apply text-primary-600 dark:text-primary-400 hover:underline;
+  }
+  
+  .markdown code {
+    @apply font-mono text-sm px-1.5 py-0.5 rounded-md bg-black/5 dark:bg-white/10;
+  }
+  
+  .markdown pre {
+    @apply p-3 rounded-md bg-gray-100 dark:bg-gray-800 overflow-x-auto my-3;
+  }
 }
 
 /* Estilos para interfaces elegantes tanto para o chat quanto para documentos */
@@ -133,6 +170,18 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background-image: 
+    linear-gradient(to bottom right, rgba(200, 220, 255, 0.03), rgba(50, 100, 200, 0.02)),
+    radial-gradient(circle at 70% 10%, rgba(200, 220, 255, 0.03), transparent 70%),
+    radial-gradient(circle at 30% 80%, rgba(200, 220, 255, 0.03), transparent 60%);
+}
+
+.dark .chat-area-container,
+.dark .documentos-area-container {
+  background-image: 
+    linear-gradient(to bottom right, rgba(60, 80, 200, 0.02), rgba(20, 30, 80, 0.01)),
+    radial-gradient(circle at 70% 10%, rgba(60, 80, 200, 0.015), transparent 70%),
+    radial-gradient(circle at 30% 80%, rgba(60, 80, 200, 0.015), transparent 60%);
 }
 
 .chat-messages-container,
@@ -141,16 +190,132 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
+  padding-bottom: 80px; /* Espaço para o input fixo no celular */
+  scroll-behavior: smooth;
 }
 
 .chat-input-container,
 .documentos-input-container {
-  position: sticky;
+  position: fixed;
   bottom: 0;
+  left: 0;
+  right: 0;
   width: 100%;
-  background-color: transparent;
-  z-index: 10;
+  background: none !important;
+  background-color: transparent !important;
+  backdrop-filter: none !important;
+  z-index: 40;
   padding: 0.75rem 1rem;
+  border-top: none;
+  box-shadow: none !important;
+}
+
+.dark .chat-input-container,
+.dark .documentos-input-container {
+  background: none !important;
+  background-color: transparent !important;
+  backdrop-filter: none !important;
+  border-top: none;
+  box-shadow: none !important;
+}
+
+/* Versão desktop do chat input */
+@media (min-width: 640px) {
+  .chat-input-container,
+  .documentos-input-container {
+    position: sticky;
+    border-top: none;
+    background: none !important;
+    background-color: transparent !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+  }
+  
+  .chat-messages-container,
+  .documentos-content-container {
+    padding-bottom: 0;
+  }
+}
+
+/* Garantir que o toque em smartphones funcione corretamente */
+@media (max-width: 640px) {
+  .chat-messages-container {
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    overflow-y: auto !important;
+  }
+  
+  /* Garante espaço na parte inferior para o input fixo em celulares */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 1rem);
+  }
+  
+  /* Ajusta o padding inferior dependendo do dispositivo */
+  .chat-input-container {
+    padding-bottom: env(safe-area-inset-bottom, 1rem);
+  }
+
+  /* Estilos para cabeçalho fixo em dispositivos móveis */
+  .chat-header-mobile {
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 10;
+    transition: all 0.3s ease;
+  }
+}
+
+/* Estilos para grid patterns e backgrounds */
+.bg-grid-pattern {
+  background-size: 20px 20px;
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+}
+
+.dark .bg-grid-pattern {
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+}
+
+/* Sombras elegantes */
+.shadow-elegant {
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.05),
+    0 2px 4px -1px rgba(0, 0, 0, 0.03),
+    0 -1px 0 0 rgba(0, 0, 0, 0.03);
+}
+
+.dark .shadow-elegant {
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.2),
+    0 2px 4px -1px rgba(0, 0, 0, 0.1),
+    0 -1px 0 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Animações sutis */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes textShimmer {
+  0% { background-position: -100% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-text-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 20%,
+    transparent 40%
+  );
+  background-size: 200% 100%;
+  animation: textShimmer 2s infinite;
 }
 
 /* Garantir centralização mesmo quando a sidebar está fechada */
@@ -552,4 +717,46 @@ body {
 .popover,
 .dropdown-menu {
   z-index: 9999 !important;
+}
+
+/* Melhorias para permitir seleção de texto nas mensagens */
+.select-text {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  cursor: text !important;
+  pointer-events: auto !important;
+}
+
+.message * {
+  pointer-events: auto !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+}
+
+.message div[class*="markdown"] * {
+  pointer-events: auto !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  cursor: text !important;
+}
+
+/* Remover sobreposições que possam interferir na seleção */
+.message::before,
+.message::after,
+.message *::before,
+.message *::after {
+  pointer-events: none !important;
+}
+
+/* Garantir que não haja elementos invisíveis bloqueando a interação com o texto */
+.markdown {
+  position: relative;
+  z-index: 20 !important;
+  pointer-events: auto !important;
 } 
