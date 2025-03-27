@@ -15,6 +15,27 @@ body {
   scroll-behavior: smooth;
 }
 
+/* Estilos para o editor Quill */
+.ql-editor {
+  @apply text-gray-900 dark:text-gray-100;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 1rem;
+}
+
+.ql-snow .ql-editor h1,
+.ql-snow .ql-editor h2,
+.ql-snow .ql-editor h3,
+.ql-snow .ql-editor h4,
+.ql-snow .ql-editor h5,
+.ql-snow .ql-editor h6,
+.ql-snow .ql-editor p,
+.ql-snow .ql-editor ol,
+.ql-snow .ql-editor ul,
+.ql-snow .ql-editor li,
+.ql-snow .ql-editor blockquote {
+  @apply text-gray-900 dark:text-gray-100;
+}
+
 /* Estilos para o tema jurídico */
 @layer base {
   :root {
