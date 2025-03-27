@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
@@ -179,7 +179,7 @@ const CONFIGURACOES_FORMULARIOS: Record<string, ConfiguracaoFormulario> = {
   },
 };
 
-export default function Documentos() {
+export default function DocumentosPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const [tipoDocumentoSelecionado, setTipoDocumentoSelecionado] = useState<string>('');
@@ -203,23 +203,25 @@ export default function Documentos() {
   const [isAnalisandoReferencias, setIsAnalisandoReferencias] = useState(false);
   const [analiseReferencias, setAnaliseReferencias] = useState<string>('');
 
-  // Detectar se é dispositivo móvel
+  // Verificar se é dispositivo móvel
   useEffect(() => {
     const checkIsMobile = () => {
       setIsMobile(window.innerWidth < 768);
-      
-      // Sidebar sempre aberta em desktop, fechada por padrão em mobile
-      setSidebarAberta(window.innerWidth >= 768);
     };
     
-    // Verificar inicialmente
+    // Verifica quando o componente monta
     checkIsMobile();
     
-    // Adicionar listener para redimensionamento
+    // Fecha sidebar em mobile, mantém aberta em desktop
+    setSidebarAberta(window.innerWidth >= 768);
+    
+    // Adiciona listener para quando a janela é redimensionada
     window.addEventListener('resize', checkIsMobile);
     
-    // Limpar listener
-    return () => window.removeEventListener('resize', checkIsMobile);
+    // Limpa o listener quando o componente desmonta
+    return () => {
+      window.removeEventListener('resize', checkIsMobile);
+    };
   }, []);
 
   // Redirecionar para login se não estiver autenticado
@@ -1467,118 +1469,17 @@ ${camposDoc.map(campo => {
   return (
     <Layout title="Gerador de Documentos">
       <Head>
-        <style>{`
-          @media print {
-            body * {
-              visibility: hidden;
-            }
-            .print-content .ql-editor, .print-content .ql-editor * {
-              visibility: visible;
-            }
-            .print-content .ql-editor {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 21cm;
-              height: auto;
-              margin: 0;
-              padding: 2.54cm;
-              box-sizing: border-box;
-              overflow: visible;
-              page-break-inside: avoid;
-            }
-            .ql-toolbar {
-              display: none !important;
-            }
-            @page {
-              size: A4;
-              margin: 0;
-            }
-            html, body {
-              width: 21cm;
-              height: 29.7cm;
-              background-color: white;
-            }
-            .no-print {
+        <title>JurisIA - Editor de Documentos</title>
+        <meta name="description" content="Editor de documentos jurídicos com inteligência artificial" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+        <style jsx global>{`
+          .no-print {
+            @media print {
               display: none !important;
             }
           }
-          
-          /* Estilos Quill personalizados */
-          .ql-editor {
-            font-family: 'Times New Roman', Times, serif;
-            font-size: 12pt;
-            line-height: 1.5;
-            padding: 1.5cm;
-            text-align: justify;
-          }
-          
-          .ql-editor p, .ql-editor ol, .ql-editor ul, .ql-editor pre, .ql-editor blockquote {
-            margin-bottom: 1em;
-          }
-          
-          /* Estilos para impressão */
-          .print-content .ql-editor {
-            height: auto !important;
-            min-height: 29.7cm;
-            box-shadow: none;
-          }
-          
-          .ql-snow .ql-toolbar {
-            border-top-left-radius: 4px;
-            border-top-right-radius: 4px;
-            background-color: #f9fafb;
-          }
-          
-          .dark .ql-snow .ql-toolbar {
-            background-color: #1e293b;
-            border-color: #334155;
-          }
-          
-          .dark .ql-snow .ql-editor {
-            color: black; /* Mantém o texto preto mesmo no modo escuro */
-          }
-          
-          .dark .ql-snow.ql-container {
-            border-color: #334155;
-          }
-          
-          /* Ajusta altura do container para incluir a barra de ferramentas */
-          .ql-container {
-            min-height: calc(29.7cm - 42px);
-          }
-          
-          /* Melhorias para dispositivos móveis */
-          @media screen and (max-width: 768px) {
-            .ql-editor {
-              padding: 1cm;
-              overflow-y: auto !important;
-              -webkit-overflow-scrolling: touch !important;
-              touch-action: auto !important;
-            }
-            
-            .print-content {
-              overflow-y: auto !important;
-              -webkit-overflow-scrolling: touch !important;
-              touch-action: auto !important;
-              max-height: calc(100vh - 200px) !important;
-            }
-            
-            .ql-container {
-              min-height: auto !important;
-              height: auto !important;
-              overflow: visible !important;
-            }
-            
-            #documento-para-impressao {
-              min-height: auto !important;
-              overflow: visible !important;
-            }
-            
-            .bg-white.shadow-lg {
-              overflow: visible !important;
-              max-height: none !important;
-            }
+          .documentos-content-container {
+            overflow-y: auto !important;
           }
         `}</style>
       </Head>
@@ -1603,6 +1504,25 @@ ${camposDoc.map(campo => {
               isMobile={isMobile}
             />
           </div>
+        )}
+        
+        {/* Botão flutuante para abrir a sidebar em dispositivos móveis */}
+        {isMobile && !sidebarAberta && (
+          <button
+            onClick={() => setSidebarAberta(true)}
+            className="fixed left-4 bottom-4 w-12 h-12 rounded-full bg-primary-600 text-white shadow-lg flex items-center justify-center z-30 no-print"
+            aria-label="Abrir lista de documentos"
+          >
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              className="h-6 w-6" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </button>
         )}
         
         {/* Conteúdo principal */}
