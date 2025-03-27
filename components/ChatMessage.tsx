@@ -93,12 +93,12 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ conteudo, isUsuario }) => {
           isUsuario 
             ? 'border-primary-400/30' 
             : 'border-gray-100 dark:border-gray-700/50'
-        } px-5 py-4 relative`}
+        } px-5 py-4 relative group`}
         >
-          {/* Botão de copiar fixo (sem hover) */}
+          {/* Botão de copiar que só aparece no hover */}
           <button 
             onClick={copyToClipboard}
-            className={`absolute top-2 ${isUsuario ? 'left-2' : 'right-2'} p-1.5 rounded-full bg-white/20 dark:bg-gray-700/20 hover:bg-white/40 dark:hover:bg-gray-700/40 text-white/70 dark:text-gray-300 z-[30]`}
+            className={`absolute top-2 ${isUsuario ? 'left-2' : 'right-2'} p-1.5 rounded-full bg-white/20 dark:bg-gray-700/20 hover:bg-white/40 dark:hover:bg-gray-700/40 text-white/70 dark:text-gray-300 z-[30] opacity-0 group-hover:opacity-100 transition-opacity duration-200`}
             title={copied ? "Copiado!" : "Copiar texto"}
           >
             {copied ? (
