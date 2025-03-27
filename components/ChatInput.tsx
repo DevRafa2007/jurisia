@@ -96,6 +96,25 @@ const ChatInput: React.FC<ChatInputProps> = ({ onEnviar, isCarregando }) => {
             setMostrarSugestoes(e.target.value === '');
           }}
           onKeyDown={handleKeyDown}
+          onFocus={() => {
+            // Em dispositivos móveis, quando o input recebe foco (teclado abre)
+            if (typeof window !== 'undefined' && window.innerWidth <= 640) {
+              // Forçar o header a permanecer visível
+              window.scrollTo(0, 0);
+              
+              // Garantir que o scroll da área de mensagens seja ajustado
+              const chatContainer = document.getElementById('chat-messages');
+              if (chatContainer) {
+                // Ajustar scroll para que o usuário possa ver a última mensagem e o input
+                const lastMessage = chatContainer.querySelector('.message:last-child');
+                if (lastMessage) {
+                  lastMessage.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                } else {
+                  chatContainer.scrollTop = chatContainer.scrollHeight;
+                }
+              }
+            }
+          }}
           placeholder="Pergunte alguma coisa"
           className="w-full py-3 px-4 pr-10 text-sm sm:text-base bg-transparent text-gray-900 dark:text-gray-200 focus:ring-0 focus:outline-none resize-none min-h-[44px] max-h-[120px] overflow-y-auto rounded-xl"
           disabled={isCarregando}

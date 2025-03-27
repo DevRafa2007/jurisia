@@ -237,33 +237,54 @@ body {
   }
 }
 
-/* Garantir que o toque em smartphones funcione corretamente */
+/* Para mobile: garantir que o header fique sempre visível e o sidebar sobre o input */
 @media (max-width: 640px) {
-  .chat-messages-container {
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-y;
-    overflow-y: auto !important;
-  }
-  
-  /* Garante espaço na parte inferior para o input fixo em celulares */
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom, 1rem);
-  }
-  
-  /* Ajusta o padding inferior dependendo do dispositivo */
-  .chat-input-container {
-    padding-bottom: env(safe-area-inset-bottom, 1rem);
-  }
-
-  /* Estilos para cabeçalho fixo em dispositivos móveis */
-  .chat-header-mobile {
-    position: sticky;
+  /* Cabeçalho fixo - sempre visível no topo */
+  header {
+    position: fixed !important;
     top: 0;
     left: 0;
     right: 0;
+    z-index: 100 !important;
     width: 100%;
-    z-index: 10;
     transition: all 0.3s ease;
+  }
+  
+  /* Garantir que o conteúdo principal não fique escondido sob o header fixo */
+  main {
+    padding-top: 56px !important; /* Ajustar conforme altura do header */
+    height: calc(100vh - 56px) !important;
+    overflow: hidden;
+  }
+  
+  /* Sidebar deve ficar sobre o input de chat */
+  .sidebar-animation-container {
+    z-index: 50 !important;
+  }
+  
+  /* Chat messages container com altura ajustada e scroll próprio */
+  .chat-messages-container {
+    height: calc(100vh - 120px) !important; /* Altura total - header - input aproximados */
+    padding-bottom: 60px;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Evitar scroll da página inteira em mobile */
+  body.no-scroll {
+    position: fixed;
+    width: 100%;
+    overflow: hidden !important;
+  }
+  
+  /* Impedir que o input cause scroll da página */
+  .chat-input-container {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    transform: translateZ(0);
+    z-index: 40 !important;
   }
 }
 

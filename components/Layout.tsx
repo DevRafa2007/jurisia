@@ -125,7 +125,7 @@ const Layout: React.FC<LayoutProps> = ({
       <div className="absolute inset-0 bg-grid-pattern opacity-5 pointer-events-none"></div>
 
       {router.pathname !== '/landing-nova' && router.pathname !== '/login' && router.pathname !== '/cadastro' && (
-        <header className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm border-b border-gray-200/40 dark:border-gray-800/40 py-2 px-4 flex items-center justify-between sticky top-0 left-0 right-0 z-50">
+        <header className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm border-b border-gray-200/40 dark:border-gray-800/40 py-2 px-4 flex items-center justify-between sticky top-0 left-0 right-0 z-[100] sm:z-50">
           <div className="flex items-center gap-2">
             {/* Botão de abrir/fechar sidebar (somente na página inicial) ou botão de voltar */}
             {router.pathname === '/' && toggleSidebar ? (

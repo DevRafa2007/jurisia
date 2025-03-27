@@ -98,10 +98,29 @@ export default function Home() {
       document.documentElement.classList.add('no-scroll');
       document.body.classList.add('no-scroll');
       
+      // Tratamento específico para lidar com a abertura do teclado virtual em mobile
+      function handleResize() {
+        // Se estiver em um dispositivo móvel e o teclado estiver aberto (altura da janela diminui)
+        if (window.innerWidth <= 640) {
+          // Evitar scroll automático que esconderia o header
+          window.scrollTo(0, 0);
+          
+          // Manter o header visível
+          const header = document.querySelector('header');
+          if (header) {
+            header.style.top = '0';
+          }
+        }
+      }
+      
+      // Atualizar quando a orientação mudar ou o teclado abrir/fechar
+      window.addEventListener('resize', handleResize);
+      
       return () => {
         // Remover classe ao desmontar
         document.documentElement.classList.remove('no-scroll');
         document.body.classList.remove('no-scroll');
+        window.removeEventListener('resize', handleResize);
       };
     }
   }, []);
@@ -409,7 +428,7 @@ Como posso auxiliar você hoje?`,
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: "-100%", opacity: 0 }}
                 transition={{ type: "spring", stiffness: 200, damping: 25 }}
-                className="fixed inset-0 sm:absolute sm:inset-auto sm:top-0 sm:bottom-0 sm:left-0 z-40 bg-white dark:bg-law-900 overflow-hidden sm:w-[280px] border-r border-gray-200 dark:border-law-700 sidebar-animation-container"
+                className="fixed inset-0 sm:absolute sm:inset-auto sm:top-0 sm:bottom-0 sm:left-0 z-50 bg-white dark:bg-law-900 overflow-hidden sm:w-[280px] border-r border-gray-200 dark:border-law-700 sidebar-animation-container"
               >
                 <ConversasSidebar 
                   conversaAtual={conversaAtual}
