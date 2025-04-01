@@ -1792,13 +1792,55 @@ ${camposDoc.map(campo => {
     </motion.div>
   );
 
+  // Funções para manipulação de texto
+  const substituirTextoEditor = (inicio: number, fim: number, novoTexto: string): boolean => {
+    try {
+      const editor = editorRef.current?.getEditor();
+      if (editor) {
+        editor.deleteText(inicio, fim - inicio);
+        editor.insertText(inicio, novoTexto);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Erro ao substituir texto no editor:', error);
+      return false;
+    }
+  };
+
+  const moverConteudoEditor = (origem: {inicio: number, fim: number}, destino: number): boolean => {
+    try {
+      const editor = editorRef.current?.getEditor();
+      if (editor) {
+        // Obter o texto a ser movido
+        const textoMover = editor.getText(origem.inicio, origem.fim - origem.inicio);
+        
+        // Ajustar o índice de destino se estiver após a origem
+        const destinoAjustado = destino > origem.inicio ? destino - (origem.fim - origem.inicio) : destino;
+        
+        // Inserir no destino
+        editor.insertText(destinoAjustado, textoMover);
+        
+        // Remover da origem (ajustar índices se necessário)
+        const ajuste = destino < origem.inicio ? textoMover.length : 0;
+        editor.deleteText(origem.inicio + ajuste, origem.fim - origem.inicio);
+        
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Erro ao mover conteúdo no editor:', error);
+      return false;
+    }
+  };
+
   // Função para renderizar o editor
   const renderEditor = () => (
-    <motion.div 
-      className="flex-1 flex flex-col"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+    <motion.div
+      className="flex-1 flex flex-col relative mt-4 sm:mt-6 overflow-hidden"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 260, damping: 20 }}
     >
       <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 flex items-center">
         <button
@@ -1967,10 +2009,9 @@ ${camposDoc.map(campo => {
         </div>
       </div>
       
-      <div className="flex-1 bg-gray-100 dark:bg-gray-800 overflow-auto">
-        <div className="max-w-4xl mx-auto my-6 print-content">
-          <div className="bg-white dark:bg-white shadow-lg rounded-lg overflow-visible">
-            {/* Editor de texto */}
+      <div className="flex-1 overflow-auto">
+        <div className="relative h-full">
+          <div className="flex-1 h-full print-content" id="documento-para-impressao">
             <ReactQuill
               ref={handleEditorRef}
               value={documentoGerado}
@@ -2045,12 +2086,15 @@ ${camposDoc.map(campo => {
         )}
       </AnimatePresence>
       
-      {/* Assistente do editor - remover a condição para garantir que seja sempre renderizado */}
+      {/* Assistente do editor - passar a referência do editor */}
       <EditorAssistant
         documentoId={documentoAtual || 'temp_doc_id'}
         tipoDocumento={tipoDocumentoSelecionado}
         conteudoAtual={documentoGerado}
         onAplicarSugestao={aplicarSugestaoAssistente}
+        editorRef={editorRef} // Passar a referência
+        onSubstituirTexto={substituirTextoEditor}
+        onMoverConteudo={moverConteudoEditor}
       />
     </motion.div>
   );

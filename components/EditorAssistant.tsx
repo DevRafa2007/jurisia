@@ -6,6 +6,8 @@ import DocumentFeedback from './DocumentFeedback';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import { CheckIcon } from '@heroicons/react/24/solid';
+import { DocumentoService } from '../services/DocumentoService';
+import { v4 as uuidv4 } from 'uuid';
 
 interface Mensagem {
   id?: string;
@@ -23,13 +25,21 @@ interface EditorAssistantProps {
   tipoDocumento: string;
   conteudoAtual: string;
   onAplicarSugestao?: (sugestao: string, selecao?: { index: number, length: number }) => void;
+  
+  // Novas props para manipulação avançada
+  editorRef?: React.RefObject<any>; // Referência direta ao editor
+  onSubstituirTexto?: (inicio: number, fim: number, novoTexto: string) => boolean;
+  onMoverConteudo?: (origem: {inicio: number, fim: number}, destino: number) => boolean;
 }
 
 const EditorAssistant: React.FC<EditorAssistantProps> = ({ 
   documentoId, 
   tipoDocumento, 
   conteudoAtual,
-  onAplicarSugestao 
+  onAplicarSugestao,
+  editorRef, // Nova prop
+  onSubstituirTexto,
+  onMoverConteudo
 }) => {
   // Estados
   const [isVisible, setIsVisible] = useState(false);
@@ -46,6 +56,18 @@ const EditorAssistant: React.FC<EditorAssistantProps> = ({
   const [isTyping, setIsTyping] = useState(false);
   const [mostrarSugestaoEditor, setMostrarSugestaoEditor] = useState(false);
   const [sugestaoPendente, setSugestaoPendente] = useState('');
+
+  // Adicionar estado para o serviço de documento
+  const [documentoService, setDocumentoService] = useState<DocumentoService | null>(null);
+  
+  // Inicializar o serviço quando a referência do editor estiver disponível
+  useEffect(() => {
+    if (editorRef?.current && !documentoService) {
+      const service = new DocumentoService(editorRef);
+      setDocumentoService(service);
+      console.log('DocumentoService inicializado no EditorAssistant');
+    }
+  }, [editorRef?.current]);
 
   // Obter ID do usuário ao montar o componente
   useEffect(() => {
@@ -153,119 +175,362 @@ const EditorAssistant: React.FC<EditorAssistantProps> = ({
     }
   };
   
-  // Enviar mensagem ao assistente
+  // Função para processar comandos avançados
+  const processarComandoAvancado = async (comando: string) => {
+    if (!documentoService) return false;
+    
+    // Verificar padrões de comando para substituição
+    const regexSubstituir = /substituir?\s+"([^"]+)"\s+por\s+"([^"]+)"/i;
+    if (regexSubstituir.test(comando)) {
+      try {
+        const match = comando.match(regexSubstituir);
+        if (match && match.length >= 3) {
+          const textoAntigo = match[1];
+          const textoNovo = match[2];
+          
+          // Buscar todas as ocorrências do texto
+          const ocorrencias = documentoService.buscarTexto(textoAntigo);
+          
+          if (ocorrencias.length === 0) {
+            adicionarMensagem({
+              id: uuidv4(),
+              conteudo: `Não encontrei "${textoAntigo}" no documento.`,
+              isUsuario: false,
+              timestamp: new Date().toISOString()
+            });
+            return true;
+          }
+          
+          // Se houver apenas uma ocorrência, substituir diretamente
+          if (ocorrencias.length === 1) {
+            const ocorrencia = ocorrencias[0];
+            const sucesso = documentoService.substituirTexto(
+              ocorrencia.indice, 
+              ocorrencia.indice + ocorrencia.comprimento, 
+              textoNovo
+            );
+            
+            if (sucesso) {
+              adicionarMensagem({
+                id: uuidv4(),
+                conteudo: `Substituí "${textoAntigo}" por "${textoNovo}" com sucesso.`,
+                isUsuario: false,
+                timestamp: new Date().toISOString()
+              });
+            } else {
+              adicionarMensagem({
+                id: uuidv4(),
+                conteudo: `Encontrei o texto, mas houve um erro ao fazer a substituição.`,
+                isUsuario: false,
+                timestamp: new Date().toISOString()
+              });
+            }
+            return true;
+          }
+          
+          // Se houver múltiplas ocorrências, perguntar qual substituir
+          let mensagem = `Encontrei ${ocorrencias.length} ocorrências de "${textoAntigo}". Qual você deseja substituir?\n\n`;
+          
+          ocorrencias.forEach((ocorrencia, index) => {
+            // Obter contexto em torno da ocorrência
+            const textoCompleto = documentoService.getConteudoTexto();
+            const inicio = Math.max(0, ocorrencia.indice - 20);
+            const fim = Math.min(textoCompleto.length, ocorrencia.indice + ocorrencia.comprimento + 20);
+            const contexto = textoCompleto.substring(inicio, fim);
+            
+            // Destacar a ocorrência no contexto
+            const ocorrenciaIndex = ocorrencia.indice - inicio;
+            const parteAntes = contexto.substring(0, ocorrenciaIndex);
+            const parteMeio = contexto.substring(ocorrenciaIndex, ocorrenciaIndex + ocorrencia.comprimento);
+            const parteDepois = contexto.substring(ocorrenciaIndex + ocorrencia.comprimento);
+            
+            mensagem += `${index + 1}. "...${parteAntes}**${parteMeio}**${parteDepois}..."\n\n`;
+          });
+          
+          mensagem += `Responda com o número da ocorrência que deseja substituir, ou "todas" para substituir todas.`;
+          
+          adicionarMensagem({
+            id: uuidv4(),
+            conteudo: mensagem,
+            isUsuario: false,
+            timestamp: new Date().toISOString()
+          });
+          
+          // Armazenar o contexto da substituição para continuar depois
+          setContextoOperacao({
+            tipo: 'substituir',
+            dados: {
+              ocorrencias,
+              textoAntigo,
+              textoNovo
+            }
+          });
+          
+          return true;
+        }
+      } catch (error) {
+        console.error('Erro ao processar comando de substituição:', error);
+      }
+    }
+    
+    // Verificar padrões de comando para mover texto
+    const regexMover = /mover?\s+(?:o\s+)?(?:parágrafo|trecho|seção)\s+"([^"]+)"\s+(?:para|após|antes)\s+"([^"]+)"/i;
+    if (regexMover.test(comando)) {
+      try {
+        const match = comando.match(regexMover);
+        if (match && match.length >= 3) {
+          const trechoMover = match[1];
+          const referencia = match[2];
+          
+          // Buscar o trecho a ser movido
+          const ocorrenciasOrigem = documentoService.buscarTexto(trechoMover);
+          
+          if (ocorrenciasOrigem.length === 0) {
+            adicionarMensagem({
+              id: uuidv4(),
+              conteudo: `Não encontrei o trecho "${trechoMover}" no documento.`,
+              isUsuario: false,
+              timestamp: new Date().toISOString()
+            });
+            return true;
+          }
+          
+          // Buscar a referência de destino
+          const ocorrenciasDestino = documentoService.buscarTexto(referencia);
+          
+          if (ocorrenciasDestino.length === 0) {
+            adicionarMensagem({
+              id: uuidv4(),
+              conteudo: `Não encontrei a referência "${referencia}" no documento.`,
+              isUsuario: false,
+              timestamp: new Date().toISOString()
+            });
+            return true;
+          }
+          
+          // Se houver apenas uma ocorrência de cada, mover diretamente
+          if (ocorrenciasOrigem.length === 1 && ocorrenciasDestino.length === 1) {
+            const origem = ocorrenciasOrigem[0];
+            const destino = ocorrenciasDestino[0];
+            
+            // Calcular a posição após a referência
+            const posicaoDestino = destino.indice + destino.comprimento;
+            
+            const sucesso = documentoService.moverConteudo(
+              { inicio: origem.indice, fim: origem.indice + origem.comprimento },
+              posicaoDestino
+            );
+            
+            if (sucesso) {
+              adicionarMensagem({
+                id: uuidv4(),
+                conteudo: `Movi o trecho com sucesso.`,
+                isUsuario: false,
+                timestamp: new Date().toISOString()
+              });
+            } else {
+              adicionarMensagem({
+                id: uuidv4(),
+                conteudo: `Encontrei os trechos, mas houve um erro ao fazer a movimentação.`,
+                isUsuario: false,
+                timestamp: new Date().toISOString()
+              });
+            }
+            return true;
+          }
+          
+          // Se houver múltiplas ocorrências, perguntar qual usar
+          let mensagem = `Encontrei ${ocorrenciasOrigem.length} ocorrências do trecho a mover e ${ocorrenciasDestino.length} ocorrências da referência. Preciso de mais informações.\n\n`;
+          
+          mensagem += `Por favor, especifique com mais detalhes qual trecho deseja mover e para onde.`;
+          
+          adicionarMensagem({
+            id: uuidv4(),
+            conteudo: mensagem,
+            isUsuario: false,
+            timestamp: new Date().toISOString()
+          });
+          
+          return true;
+        }
+      } catch (error) {
+        console.error('Erro ao processar comando de mover:', error);
+      }
+    }
+    
+    return false;
+  };
+  
+  // Estado para armazenar contexto de operações multi-passo
+  const [contextoOperacao, setContextoOperacao] = useState<{
+    tipo: 'substituir' | 'mover' | null;
+    dados: any;
+  } | null>(null);
+  
+  // Modificar a função enviarMensagem para processar comandos avançados
   const enviarMensagem = async () => {
     if (!inputMensagem.trim() || isAnalisando) return;
     
     // Adicionar mensagem do usuário
-    const mensagemUsuario: Mensagem = {
-      id: 'user_' + Date.now(),
+    const mensagemUsuario = {
+      id: uuidv4(),
       conteudo: inputMensagem,
       isUsuario: true,
-      timestamp: new Date()
+      timestamp: new Date().toISOString()
     };
+    adicionarMensagem(mensagemUsuario);
     
-    setMensagens(prev => [...prev, mensagemUsuario]);
+    // Limpar o input
     setInputMensagem('');
+    
+    // Se estamos no meio de uma operação contextual
+    if (contextoOperacao) {
+      if (contextoOperacao.tipo === 'substituir') {
+        const { ocorrencias, textoAntigo, textoNovo } = contextoOperacao.dados;
+        
+        // Tentar interpretar a resposta como um número ou "todas"
+        if (inputMensagem.toLowerCase() === 'todas' || inputMensagem.toLowerCase() === 'todos') {
+          // Substituir todas as ocorrências
+          let sucesso = true;
+          let contador = 0;
+          
+          // Substituir de trás para frente para evitar problemas com índices
+          for (let i = ocorrencias.length - 1; i >= 0; i--) {
+            const ocorrencia = ocorrencias[i];
+            const resultado = documentoService?.substituirTexto(
+              ocorrencia.indice,
+              ocorrencia.indice + ocorrencia.comprimento,
+              textoNovo
+            );
+            
+            if (resultado) contador++;
+            sucesso = sucesso && resultado;
+          }
+          
+          if (sucesso) {
+            adicionarMensagem({
+              id: uuidv4(),
+              conteudo: `Substituí ${contador} ocorrências de "${textoAntigo}" por "${textoNovo}" com sucesso.`,
+              isUsuario: false,
+              timestamp: new Date().toISOString()
+            });
+          } else {
+            adicionarMensagem({
+              id: uuidv4(),
+              conteudo: `Tentei substituir todas as ocorrências, mas algumas falhas ocorreram. ${contador} substituições foram realizadas.`,
+              isUsuario: false,
+              timestamp: new Date().toISOString()
+            });
+          }
+        } else {
+          // Tentar interpretar como um número
+          const indice = parseInt(inputMensagem) - 1; // Ajustar para índice base-0
+          
+          if (isNaN(indice) || indice < 0 || indice >= ocorrencias.length) {
+            adicionarMensagem({
+              id: uuidv4(),
+              conteudo: `Não entendi qual ocorrência você deseja substituir. Por favor, responda com um número entre 1 e ${ocorrencias.length}, ou "todas".`,
+              isUsuario: false,
+              timestamp: new Date().toISOString()
+            });
+          } else {
+            // Substituir a ocorrência específica
+            const ocorrencia = ocorrencias[indice];
+            const sucesso = documentoService?.substituirTexto(
+              ocorrencia.indice,
+              ocorrencia.indice + ocorrencia.comprimento,
+              textoNovo
+            );
+            
+            if (sucesso) {
+              adicionarMensagem({
+                id: uuidv4(),
+                conteudo: `Substituí a ocorrência ${indice + 1} de "${textoAntigo}" por "${textoNovo}" com sucesso.`,
+                isUsuario: false,
+                timestamp: new Date().toISOString()
+              });
+            } else {
+              adicionarMensagem({
+                id: uuidv4(),
+                conteudo: `Houve um erro ao substituir a ocorrência ${indice + 1}. Por favor, tente novamente ou use outro método.`,
+                isUsuario: false,
+                timestamp: new Date().toISOString()
+              });
+            }
+          }
+        }
+        
+        // Limpar o contexto após processar
+        setContextoOperacao(null);
+        return;
+      }
+      
+      // Outros tipos de operações contextuais podem ser processados aqui
+    }
+    
+    // Verificar se é um comando de edição avançada
+    const comandosPossiveis = [
+      'substituir', 'mover', 'inserir após', 'remover', 'formatar'
+    ];
+    
+    const podeSerComandoAvancado = comandosPossiveis.some(cmd => 
+      inputMensagem.toLowerCase().includes(cmd)
+    );
+    
+    if (podeSerComandoAvancado && documentoService) {
+      const foiProcessado = await processarComandoAvancado(inputMensagem);
+      if (foiProcessado) {
+        // Comando foi processado como edição avançada
+        return;
+      }
+    }
+    
+    // Se não foi um comando avançado, continuar com o processamento normal
+    // ... código existente para processar mensagens normais ...
+    
     setIsAnalisando(true);
     setIsTyping(true);
     
     try {
-      // Criar histórico para o prompt
-      const historico = mensagens
-        .slice(-6) // Últimas 6 mensagens para manter o contexto
-        .map(msg => ({
-          role: msg.isUsuario ? 'user' : 'assistant',
-          content: msg.conteudo
-        }));
-      
-      // Verificar se a mensagem é um pedido para editar o documento
-      const podeSerPedidoDeEdicao = 
-        inputMensagem.toLowerCase().includes('editar') || 
-        inputMensagem.toLowerCase().includes('modificar') || 
-        inputMensagem.toLowerCase().includes('alterar') || 
-        inputMensagem.toLowerCase().includes('escrever') ||
-        inputMensagem.toLowerCase().includes('corrigir') ||
-        inputMensagem.toLowerCase().includes('melhorar') ||
-        inputMensagem.toLowerCase().includes('revisar');
-      
-      // Se for um pedido de edição, incluir todo o conteúdo do documento
-      const incluirDocumentoCompleto = podeSerPedidoDeEdicao;
-      
-      // Chamar API do assistente
-      const { data } = await axios.post('/api/documento-assistente', {
-        operacao: 'analisar',
-        texto: inputMensagem,
+      const mensagemAssistente = await enviarMensagemAoAssistente(
+        mensagemUsuario.conteudo, 
+        documentoId, 
         tipoDocumento,
-        documentoId,
-        usuarioId,
-        dadosContexto: {
-          historico: historico,
-          tipoDocumento,
-          conteudoAtual: incluirDocumentoCompleto ? conteudoAtual : conteudoAtual.substring(0, 1000), // Enviar conteúdo completo ou parcial dependendo do contexto
-          pedidoDeEdicao: podeSerPedidoDeEdicao
-        }
-      });
-      
-      // Adicionar resposta do assistente
-      const interacaoId = await salvarInteracaoDocumento(
-        'pergunta', 
-        inputMensagem, 
-        data.resposta, 
-        {
-          modeloUsado: data.modeloUsado,
-          tokens: data.tokens,
-          referenciasJuridicas: data.referenciasJuridicas
-        }
+        textoSelecionado
       );
       
-      const mensagemAssistente: Mensagem = {
-        id: interacaoId || 'assistant_' + Date.now(),
-        conteudo: data.resposta,
+      const novaMensagem = {
+        id: uuidv4(),
+        conteudo: mensagemAssistente.texto,
         isUsuario: false,
-        timestamp: new Date(),
-        metadata: {
-          modeloUsado: data.modeloUsado,
-          tokens: data.tokens,
-          referenciasJuridicas: data.referenciasJuridicas
-        }
+        timestamp: new Date().toISOString(),
+        foiUtil: null,
+        avaliacao: null
       };
       
-      // Verificar se a resposta contém sugestões de edição explícitas
-      // Procurar por padrões como:
-      // - "Sugiro alterar..."
-      // - "Você pode editar..." 
-      // - Blocos de código ou texto entre backticks, aspas ou com formatação específica
-      if (podeSerPedidoDeEdicao) {
-        // Tentar extrair um trecho específico que poderia ser uma sugestão de edição
-        const sugestoes = extrairSugestoesDeEdicao(data.resposta);
-        
-        if (sugestoes.length > 0) {
-          // Se encontrou sugestões, mostrar botão para aplicar
-          setSugestaoPendente(sugestoes[0]);
-          setMostrarSugestaoEditor(true);
-        }
+      adicionarMensagem(novaMensagem);
+      
+      // Verificar se a resposta contém uma sugestão e armazená-la
+      if (
+        mensagemAssistente.texto.includes('sugestão') || 
+        mensagemAssistente.texto.includes('correção') ||
+        mensagemAssistente.texto.includes('trecho sugerido')
+      ) {
+        setSugestaoPendente(mensagemAssistente.texto);
+        setMostrarSugestaoEditor(true);
       }
-      
-      setMensagens(prev => [...prev, mensagemAssistente]);
     } catch (error) {
-      console.error('Erro ao processar mensagem:', error);
-      toast.error('Não foi possível processar sua solicitação. Tente novamente mais tarde.');
+      console.error('Erro ao enviar mensagem:', error);
       
-      // Adicionar mensagem de erro
-      const mensagemErro: Mensagem = {
-        id: 'error_' + Date.now(),
-        conteudo: "Desculpe, não foi possível processar sua solicitação. Por favor, tente novamente mais tarde.",
+      adicionarMensagem({
+        id: uuidv4(),
+        conteudo: "Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.",
         isUsuario: false,
-        timestamp: new Date()
-      };
-      
-      setMensagens(prev => [...prev, mensagemErro]);
+        timestamp: new Date().toISOString()
+      });
     } finally {
       setIsAnalisando(false);
       setIsTyping(false);
-      setTextoSelecionado('');
-      setPosicaoSelecao(null);
     }
   };
 
@@ -645,6 +910,31 @@ const EditorAssistant: React.FC<EditorAssistantProps> = ({
     );
   };
 
+  // Adicionar seção de comandos rápidos no componente de chat
+  const renderizarComandosRapidos = () => {
+    return (
+      <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-3">
+        <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+          Comandos avançados:
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setInputMensagem('substituir "texto antigo" por "texto novo"')}
+            className="text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 py-1 px-2 rounded text-gray-700 dark:text-gray-300"
+          >
+            Substituir texto
+          </button>
+          <button
+            onClick={() => setInputMensagem('mover parágrafo "início do parágrafo" para após "referência"')}
+            className="text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 py-1 px-2 rounded text-gray-700 dark:text-gray-300"
+          >
+            Mover conteúdo
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   // Renderizar o componente
   return (
     <>
@@ -778,6 +1068,9 @@ const EditorAssistant: React.FC<EditorAssistantProps> = ({
                 <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex justify-between items-center">
                   <span>Pressione Enter para enviar, Shift+Enter para nova linha</span>
                 </div>
+                
+                {/* Adicionar a seção de comandos rápidos */}
+                {renderizarComandosRapidos()}
               </div>
             </motion.div>
           )}
