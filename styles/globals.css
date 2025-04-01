@@ -19,7 +19,33 @@ body {
 .ql-editor {
   @apply text-gray-900 dark:text-gray-100;
   font-family: 'Times New Roman', Times, serif;
-  font-size: 1rem;
+  font-size: 12pt;
+  line-height: 1.5;
+  padding: 1.5cm;
+  text-align: justify;
+  background-color: white !important;
+  position: relative;
+  z-index: 30 !important;
+}
+
+.ql-container {
+  background-color: white !important;
+  position: relative;
+  z-index: 25 !important;
+  min-height: calc(29.7cm - 42px);
+}
+
+.ql-snow .ql-toolbar {
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+  background-color: #f9fafb !important;
+  position: relative;
+  z-index: 20 !important;
+}
+
+.dark .ql-snow .ql-toolbar {
+  background-color: #1e293b !important;
+  border-color: #334155;
 }
 
 .ql-snow .ql-editor h1,

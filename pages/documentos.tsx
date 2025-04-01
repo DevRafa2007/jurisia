@@ -1792,6 +1792,48 @@ ${camposDoc.map(campo => {
     </motion.div>
   );
 
+  // Funções para manipulação de texto
+  const substituirTextoEditor = (inicio: number, fim: number, novoTexto: string): boolean => {
+    try {
+      const editor = editorRef.current?.getEditor();
+      if (editor) {
+        editor.deleteText(inicio, fim - inicio);
+        editor.insertText(inicio, novoTexto);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Erro ao substituir texto no editor:', error);
+      return false;
+    }
+  };
+
+  const moverConteudoEditor = (origem: {inicio: number, fim: number}, destino: number): boolean => {
+    try {
+      const editor = editorRef.current?.getEditor();
+      if (editor) {
+        // Obter o texto a ser movido
+        const textoMover = editor.getText(origem.inicio, origem.fim - origem.inicio);
+        
+        // Ajustar o índice de destino se estiver após a origem
+        const destinoAjustado = destino > origem.inicio ? destino - (origem.fim - origem.inicio) : destino;
+        
+        // Inserir no destino
+        editor.insertText(destinoAjustado, textoMover);
+        
+        // Remover da origem (ajustar índices se necessário)
+        const ajuste = destino < origem.inicio ? textoMover.length : 0;
+        editor.deleteText(origem.inicio + ajuste, origem.fim - origem.inicio);
+        
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Erro ao mover conteúdo no editor:', error);
+      return false;
+    }
+  };
+
   // Modificar o renderEditor para corrigir a visibilidade
   const renderEditor = () => {
     return (
