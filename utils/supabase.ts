@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import logger from './logger';
 
 // Declaração de tipo para resolver o erro "Cannot find name 'process'"
 declare global {
@@ -19,14 +20,19 @@ const isBrowser = typeof window !== 'undefined';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-// Verificar se as chaves foram fornecidas apenas em ambiente de desenvolvimento
-if (isBrowser && process.env.NODE_ENV === 'development') {
-  if (!supabaseUrl) {
-    console.error('Supabase URL não definida. Configure a variável de ambiente NEXT_PUBLIC_SUPABASE_URL.');
+// Verificar se as chaves foram fornecidas
+if (!supabaseUrl || !supabaseAnonKey) {
+  const errorMessage = 'Variáveis de ambiente do Supabase não definidas. Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY no arquivo .env.local';
+  
+  // Log do erro
+  console.error(errorMessage);
+  if (typeof logger !== 'undefined' && logger.error) {
+    logger.error(errorMessage);
   }
   
-  if (!supabaseAnonKey) {
-    console.error('Supabase chave anônima não definida. Configure a variável de ambiente NEXT_PUBLIC_SUPABASE_ANON_KEY.');
+  // Também alertar em ambiente de desenvolvimento
+  if (isBrowser && process.env.NODE_ENV === 'development') {
+    console.warn('⚠️ Inicialização do Supabase falhou: variáveis de ambiente não configuradas');
   }
 }
 
@@ -72,9 +78,12 @@ export interface Documento {
   favorito?: boolean;
 }
 
-// Criar uma única instância do cliente Supabase
-export const supabase = isBrowser && supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey, {
+// Criar uma única instância do cliente Supabase com tratamento de erro aprimorado
+let supabaseInstance = null;
+
+try {
+  if (supabaseUrl && supabaseAnonKey) {
+    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
@@ -92,8 +101,33 @@ export const supabase = isBrowser && supabaseUrl && supabaseAnonKey
           eventsPerSecond: 10
         }
       }
-    })
-  : null;
+    });
+    
+    if (isBrowser && process.env.NODE_ENV === 'development') {
+      console.log('✅ Cliente Supabase inicializado com sucesso');
+    }
+  }
+} catch (error) {
+  const errorMessage = `Erro ao inicializar o cliente Supabase: ${error instanceof Error ? error.message : 'Erro desconhecido'}`;
+  console.error(errorMessage);
+  if (typeof logger !== 'undefined' && logger.error) {
+    logger.error(errorMessage);
+  }
+}
+
+export const supabase = supabaseInstance;
+
+// Função auxiliar para verificar cliente Supabase antes de operações
+function verificarSupabase() {
+  if (!supabase) {
+    const errorMessage = 'Cliente Supabase não inicializado. Verifique as variáveis de ambiente.';
+    console.error(errorMessage);
+    if (typeof logger !== 'undefined' && logger.error) {
+      logger.error(errorMessage);
+    }
+    throw new Error(errorMessage);
+  }
+}
 
 // Função para carregar conversas de um usuário com caching
 let cachedConversas: { [userId: string]: { data: Conversa[], timestamp: number } } = {};
@@ -106,10 +140,7 @@ export async function buscarConversas(usuarioId: string, forceUpdate = true): Pr
   // Sempre forçar atualização para garantir dados atualizados
   forceUpdate = true;
 
-  if (!supabase) {
-    console.error('Cliente Supabase não inicializado');
-    return [];
-  }
+  verificarSupabase();
 
   try {
     console.log('Carregando conversas do banco de dados para o usuário', userId);
@@ -141,10 +172,7 @@ let cachedMensagens: { [conversaId: string]: { data: Mensagem[], timestamp: numb
 
 // Função para carregar mensagens de uma conversa
 export async function carregarMensagens(conversaId: string): Promise<Mensagem[]> {
-  if (!supabase) {
-    console.error('Cliente Supabase não inicializado');
-    return [];
-  }
+  verificarSupabase();
 
   try {
     // Verificar se temos cache válido
@@ -198,10 +226,7 @@ function limparCacheMensagem(conversaId: string) {
 
 // Função para criar uma nova conversa
 export async function criarConversa(usuarioId: string, titulo: string): Promise<Conversa> {
-  if (!supabase) {
-    console.error('Cliente Supabase não inicializado');
-    throw new Error('Cliente Supabase não inicializado');
-  }
+  verificarSupabase();
 
   try {
     const { data, error } = await supabase
@@ -231,10 +256,7 @@ export async function adicionarMensagem(
   conteudo: string,
   tipo: 'usuario' | 'assistente'
 ): Promise<Mensagem> {
-  if (!supabase) {
-    console.error('Cliente Supabase não inicializado');
-    throw new Error('Cliente Supabase não inicializado');
-  }
+  verificarSupabase();
 
   try {
     // Primeiro, adiciona a mensagem
@@ -272,10 +294,7 @@ export async function adicionarMensagem(
 
 // Função para atualizar o título de uma conversa
 export async function atualizarTituloConversa(conversaId: string, titulo: string): Promise<void> {
-  if (!supabase) {
-    console.error('Cliente Supabase não inicializado');
-    throw new Error('Cliente Supabase não inicializado');
-  }
+  verificarSupabase();
 
   try {
     const { error } = await supabase
@@ -295,10 +314,7 @@ export async function atualizarTituloConversa(conversaId: string, titulo: string
 
 // Função para excluir uma conversa
 export async function excluirConversa(conversaId: string): Promise<void> {
-  if (!supabase) {
-    console.error('Cliente Supabase não inicializado');
-    throw new Error('Cliente Supabase não inicializado');
-  }
+  verificarSupabase();
 
   try {
     // Obter o usuário_id antes de excluir a conversa para limpar o cache depois
@@ -342,6 +358,8 @@ export async function marcarComoFavorito(conversaId: string, favorito: boolean):
     throw new Error('ID da conversa não especificado');
   }
 
+  verificarSupabase();
+
   try {
     const response = await fetch('/api/conversas/atalho', {
       method: 'PUT',
@@ -379,6 +397,8 @@ export async function exportarConversa(conversaId: string): Promise<{ conversa: 
     throw new Error('ID da conversa não especificado');
   }
 
+  verificarSupabase();
+
   try {
     const response = await fetch(`/api/conversas/exportar?conversaId=${conversaId}`, {
       method: 'GET',
@@ -404,6 +424,8 @@ export async function exportarTodasConversas(usuarioId: string): Promise<{ [conv
   if (!usuarioId) {
     throw new Error('ID do usuário não especificado');
   }
+
+  verificarSupabase();
 
   try {
     const response = await fetch('/api/conversas/exportar', {
@@ -443,10 +465,7 @@ export async function carregarDocumentos(usuarioId: string, forceUpdate = false)
   // Verificar se devemos forçar a atualização
   forceUpdate = forceUpdate || usuarioId.includes('nocache');
 
-  if (!supabase) {
-    console.error('Cliente Supabase não inicializado');
-    return [];
-  }
+  verificarSupabase();
 
   try {
     // Verificar se temos cache válido
@@ -487,10 +506,7 @@ export async function carregarDocumentos(usuarioId: string, forceUpdate = false)
 
 // Função para carregar um documento específico
 export async function carregarDocumento(documentoId: string): Promise<Documento | null> {
-  if (!supabase) {
-    console.error('Cliente Supabase não inicializado');
-    return null;
-  }
+  verificarSupabase();
 
   try {
     const { data, error } = await supabase
@@ -518,10 +534,7 @@ export async function criarDocumento(
   tipo: string,
   conteudo: string
 ): Promise<Documento> {
-  if (!supabase) {
-    console.error('Cliente Supabase não inicializado');
-    throw new Error('Cliente Supabase não inicializado');
-  }
+  verificarSupabase();
 
   try {
     const { data, error } = await supabase
@@ -558,10 +571,7 @@ export async function atualizarDocumento(
     conteudo?: string;
   }
 ): Promise<void> {
-  if (!supabase) {
-    console.error('Cliente Supabase não inicializado');
-    throw new Error('Cliente Supabase não inicializado');
-  }
+  verificarSupabase();
 
   try {
     // Obter o usuário_id antes de atualizar para limpar o cache depois
@@ -596,10 +606,7 @@ export async function atualizarDocumento(
 
 // Função para excluir um documento
 export async function excluirDocumento(documentoId: string): Promise<void> {
-  if (!supabase) {
-    console.error('Cliente Supabase não inicializado');
-    throw new Error('Cliente Supabase não inicializado');
-  }
+  verificarSupabase();
 
   try {
     // Obter o usuário_id antes de excluir para limpar o cache depois
@@ -631,10 +638,7 @@ export async function excluirDocumento(documentoId: string): Promise<void> {
 
 // Função para marcar/desmarcar documento como favorito
 export async function marcarDocumentoComoFavorito(documentoId: string, favorito: boolean): Promise<void> {
-  if (!supabase) {
-    console.error('Cliente Supabase não inicializado');
-    throw new Error('Cliente Supabase não inicializado');
-  }
+  verificarSupabase();
 
   try {
     // Obter o usuário_id antes de atualizar para limpar o cache depois

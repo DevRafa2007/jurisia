@@ -1,6 +1,21 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../utils/supabase';
+import { createClient } from '@supabase/supabase-js';
+import logger from '../../utils/logger';
 import { logError, logInfo, logWarning } from '../../utils/logger';
+
+// Configuração do cliente Supabase
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+// Verificar se as variáveis de ambiente existem
+if (!supabaseUrl || !supabaseKey) {
+  logger.error('Variáveis de ambiente do Supabase não definidas. Verifique o arquivo .env.local');
+}
+
+// Criar cliente com fallback para evitar falhas na inicialização
+const supabase = supabaseUrl && supabaseKey 
+  ? createClient(supabaseUrl, supabaseKey)
+  : null;
 
 // Função alternativa para autenticação que pode ser usada se Clerk não estiver configurado
 function getUsuarioIdAlternativo(req: NextApiRequest): string | null {
@@ -59,12 +74,12 @@ export default async function handler(
     return res.status(405).json({ erro: 'Método não permitido' });
   }
 
-  // Verificar se o Supabase está inicializado
+  // Verificar se o cliente foi inicializado
   if (!supabase) {
-    logError('Cliente Supabase não inicializado. Verifique as variáveis de ambiente.');
-    return res.status(500).json({
-      erro: 'Serviço temporariamente indisponível',
-      detalhes: 'Configuração do banco de dados incompleta'
+    logger.error('Cliente Supabase não inicializado. Verifique as variáveis de ambiente.');
+    return res.status(500).json({ 
+      error: 'Configuração do banco de dados indisponível',
+      mensagem: 'Serviço temporariamente indisponível. Por favor, tente novamente mais tarde.'
     });
   }
 
