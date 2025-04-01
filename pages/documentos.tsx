@@ -2033,6 +2033,13 @@ ${camposDoc.map(campo => {
                   matchVisual: false,
                 },
               }}
+              className="h-full z-20"
+              style={{ 
+                position: 'relative', 
+                zIndex: 20,
+                backgroundColor: '#ffffff',
+                minHeight: '500px'
+              }}
               onInit={() => {
                 const editorElement = document.querySelector('.ql-editor');
                 setupSelectionObserver(editorElement);
@@ -2246,6 +2253,40 @@ ${camposDoc.map(campo => {
             display: none;
             z-index: 1000;
             transform: translate(-50%, -100%);
+          }
+          
+          /* Garantir que o editor esteja sempre visível */
+          .react-quill {
+            z-index: 20 !important;
+            position: relative !important;
+            background-color: white !important;
+          }
+          
+          .ql-container {
+            z-index: 20 !important;
+            position: relative !important;
+            background-color: white !important;
+          }
+          
+          .ql-editor {
+            z-index: 20 !important;
+            position: relative !important;
+            background-color: white !important;
+          }
+          
+          .ql-toolbar {
+            z-index: 21 !important;
+            position: relative !important;
+            background-color: #f9fafb !important;
+          }
+          
+          .dark .ql-toolbar {
+            background-color: #1e293b !important;
+          }
+          
+          /* Garantir que o degradê fique abaixo do editor */
+          .bg-gray-100, .dark .bg-gray-800 {
+            z-index: 1 !important;
           }
         `}</style>
       </Head>
