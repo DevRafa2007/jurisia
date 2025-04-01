@@ -71,12 +71,16 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ conteudo, isUsuario }) => {
       className={`message relative mb-8 ${
         isUsuario ? 'ml-auto' : 'mr-auto'
       }`}
+      style={{ boxShadow: 'none', filter: 'none' }}
     >
-      <div className={`flex ${isUsuario ? 'justify-end' : 'justify-start'} items-end`}>
+      <div 
+        className={`flex ${isUsuario ? 'justify-end' : 'justify-start'} items-end`} 
+        style={{ boxShadow: 'none', filter: 'none' }}
+      >
         {/* Avatar para o assistente */}
         {!isUsuario && (
-          <div className="flex-shrink-0 mr-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 dark:from-primary-500 dark:to-primary-700 flex items-center justify-center text-white shadow-md">
+          <div className="flex-shrink-0 mr-3" style={{ boxShadow: 'none' }}>
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 dark:from-primary-500 dark:to-primary-700 flex items-center justify-center text-white" style={{ boxShadow: 'none' }}>
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clipRule="evenodd" />
               </svg>
@@ -85,15 +89,16 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ conteudo, isUsuario }) => {
         )}
         
         {/* Conteúdo da mensagem */}
-        <div className={`${
-          isUsuario
-            ? 'bg-gradient-to-r from-primary-500 via-primary-600 to-indigo-600 text-white rounded-2xl rounded-br-none max-w-[85%]'
-            : 'bg-white dark:bg-gray-800 rounded-2xl rounded-bl-none max-w-[90%]'
-        } shadow-md border border-l border-r ${
-          isUsuario 
-            ? 'border-primary-400/30' 
-            : 'border-gray-100 dark:border-gray-700/50'
-        } px-5 py-4 relative group`}
+        <div 
+          className={`${
+            isUsuario
+              ? 'bg-gradient-to-r from-primary-500 via-primary-600 to-indigo-600 text-white rounded-2xl rounded-br-none max-w-[85%]'
+              : 'bg-white dark:bg-gray-800 rounded-2xl rounded-bl-none max-w-[90%]'
+          } shadow-lg hover:shadow-2xl border border-l border-r ${
+            isUsuario 
+              ? 'border-primary-400/30' 
+              : 'border-gray-100 dark:border-gray-700/50'
+          } px-5 py-4 relative group transition-all duration-300`}
         >
           {/* Botão de copiar que só aparece no hover */}
           <button 
@@ -133,8 +138,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ conteudo, isUsuario }) => {
 
         {/* Avatar para o usuário */}
         {isUsuario && (
-          <div className="flex-shrink-0 ml-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-400 to-violet-600 flex items-center justify-center text-white shadow-md">
+          <div className="flex-shrink-0 ml-3" style={{ boxShadow: 'none' }}>
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-400 to-violet-600 flex items-center justify-center text-white" style={{ boxShadow: 'none' }}>
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
               </svg>

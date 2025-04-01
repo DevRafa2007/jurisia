@@ -23,23 +23,12 @@
   line-height: 1.5;
   text-align: justify;
   background-color: white;
-  color: black !important;
-}
-
-/* Garantir que o texto seja preto em modo escuro também */
-.dark .ck.ck-content {
-  color: black !important;
-  background-color: white !important;
-}
-
-.dark .ck-editor__main {
-  color: black !important;
+  color: black;
 }
 
 .ck.ck-editor__editable_inline {
   border: none;
   outline: none;
-  color: black !important;
 }
 
 /* Estilos da barra de ferramentas */

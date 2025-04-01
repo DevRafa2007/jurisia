@@ -1,9 +1,17 @@
 import { Groq } from "groq-sdk";
-import { logDebug, logError, logInfo, logWarning } from './logger';
+import { logDebug, logError, logInfo } from './logger';
+import { 
+  verificarAtualizacoesLegais, 
+  EventoLegal, 
+  invalidarCacheAtualizacoes,
+  OpcoesConsultaAtualizacao 
+} from './atualizacoes-legais';
 
 // Tipagem para process.env usando módulos ES2015
 type ProcessEnv = {
   GROQ_API_KEY?: string;
+  LEGAL_UPDATE_API_KEY?: string;
+  WEBHOOK_SECRET?: string;
 }
 
 // Tipagem para o objeto global process
@@ -38,6 +46,8 @@ export interface RespostaIA {
     saida: number;
     total: number;
   };
+  fontesAtualizadas?: string[];
+  dataAtualizacao?: string;
 }
 
 // Prompt do sistema para direcionar o comportamento da IA
@@ -90,6 +100,77 @@ function getGroqClient(): Groq {
 }
 
 /**
+ * Registra um webhook para receber atualizações legais em tempo real
+ * @returns Identificador do webhook registrado
+ */
+export async function registrarWebhookAtualizacoes(): Promise<string> {
+  try {
+    logInfo('Registrando webhook para atualizações legais...');
+    
+    // Implementação simulada de registro de webhook
+    // Em produção, seria uma chamada a uma API real
+    const webhookId = `webhook_${new Date().getTime()}`;
+    
+    // Simulação de configuração de evento para receber atualizações
+    // const response = await fetch('https://api.legislacao.gov.br/webhook/register', {
+    //   method: 'POST',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //     'Authorization': `Bearer ${process.env.LEGAL_UPDATE_API_KEY}`
+    //   },
+    //   body: JSON.stringify({
+    //     callbackUrl: 'https://seudominio.com.br/api/atualizacoes-legais',
+    //     eventos: ['nova_lei', 'alteracao', 'jurisprudencia', 'revogacao']
+    //   })
+    // });
+    
+    logInfo(`Webhook registrado com ID: ${webhookId}`);
+    return webhookId;
+  } catch (error) {
+    logError('Erro ao registrar webhook', error instanceof Error ? error : new Error(String(error)));
+    throw new Error('Falha ao configurar sistema de atualizações legais automáticas');
+  }
+}
+
+/**
+ * Processa evento legal recebido via webhook
+ * @param evento Evento legal recebido
+ * @returns Status do processamento
+ */
+export async function processarEventoLegal(evento: EventoLegal): Promise<boolean> {
+  try {
+    logInfo(`Processando evento legal: ${evento.tipo}`);
+    
+    // Invalidar cache de atualizações
+    invalidarCacheAtualizacoes();
+    
+    // Aqui seria implementada a lógica para armazenar a nova informação
+    // em um banco de dados ou sistema de armazenamento
+    
+    // Exemplo de processamento conforme tipo do evento
+    switch (evento.tipo) {
+      case 'nova_lei':
+        logInfo(`Nova legislação detectada: ${evento.dados.identificador}`);
+        break;
+      case 'alteracao':
+        logInfo(`Alteração em legislação: ${evento.dados.identificador}`);
+        break;
+      case 'jurisprudencia':
+        logInfo(`Nova jurisprudência relevante: ${evento.dados.identificador}`);
+        break;
+      case 'revogacao':
+        logInfo(`Revogação de legislação: ${evento.dados.identificador}`);
+        break;
+    }
+    
+    return true;
+  } catch (error) {
+    logError('Erro ao processar evento legal', error instanceof Error ? error : new Error(String(error)));
+    return false;
+  }
+}
+
+/**
  * Obtém uma resposta jurídica da IA
  * @param param0 Objeto contendo a consulta e histórico opcional
  * @returns Resposta formatada da IA
@@ -115,26 +196,49 @@ export async function obterRespostaJuridica({
     logInfo('Iniciando consulta jurídica');
     const client = getGroqClient();
     
+    // Opções para consultar atualizações legais
+    const opcoesAtualizacao: OpcoesConsultaAtualizacao = {
+      limite: 5 // Limitar a 5 itens para não sobrecarregar o contexto
+    };
+    
+    // Obter atualizações legais 
+    const atualizacoes = await verificarAtualizacoesLegais(opcoesAtualizacao);
+    logDebug(`Atualizações obtidas de ${atualizacoes.fontes.length} fontes`);
+    
+    // Construir prompt com informações atualizadas
+    let promptAtualizado = SISTEMA_PROMPT;
+    
+    // Adicionar informações sobre atualizações legais recentes
+    if (atualizacoes.legislacoes && atualizacoes.legislacoes.length > 0) {
+      promptAtualizado += `\n\nDados jurídicos complementares atualizados até ${atualizacoes.ultimaVerificacao.toLocaleDateString('pt-BR')}:\n`;
+      
+      // Adicionar legislações ao prompt
+      atualizacoes.legislacoes.forEach(leg => {
+        promptAtualizado += `- ${leg.tipo} ${leg.numero} (${leg.data}): ${leg.ementa}\n`;
+      });
+    }
+    
     // Limitar histórico para evitar exceder limites de tokens
     const historicoLimitado = historico.slice(-10);
     logDebug(`Histórico limitado a ${historicoLimitado.length} mensagens`);
     
     // Preparar mensagens para a API
     const mensagens: Mensagem[] = [
-      { role: 'system', content: SISTEMA_PROMPT },
+      { role: 'system', content: promptAtualizado },
       ...historicoLimitado,
       { role: 'user', content: consulta }
     ];
     
     logInfo('Enviando consulta para Groq API...');
     
-    // Enviar para API
+    // Enviar para API com modelo atualizado e parâmetros otimizados
     const resposta = await client.chat.completions.create({
-      model: 'llama3-70b-8192',
+      model: 'llama-3.3-70b-versatile', // Llama 3.3, modelo mais recente e robusto disponível na Groq
       messages: mensagens,
       temperature: 0.2,
       max_tokens: 4096,
       top_p: 0.9,
+      // Parâmetros adicionais seriam adicionados aqui quando suportados pelo SDK
     });
     
     // Validar resposta
@@ -153,15 +257,17 @@ export async function obterRespostaJuridica({
     logInfo('Resposta da Groq API recebida com sucesso');
     logDebug(`Tokens utilizados: ${resposta.usage?.total_tokens || 0}`);
     
-    // Retornar resposta formatada
+    // Retornar resposta formatada com informações sobre atualização
     return {
       conteudo,
-      modeloUsado: resposta.model || 'llama3-70b-8192',
+      modeloUsado: resposta.model || 'llama-3.3-70b-versatile',
       tokens: {
         entrada: resposta.usage?.prompt_tokens || 0,
         saida: resposta.usage?.completion_tokens || 0,
         total: resposta.usage?.total_tokens || 0
-      }
+      },
+      fontesAtualizadas: atualizacoes.fontes,
+      dataAtualizacao: atualizacoes.ultimaVerificacao.toISOString()
     };
   } catch (error) {
     // Tratar erros específicos

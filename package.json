@@ -12,6 +12,8 @@
   "dependencies": {
     "@ckeditor/ckeditor5-build-classic": "^44.3.0",
     "@ckeditor/ckeditor5-react": "^9.5.0",
+    "@clerk/nextjs": "^6.12.12",
+    "@heroicons/react": "^2.2.0",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/auth-helpers-react": "^0.5.0",
     "@supabase/auth-ui-react": "^0.4.7",
@@ -29,6 +31,7 @@
     "html-docx-js-typescript": "^0.1.5",
     "next": "^14.0.4",
     "next-themes": "^0.4.6",
+    "node-cache": "^5.1.2",
     "postcss": "^8.4.32",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

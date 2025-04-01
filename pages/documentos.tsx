@@ -16,6 +16,10 @@ import {
   criarDocumento, 
   atualizarDocumento
 } from '../utils/supabase';
+// Importar componentes do assistente IA
+import EditorAssistant from '../components/EditorAssistant';
+import TextSuggestionTooltip from '../components/TextSuggestionTooltip';
+import AnalysisIndicator from '../components/AnalysisIndicator';
 
 // Importação dinâmica do React Quill para evitar problemas de SSR
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
@@ -203,23 +207,647 @@ export default function Documentos() {
   const [isAnalisandoReferencias, setIsAnalisandoReferencias] = useState(false);
   const [analiseReferencias, setAnaliseReferencias] = useState<string>('');
 
+  // Estados para o assistente IA
+  const [textoSelecionado, setTextoSelecionado] = useState('');
+  const [posicaoSelecao, setPosicaoSelecao] = useState<{ index: number, length: number } | null>(null);
+  const [sugestaoTexto, setSugestaoTexto] = useState('');
+  const [tooltipPosicao, setTooltipPosicao] = useState({ x: 0, y: 0 });
+  const [isTooltipVisible, setIsTooltipVisible] = useState(false);
+  const [isAnalysisVisible, setIsAnalysisVisible] = useState(false);
+  const editorRef = useRef<any>(null);
+
+  const [isCarregandoSugestoes, setIsCarregandoSugestoes] = useState(false);
+  const [trechosSugeridos, setTrechosSugeridos] = useState<Array<{titulo: string, texto: string, explicacao: string}>>([]);
+  const [exibirModalSugestoes, setExibirModalSugestoes] = useState(false);
+
+  const [mostrarTooltip, setMostrarTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [analisando, setAnalisando] = useState(false);
+
+  // Função para sugerir trechos com base no tipo de documento
+  const sugerirTrechos = async () => {
+    if (!tipoDocumentoSelecionado) return;
+    
+    setIsCarregandoSugestoes(true);
+    try {
+      const tipDoc = CONFIGURACOES_FORMULARIOS[tipoDocumentoSelecionado].nome;
+      const promptSugestao = `Sugira 3 exemplos de trechos jurídicos prontos para um documento do tipo "${tipDoc}" com base nos seguintes dados:
+      
+${Object.entries(valoresFormulario)
+  .filter(([_, valor]) => valor)
+  .map(([campo, valor]) => {
+    const campoConfig = CONFIGURACOES_FORMULARIOS[tipoDocumentoSelecionado].campos.find(c => c.id === campo);
+    return campoConfig ? `${campoConfig.label}: ${valor}` : `${campo}: ${valor}`;
+  })
+  .join('\n')}
+
+Para cada trecho, forneça:
+1. Um título descritivo
+2. O texto pronto para ser aplicado ao documento
+3. Uma breve explicação da finalidade e relevância deste trecho
+
+Retorne os trechos em formato markdown, com cabeçalhos para cada seção.`;
+
+      try {
+        // Aqui faria a chamada à API
+        // Por enquanto, vamos simular a resposta
+        toast.success("Gerando sugestões de trechos...");
+        
+        setTimeout(() => {
+          const sugestoes = gerarSugestoesTrecho(tipoDocumentoSelecionado, valoresFormulario);
+          
+          // Atualizar o estado com as sugestões
+          setTrechosSugeridos(sugestoes);
+          
+          // Exibir modal ou componente com sugestões
+          setExibirModalSugestoes(true);
+          
+          setIsCarregandoSugestoes(false);
+        }, 1500);
+        
+      } catch (error) {
+        console.error("Erro ao obter sugestões:", error);
+        toast.error("Erro ao gerar sugestões de trechos");
+        setIsCarregandoSugestoes(false);
+      }
+    } catch (error) {
+      console.error("Erro ao processar sugestões:", error);
+      toast.error("Erro ao processar os dados para sugestões");
+      setIsCarregandoSugestoes(false);
+    }
+  };
+  
+  // Função para gerar sugestões de trechos específicos para diferentes tipos de documentos
+  const gerarSugestoesTrecho = (tipoDoc: string, dados: Record<string, any>): Array<{titulo: string, texto: string, explicacao: string}> => {
+    const sugestoes = [];
+    
+    // Modelos para diferentes tipos de documento
+    if (tipoDoc === 'peticao-inicial') {
+      sugestoes.push({
+        titulo: "DOS FATOS",
+        texto: `DOS FATOS
+
+1. O(A) Autor(a) é ${dados.profissao || 'profissional'} residente e domiciliado(a) no endereço constante na qualificação inicial.
+
+2. Em ${dados.dataOcorrencia || '[data do ocorrido]'}, o(a) Autor(a) ${dados.descricaoFato || 'descrever brevemente o fato ocorrido'}.
+
+3. Diante dos fatos narrados, não restou alternativa ao(à) Autor(a) senão buscar a tutela jurisdicional para salvaguardar seus direitos.`,
+        explicacao: "Este trecho apresenta a narrativa fática de forma clara e objetiva, elemento essencial de qualquer petição inicial."
+      });
+      
+      sugestoes.push({
+        titulo: "DO DIREITO",
+        texto: `DO DIREITO
+
+1. O caso em tela encontra amparo legal no art. 5º, inciso XXXV da Constituição Federal, que assegura o acesso à justiça.
+
+2. Ademais, o Código Civil Brasileiro, em seu art. 186, estabelece que "aquele que, por ação ou omissão voluntária, negligência ou imprudência, violar direito e causar dano a outrem, ainda que exclusivamente moral, comete ato ilícito."
+
+3. Outrossim, o art. 927 do mesmo diploma legal determina que "aquele que, por ato ilícito, causar dano a outrem, fica obrigado a repará-lo."`,
+        explicacao: "Fundamentação jurídica básica para casos de responsabilidade civil, adequada para diversos tipos de petições iniciais."
+      });
+      
+      sugestoes.push({
+        titulo: "DOS PEDIDOS",
+        texto: `DOS PEDIDOS
+
+Ante o exposto, requer a Vossa Excelência:
+
+a) O recebimento da presente ação, com a citação do(a) Réu(Ré) para, querendo, apresentar resposta no prazo legal, sob pena de revelia;
+
+b) A procedência dos pedidos, condenando-se o(a) Réu(Ré) ao pagamento de indenização por danos ${dados.tipoDano || 'materiais e morais'} no valor de R$ ${dados.valorDano || '[valor do dano]'};
+
+c) A condenação do(a) Réu(Ré) ao pagamento das custas processuais e honorários advocatícios, a serem arbitrados em 20% sobre o valor da causa;
+
+d) A produção de todas as provas admitidas em direito, especialmente documental, testemunhal e pericial.
+
+Dá-se à causa o valor de R$ ${dados.valorCausa || '[valor da causa]'}.`,
+        explicacao: "Estrutura padrão da seção de pedidos, adaptável conforme as especificidades do caso concreto."
+      });
+    } 
+    else if (tipoDoc === 'contrato') {
+      sugestoes.push({
+        titulo: "CLÁUSULA DE RESCISÃO",
+        texto: `CLÁUSULA ${dados.numeroClausula || 'X'} – DA RESCISÃO
+
+O presente contrato poderá ser rescindido por qualquer das partes, mediante notificação prévia e por escrito, com antecedência mínima de ${dados.prazoPrevioRescisao || '30 (trinta)'} dias, nas seguintes hipóteses:
+
+a) por comum acordo entre as partes;
+b) pelo inadimplemento de qualquer cláusula ou condição estabelecida neste contrato;
+c) pela impossibilidade de execução, ainda que temporária, do objeto do contrato;
+d) por determinação judicial, legal ou administrativa que impeça a continuidade da prestação dos serviços.
+
+Parágrafo Único: Em caso de rescisão por infração contratual, a parte infratora ficará sujeita ao pagamento de multa de ${dados.valorMulta || '20% (vinte por cento)'} sobre o valor total do contrato, sem prejuízo de indenização complementar por perdas e danos.`,
+        explicacao: "Cláusula de rescisão contratual que prevê as hipóteses de término antecipado do contrato, com previsão de multa, essencial para proteger as partes."
+      });
+      
+      sugestoes.push({
+        titulo: "CLÁUSULA DE FORO",
+        texto: `CLÁUSULA ${dados.numeroClausula ? Number(dados.numeroClausula) + 1 : 'Y'} – DO FORO
+
+As partes elegem o Foro da Comarca de ${dados.comarca || '[cidade/estado]'} para dirimir quaisquer controvérsias oriundas do presente contrato, renunciando a qualquer outro, por mais privilegiado que seja.
+
+Parágrafo Único: Antes de recorrer ao Poder Judiciário, as partes envidarão seus melhores esforços para solucionar amigavelmente eventuais controvérsias, podendo, inclusive, utilizar-se de mediação ou arbitragem, conforme ajustarem oportunamente.`,
+        explicacao: "Cláusula de eleição de foro, determinando qual será o juízo competente para resolver litígios decorrentes do contrato, com previsão de tentativa de resolução amigável."
+      });
+      
+      sugestoes.push({
+        titulo: "CLÁUSULA DE CONFIDENCIALIDADE",
+        texto: `CLÁUSULA ${dados.numeroClausula ? Number(dados.numeroClausula) + 2 : 'Z'} – DA CONFIDENCIALIDADE
+
+As partes comprometem-se a manter em absoluto sigilo todas as informações, dados, documentos e especificações técnicas a que tiverem acesso em razão deste contrato, obrigando-se a não divulgar, reproduzir, ceder ou transferir, sob qualquer forma, as informações a terceiros.
+
+§1º. A obrigação de confidencialidade ora pactuada permanecerá vigente durante todo o prazo de vigência deste contrato e por mais ${dados.prazoConfidencialidade || '5 (cinco) anos'} após o seu término.
+
+§2º. O descumprimento da obrigação de confidencialidade sujeitará a parte infratora ao pagamento de multa no valor de ${dados.valorMultaConfidencialidade || 'R$ 50.000,00 (cinquenta mil reais)'}, sem prejuízo da responsabilização por perdas e danos suplementares.`,
+        explicacao: "Cláusula de confidencialidade que protege informações sensíveis compartilhadas durante a relação contratual, com previsão de multa específica em caso de violação."
+      });
+    }
+    else if (tipoDoc === 'recurso') {
+      sugestoes.push({
+        titulo: "PRELIMINAR DE TEMPESTIVIDADE",
+        texto: `PRELIMINAR DE TEMPESTIVIDADE
+
+Inicialmente, cumpre demonstrar a tempestividade do presente recurso.
+
+A r. sentença/decisão foi publicada no Diário de Justiça Eletrônico em ${dados.dataPublicacao || '[data da publicação]'}, tendo o prazo para recurso iniciado em ${dados.dataInicialPrazo || '[data do início do prazo]'}.
+
+Considerando que o prazo para interposição do ${dados.tipoRecurso || 'recurso'} é de ${dados.prazoRecurso || '[prazo legal]'} dias úteis, conforme disposto no art. ${dados.artigoPrazo || '[artigo do CPC]'} do Código de Processo Civil, e tendo sido observados os feriados e dias não úteis, o termo final para apresentação do recurso ocorre em ${dados.dataFinalPrazo || '[data final do prazo]'}.
+
+Assim, interposto nesta data, resta demonstrada a tempestividade do presente recurso.`,
+        explicacao: "Preliminar essencial em recursos para demonstrar o cumprimento do prazo recursal, evitando o não conhecimento por intempestividade."
+      });
+      
+      sugestoes.push({
+        titulo: "DAS RAZÕES DE REFORMA",
+        texto: `DAS RAZÕES DE REFORMA
+
+A r. sentença/decisão recorrida merece reforma pelos fundamentos fáticos e jurídicos a seguir expostos.
+
+1. DA INCORRETA APRECIAÇÃO DAS PROVAS
+
+Data maxima venia, o MM. Juízo a quo não considerou adequadamente as provas produzidas nos autos, especialmente ${dados.provasIgnoradas || '[especificar as provas não consideradas adequadamente]'}.
+
+Conforme se verifica às fls. ${dados.folhasProva || 'XX'} dos autos, restou demonstrado que ${dados.fato || '[descrever o fato provado, mas ignorado na decisão]'}, o que, por si só, seria suficiente para conduzir a julgamento diverso.
+
+2. DA INCORRETA APLICAÇÃO DO DIREITO
+
+Além da equivocada análise probatória, verifica-se erro in judicando na aplicação do direito ao caso concreto. Isto porque a r. sentença/decisão aplicou o dispositivo ${dados.dispositivoIncorreto || '[artigo/lei aplicado incorretamente]'}, quando, na realidade, a hipótese dos autos atrai a incidência do art. ${dados.dispositivoCorreto || '[artigo/lei que deveria ter sido aplicado]'}.
+
+A jurisprudência dos Tribunais Superiores é pacífica no sentido de que ${dados.entendimentoJurisprudencial || '[citar entendimento jurisprudencial favorável à tese do recurso]'}. Nesse sentido, confira-se o seguinte julgado: ${dados.precedente || '[citar precedente]'}.`,
+        explicacao: "Estrutura base para o mérito recursal, focando na incorreta apreciação das provas e na incorreta aplicação do direito pela decisão recorrida."
+      });
+      
+      sugestoes.push({
+        titulo: "DO PEDIDO",
+        texto: `DO PEDIDO
+
+Ante o exposto, requer-se:
+
+a) O conhecimento do presente ${dados.tipoRecurso || 'recurso'}, dada a presença dos pressupostos de admissibilidade recursal;
+
+b) No mérito, o provimento do recurso para reformar a r. sentença/decisão recorrida, julgando-se ${dados.pedidoRecurso || '[procedente/improcedente]'} o pedido inicial, condenando-se a parte recorrida ao pagamento das custas processuais e honorários advocatícios recursais;
+
+c) Caso assim não entenda V. Exa., o que se admite apenas por amor ao debate, requer-se ${dados.pedidoAlternativo || '[especificar pedido alternativo]'}.
+
+Nestes termos,
+Pede deferimento.
+
+${dados.local || '[Local]'}, ${dados.data || '[data]'}.
+
+
+${dados.advogado || '[Nome do(a) Advogado(a)]'}
+OAB/${dados.estadoOAB || 'XX'} nº ${dados.numeroOAB || 'XXXXX'}`,
+        explicacao: "Seção final do recurso contendo os pedidos, com estrutura que contempla pedido principal e alternativo, além de formatação adequada para a peça recursal."
+      });
+    }
+    else if (tipoDoc === 'declaracao') {
+      sugestoes.push({
+        titulo: "CABEÇALHO DA DECLARAÇÃO",
+        texto: `DECLARAÇÃO ${dados.tipoDeclaracao || ''}
+
+DECLARANTE: ${dados.nomeDeclarante || '[Nome completo]'}, ${dados.nacionalidadeDeclarante || 'brasileiro(a)'}, ${dados.estadoCivilDeclarante || '[estado civil]'}, portador(a) do RG nº ${dados.rgDeclarante || '[número do RG]'}, inscrito(a) no CPF sob o nº ${dados.cpfDeclarante || '[número do CPF]'}, residente e domiciliado(a) na ${dados.enderecoDeclarante || '[endereço completo]'}.`,
+        explicacao: "Cabeçalho padronizado para declarações, contendo a qualificação completa do declarante, conferindo formalidade e segurança jurídica ao documento."
+      });
+      
+      sugestoes.push({
+        titulo: "CORPO DA DECLARAÇÃO",
+        texto: `DECLARO, sob as penas da lei, para os devidos fins e a quem possa interessar, que ${dados.conteudoDeclaracao || '[conteúdo da declaração]'}.
+
+DECLARO, ainda, estar ciente das sanções civis, administrativas e criminais previstas para o caso de falsidade ou omissão de informações, conforme disposto nos artigos 171 e 299 do Código Penal Brasileiro.
+
+Para que produza os efeitos legais, firmo a presente declaração.`,
+        explicacao: "Corpo principal da declaração com menção expressa às consequências legais por falsidade, garantindo força jurídica ao documento através da responsabilização do declarante."
+      });
+      
+      sugestoes.push({
+        titulo: "ENCERRAMENTO DA DECLARAÇÃO",
+        texto: `${dados.local || '[Local]'}, ${dados.data || '[data por extenso]'}.
+
+
+_________________________________________
+${dados.nomeDeclarante || '[Nome do Declarante]'}
+CPF: ${dados.cpfDeclarante || '[número do CPF]'}
+
+
+TESTEMUNHAS:
+
+1. _________________________________________
+   Nome: ${dados.nomeTestemunha1 || '[Nome da Testemunha 1]'}
+   CPF: ${dados.cpfTestemunha1 || '[número do CPF]'}
+
+2. _________________________________________
+   Nome: ${dados.nomeTestemunha2 || '[Nome da Testemunha 2]'}
+   CPF: ${dados.cpfTestemunha2 || '[número do CPF]'}`,
+        explicacao: "Encerramento formal da declaração com espaço para assinatura do declarante e de testemunhas, aumentando a validade jurídica do documento em caso de contestação."
+      });
+    }
+    else {
+      // Sugestões genéricas para outros tipos de documento
+      sugestoes.push({
+        titulo: "Fundamentação Legal Básica",
+        texto: `FUNDAMENTAÇÃO LEGAL
+
+Conforme estabelecido pelo art. 5º da Constituição Federal, que garante a inviolabilidade do direito à vida, à liberdade, à igualdade, à segurança e à propriedade, o presente documento encontra amparo legal nos seguintes dispositivos:
+
+1. Código Civil (Lei nº 10.406/2002), especialmente em seus artigos 186, 187 e 927, que estabelecem a responsabilidade civil;
+
+2. Código de Processo Civil (Lei nº 13.105/2015), notadamente em seus artigos referentes ao devido processo legal, contraditório e ampla defesa;
+
+3. Lei nº ${dados.leiEspecifica || '[número da lei específica aplicável ao caso]'}, que dispõe sobre ${dados.assuntoLei || '[assunto da lei]'}.`,
+        explicacao: "Fundamentação legal básica aplicável a diversos tipos de documentos jurídicos, mencionando a Constituição Federal e os principais códigos."
+      });
+      
+      sugestoes.push({
+        titulo: "Cláusula de Eleição de Foro",
+        texto: `CLÁUSULA DE ELEIÇÃO DE FORO
+
+As partes elegem o Foro da Comarca de ${dados.comarca || '[cidade/estado]'} para dirimir quaisquer questões oriundas do presente documento, com renúncia expressa a qualquer outro, por mais privilegiado que seja.
+
+Parágrafo único. As partes comprometem-se a tentar solucionar amigavelmente qualquer controvérsia antes de recorrer às medidas judiciais, podendo valer-se de métodos adequados de solução de conflitos, como mediação e arbitragem.`,
+        explicacao: "Cláusula padrão para definição do foro competente para resolução de litígios, aplicável a contratos e outros documentos que envolvam mais de uma parte."
+      });
+      
+      sugestoes.push({
+        titulo: "Disposições Finais",
+        texto: `DISPOSIÇÕES FINAIS
+
+E, por estarem assim justas e contratadas, as partes assinam o presente documento em ${dados.numVias || '2 (duas)'} vias de igual teor e forma, para um só efeito, na presença das testemunhas abaixo identificadas.
+
+Todas as comunicações relacionadas a este documento deverão ser feitas por escrito e enviadas para os endereços indicados no preâmbulo ou por e-mail para ${dados.emailParte1 || '[e-mail da parte 1]'} e ${dados.emailParte2 || '[e-mail da parte 2]'}.
+
+Qualquer alteração neste documento somente terá validade se formalizada por escrito e assinada por todas as partes envolvidas.
+
+O presente documento constitui o acordo integral entre as partes, substituindo todas as negociações, compromissos e entendimentos anteriores sobre o assunto nele tratado.`,
+        explicacao: "Disposições finais padronizadas para diversos tipos de documentos, contemplando forma de comunicação, alterações e integralidade do documento."
+      });
+    }
+    
+    return sugestoes;
+  };
+  
+  // Função para aplicar um trecho sugerido ao documento
+  const aplicarTrechoSugerido = (texto: string) => {
+    if (!editorRef.current) return;
+    
+    try {
+      // Tentar obter o editor
+      const editor = editorRef.current.getEditor();
+      
+      if (editor) {
+        // Verificar se há texto selecionado
+        const selection = editor.getSelection();
+        
+        if (selection && selection.length > 0) {
+          // Substituir texto selecionado
+          editor.deleteText(selection.index, selection.length);
+          editor.insertText(selection.index, texto);
+        } else {
+          // Inserir no cursor
+          const range = editor.getSelection();
+          if (range) {
+            editor.insertText(range.index, texto);
+          }
+        }
+        
+        // Fechar o modal
+        setExibirModalSugestoes(false);
+        toast.success("Trecho aplicado com sucesso!");
+      } else {
+        // Tentar método alternativo
+        aplicarSugestaoAssistente(texto);
+      }
+    } catch (error) {
+      console.error("Erro ao aplicar trecho:", error);
+      
+      // Usar método alternativo
+      aplicarSugestaoAssistente(texto);
+    }
+  };
+  
+  // Componente Modal para exibir os trechos sugeridos
+  const ModalTrechosSugeridos = () => {
+    if (!exibirModalSugestoes) return null;
+    
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Trechos Sugeridos</h3>
+            <button 
+              onClick={() => setExibirModalSugestoes(false)}
+              className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+            >
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-4">
+            {trechosSugeridos.map((trecho, index) => (
+              <div key={index} className="mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+                <h4 className="text-md font-semibold text-gray-900 dark:text-white mb-2">{trecho.titulo}</h4>
+                
+                <div className="bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-700 mb-3">
+                  <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 dark:text-gray-200">{trecho.texto}</pre>
+                </div>
+                
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{trecho.explicacao}</p>
+                
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={() => {
+                      // Copiar para a área de transferência
+                      navigator.clipboard.writeText(trecho.texto);
+                      toast.success("Texto copiado para a área de transferência");
+                    }}
+                    className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 text-sm font-medium transition-colors"
+                  >
+                    Copiar
+                  </button>
+                  <button
+                    onClick={() => aplicarTrechoSugerido(trecho.texto)}
+                    className="px-3 py-1.5 bg-primary-500 text-white rounded hover:bg-primary-600 text-sm font-medium transition-colors"
+                  >
+                    Aplicar ao Documento
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+            <button
+              onClick={() => setExibirModalSugestoes(false)}
+              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-600 font-medium transition-colors"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Função para capturar seleção de texto no editor
+  const handleTextSelection = () => {
+    if (!editorRef.current) return;
+    
+    const quill = editorRef.current.getEditor();
+    const selection = quill.getSelection();
+    
+    if (selection && selection.length > 0) {
+      const text = quill.getText(selection.index, selection.length);
+      if (text.trim()) {
+        setTextoSelecionado(text);
+        setPosicaoSelecao({ index: selection.index, length: selection.length });
+        
+        // Calcular posição para o tooltip
+        const bounds = quill.getBounds(selection.index, selection.length);
+        const editorPosition = quill.container.getBoundingClientRect();
+        
+        setTooltipPosicao({
+          x: editorPosition.left + bounds.left + bounds.width / 2,
+          y: editorPosition.top + bounds.top - 10
+        });
+        
+        // Exibir o botão de análise
+        const botaoAnalise = document.getElementById('botao-analise-texto');
+        if (botaoAnalise) {
+          botaoAnalise.style.display = 'block';
+          botaoAnalise.style.left = `${editorPosition.left + bounds.left + bounds.width / 2}px`;
+          botaoAnalise.style.top = `${editorPosition.top + bounds.top - 40}px`;
+        }
+      }
+    } else {
+      const botaoAnalise = document.getElementById('botao-analise-texto');
+      if (botaoAnalise) {
+        botaoAnalise.style.display = 'none';
+      }
+    }
+  };
+  
+  // Função para analisar texto selecionado
+  const analisarTextoSelecionado = async () => {
+    if (!textoSelecionado) return;
+    
+    setIsAnalysisVisible(true);
+    
+    try {
+      // Simular chamada à API (será substituída por chamada real)
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Resposta simulada
+      const sugestao = textoSelecionado.replace(
+        /(\w+)([.,])/g, 
+        (match, word, punctuation) => word + ' ' + punctuation
+      ) + ' (Incluir referência ao Art. 5º da CF)';
+      
+      setSugestaoTexto(sugestao);
+      setIsTooltipVisible(true);
+    } catch (error) {
+      console.error('Erro ao analisar texto:', error);
+      toast.error('Não foi possível analisar o texto selecionado.');
+    } finally {
+      setIsAnalysisVisible(false);
+    }
+  };
+
+  // Função para aceitar sugestão de texto
+  const aceitarSugestao = () => {
+    if (!editorRef.current || !posicaoSelecao) return;
+    
+    try {
+      // Tentar diferentes maneiras de acessar o editor
+      let quill = null;
+      
+      if (editorRef.current.getEditor && typeof editorRef.current.getEditor === 'function') {
+        quill = editorRef.current.getEditor();
+      } else if (editorRef.current.editor) {
+        quill = editorRef.current.editor;
+      }
+      
+      if (quill && typeof quill.deleteText === 'function') {
+        quill.deleteText(posicaoSelecao.index, posicaoSelecao.length);
+        quill.insertText(posicaoSelecao.index, sugestaoTexto);
+        
+        // Fechar tooltip após aplicar
+        setIsTooltipVisible(false);
+        toast.success('Sugestão aplicada!');
+      } else {
+        // Fallback usando contenteditable
+        const editorElement = document.querySelector('.ql-editor');
+        if (editorElement && window.getSelection) {
+          const selection = window.getSelection();
+          if (selection && selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            range.deleteContents();
+            range.insertNode(document.createTextNode(sugestaoTexto));
+            
+            // Fechar tooltip após aplicar
+            setIsTooltipVisible(false);
+            toast.success('Sugestão aplicada!');
+            
+            // Atualizar o conteúdo do editor
+            if (editorElement.innerHTML) {
+              setDocumentoGerado(editorElement.innerHTML);
+              documentoModificado.current = true;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao aplicar sugestão:', error);
+      toast.error('Não foi possível aplicar a sugestão.');
+    }
+  };
+
+  // Função para aplicar sugestão do assistente ao editor
+  const aplicarSugestaoAssistente = (texto: string, selecao?: { index: number, length: number }) => {
+    if (!editorRef.current) return;
+    
+    try {
+      // Tentar diferentes maneiras de acessar o editor
+      let quill = null;
+      
+      if (editorRef.current.getEditor && typeof editorRef.current.getEditor === 'function') {
+        quill = editorRef.current.getEditor();
+      } else if (editorRef.current.editor) {
+        quill = editorRef.current.editor;
+      }
+      
+      if (quill && typeof quill.insertText === 'function') {
+        if (selecao) {
+          // Substituir texto selecionado
+          quill.deleteText(selecao.index, selecao.length);
+          quill.insertText(selecao.index, texto);
+        } else {
+          // Inserir no cursor atual ou no final
+          const selection = quill.getSelection();
+          if (selection) {
+            quill.insertText(selection.index, texto);
+          } else {
+            quill.insertText(quill.getLength() - 1, texto);
+          }
+        }
+        
+        documentoModificado.current = true;
+      } else {
+        // Fallback usando contenteditable
+        const editorElement = document.querySelector('.ql-editor');
+        if (editorElement) {
+          // Se não temos seleção, inserir no final
+          if (editorElement.innerHTML) {
+            editorElement.innerHTML += `<p>${texto}</p>`;
+            setDocumentoGerado(editorElement.innerHTML);
+            documentoModificado.current = true;
+            toast.success('Texto inserido no documento.');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao aplicar sugestão:', error);
+      toast.error('Não foi possível aplicar a sugestão do assistente.');
+    }
+  };
+  
+  // Função alterada para conectar o editorRef quando o ReactQuill é montado
+  const handleEditorRef = (ref: any) => {
+    editorRef.current = ref;
+    
+    if (ref) {
+      // A API mudou ou a referência não está acessando o editor corretamente
+      // Vamos verificar se o editor está acessível de outras formas
+      if (typeof ref.getEditor === 'function') {
+        const quill = ref.getEditor();
+        quill.on('selection-change', handleTextSelection);
+      } else if (ref.editor) {
+        // Algumas versões do ReactQuill expõem o editor diretamente
+        ref.editor.on('selection-change', handleTextSelection);
+      } else if (ref.el && ref.el.querySelector('.ql-editor')) {
+        // Como fallback, podemos obter o editor a partir do DOM
+        // mas não podemos adicionar o listener desta forma
+        console.log('Editor encontrado via DOM, mas não é possível adicionar listeners.');
+        // Vamos tentar usar um MutationObserver para capturar seleções
+        setupSelectionObserver(ref.el.querySelector('.ql-editor'));
+      } else {
+        console.error('Não foi possível acessar o editor Quill.');
+      }
+    }
+  };
+
+  // Função para configurar um observer para capturar seleções (fallback)
+  const setupSelectionObserver = (editorElement: Element | null) => {
+    if (!editorElement) return;
+    
+    document.addEventListener('selectionchange', () => {
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        // Verificar se a seleção está dentro do editor
+        if (editorElement.contains(range.commonAncestorContainer)) {
+          const text = selection.toString();
+          if (text && text.trim()) {
+            setTextoSelecionado(text);
+            
+            // Calcular posição para o tooltip e botão
+            const rect = range.getBoundingClientRect();
+            
+            setTooltipPosicao({
+              x: rect.left + rect.width / 2,
+              y: rect.top
+            });
+            
+            // Exibir o botão de análise
+            const botaoAnalise = document.getElementById('botao-analise-texto');
+            if (botaoAnalise) {
+              botaoAnalise.style.display = 'block';
+              botaoAnalise.style.left = `${rect.left + rect.width / 2}px`;
+              botaoAnalise.style.top = `${rect.top - 40}px`;
+            }
+          }
+        }
+      }
+    });
+  };
+
   // Detectar se é dispositivo móvel
   useEffect(() => {
-    const checkIsMobile = () => {
+    const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
-      
-      // Sidebar sempre aberta em desktop, fechada por padrão em mobile
-      setSidebarAberta(window.innerWidth >= 768);
     };
     
     // Verificar inicialmente
-    checkIsMobile();
+    checkMobile();
     
-    // Adicionar listener para redimensionamento
-    window.addEventListener('resize', checkIsMobile);
+    // Adicionar listener para redimensionamento da janela
+    window.addEventListener('resize', checkMobile);
     
-    // Limpar listener
-    return () => window.removeEventListener('resize', checkIsMobile);
+    // Limpar listener ao desmontar
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
   }, []);
 
   // Redirecionar para login se não estiver autenticado
@@ -1164,317 +1792,268 @@ ${camposDoc.map(campo => {
     </motion.div>
   );
 
-  // Renderiza o editor de documento estilo A4
+  // Função para renderizar o editor
   const renderEditor = () => (
     <motion.div 
-      className="min-h-full flex flex-col overflow-visible"
+      className="flex-1 flex flex-col"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      <div className="flex flex-wrap items-center justify-between p-4 border-b border-law-200 dark:border-law-700">
-        <div className="flex items-center mb-2 sm:mb-0">
-          <button 
-            onClick={voltarEtapa}
-            className="mr-4 p-2 rounded-full hover:bg-law-100 dark:hover:bg-law-800 transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary-700 dark:text-primary-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <input
-            type="text"
-            value={tituloDocumento}
-            onChange={handleTituloChange}
-            placeholder="Título do documento"
-            className="font-serif text-xl font-bold bg-transparent border-b border-transparent focus:border-primary-500 focus:outline-none dark:text-white w-full max-w-[200px] sm:max-w-none truncate"
-          />
-        </div>
+      <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 flex items-center">
+        <button
+          onClick={voltarEtapa}
+          className="mr-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          title="Voltar para etapa anterior"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M7.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l2.293 2.293a1 1 0 010 1.414z" clipRule="evenodd" />
+          </svg>
+        </button>
         
-        <div className="flex items-center">
-          <span id="status-salvamento" className="text-sm text-gray-500 dark:text-gray-400 hidden md:inline-block mr-2">
-            {ultimoSalvamento 
-              ? `Última alteração salva: ${ultimoSalvamento.toLocaleTimeString()}` 
-              : 'Documento não salvo'}
-          </span>
+        <input
+          type="text"
+          value={tituloDocumento}
+          onChange={handleTituloChange}
+          placeholder="Título do documento"
+          className="flex-1 bg-transparent border-b border-gray-300 dark:border-gray-600 px-2 py-1 text-lg font-medium text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+        />
+        
+        <div className="flex items-center ml-auto space-x-2">
+          {ultimoSalvamento && (
+            <span id="status-salvamento" className="text-xs text-gray-500 dark:text-gray-400 mr-2">
+              {salvando ? 'Salvando...' : 'Todas as alterações salvas'}
+            </span>
+          )}
           
           <button
             onClick={salvarDocumento}
             disabled={salvando}
-            className="px-3 py-1.5 text-sm bg-primary-600 hover:bg-primary-700 text-white rounded-md transition-colors flex items-center"
+            className={`px-3 py-1.5 rounded-md ${
+              salvando 
+                ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
+                : 'bg-primary-500 hover:bg-primary-600 text-white'
+            } text-sm font-medium transition-colors`}
+            title="Salvar documento"
           >
-            {salvando ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Salvando
-              </>
-            ) : (
-              <>
-                Salvar
-              </>
-            )}
+            {salvando ? 'Salvando...' : 'Salvar'}
+          </button>
+          
+          <button
+            onClick={() => {
+              // Exportar documento como DOCX
+              const loadingToast = toast.loading('Preparando documento para download...');
+              
+              try {
+                // Criar elemento temporário para analisar o HTML do Quill
+                const tempElement = document.createElement('div');
+                tempElement.innerHTML = documentoGerado;
+                
+                // Extrair texto e formatação básica do HTML
+                const paragraphs: Paragraph[] = [];
+                const elements = Array.from(tempElement.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, div'));
+                
+                for (const element of elements) {
+                  // Pular elementos aninhados para evitar duplicação
+                  if (element.parentElement && elements.includes(element.parentElement)) {
+                    continue;
+                  }
+                  
+                  // Obter texto simples do elemento
+                  const text = element.textContent || '';
+                  
+                  // Determinar alinhamento
+                  let alignment;
+                  const computedStyle = window.getComputedStyle(element);
+                  const textAlign = computedStyle.textAlign;
+                  
+                  // Mapear valores de alinhamento entre CSS e docx
+                  if (textAlign === 'center') {
+                    alignment = AlignmentType.CENTER;
+                  } else if (textAlign === 'right') {
+                    alignment = AlignmentType.RIGHT;
+                  } else if (textAlign === 'left') {
+                    alignment = AlignmentType.LEFT;
+                  } else {
+                    alignment = AlignmentType.JUSTIFIED;
+                  }
+                  
+                  // Determinar se é título
+                  let heading = undefined;
+                  if (element.tagName.match(/^H[1-6]$/)) {
+                    const level = parseInt(element.tagName.substring(1));
+                    switch (level) {
+                      case 1: heading = HeadingLevel.HEADING_1; break;
+                      case 2: heading = HeadingLevel.HEADING_2; break;
+                      case 3: heading = HeadingLevel.HEADING_3; break;
+                      case 4: heading = HeadingLevel.HEADING_4; break;
+                      case 5: heading = HeadingLevel.HEADING_5; break;
+                      case 6: heading = HeadingLevel.HEADING_6; break;
+                    }
+                  }
+                  
+                  // Criar TextRun simples
+                  const textRun = new TextRun({
+                    text: text
+                  });
+                  
+                  // Criar parágrafo com o TextRun
+                  paragraphs.push(new Paragraph({
+                    heading,
+                    alignment,
+                    children: [textRun],
+                    spacing: {
+                      after: 200,
+                    }
+                  }));
+                }
+                
+                // Criar título se existir
+                if (tituloDocumento) {
+                  paragraphs.unshift(new Paragraph({
+                    text: tituloDocumento,
+                    heading: HeadingLevel.HEADING_1,
+                    alignment: AlignmentType.CENTER,
+                    spacing: {
+                      before: 400,
+                      after: 400
+                    }
+                  }));
+                }
+                
+                // Criar documento
+                const doc = new Document({
+                  sections: [{
+                    properties: {
+                      page: {
+                        margin: {
+                          top: convertInchesToTwip(1),
+                          right: convertInchesToTwip(1),
+                          bottom: convertInchesToTwip(1),
+                          left: convertInchesToTwip(1)
+                        }
+                      }
+                    },
+                    children: paragraphs
+                  }]
+                });
+                
+                // Gerar arquivo
+                Packer.toBuffer(doc).then(buffer => {
+                  const blob = new Blob([buffer], { 
+                    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+                  });
+                  saveAs(blob, `${tituloDocumento || 'documento'}.docx`);
+                  toast.success('Documento DOCX gerado com sucesso!', { id: loadingToast });
+                });
+              } catch (error) {
+                console.error('Erro ao gerar documento:', error);
+                toast.error('Falha ao exportar o documento. Tente novamente.', { id: loadingToast });
+              }
+            }}
+            className="px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/30 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-md text-sm font-medium transition-colors"
+            title="Exportar como DOCX"
+          >
+            Exportar
+          </button>
+          
+          <button
+            onClick={imprimirDocumento}
+            className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md text-sm font-medium transition-colors"
+            title="Imprimir documento"
+          >
+            Imprimir
           </button>
         </div>
       </div>
       
-      {/* Barra de ferramentas do documento */}
-      <div className="flex flex-wrap gap-2 p-4 border-b border-law-200 dark:border-law-700 no-print">
-        <button
-          onClick={imprimirDocumento}
-          className="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-          </svg>
-          Imprimir
-        </button>
-        
-        <button
-          onClick={baixarComoDocx}
-          className="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          Baixar DOCX
-        </button>
-        
-        <button
-          onClick={copiarDocumento}
-          className="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-          </svg>
-          Copiar
-        </button>
-        
-        {/* Dica para melhor experiência de edição */}
-        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-md p-3 mt-2 w-full no-print">
-          <div className="flex items-start">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div>
-              <p className="text-sm text-blue-700 dark:text-blue-300">
-                <strong>Dica:</strong> Para melhor experiência e formatação completa, recomendamos baixar o documento em formato DOCX e editá-lo no Microsoft Word ou Google Docs.
-              </p>
-            </div>
+      <div className="flex-1 bg-gray-100 dark:bg-gray-800 overflow-auto">
+        <div className="max-w-4xl mx-auto my-6 print-content">
+          <div className="bg-white dark:bg-white shadow-lg rounded-lg overflow-visible">
+            {/* Editor de texto */}
+            <ReactQuill
+              ref={handleEditorRef}
+              value={documentoGerado}
+              onChange={(value) => {
+                setDocumentoGerado(value);
+                documentoModificado.current = true;
+              }}
+              theme="snow"
+              modules={{
+                toolbar: [
+                  [{ header: [1, 2, 3, 4, 5, 6, false] }],
+                  ['bold', 'italic', 'underline', 'strike'],
+                  [{ list: 'ordered' }, { list: 'bullet' }],
+                  [{ indent: '-1' }, { indent: '+1' }],
+                  [{ align: [] }],
+                  ['clean'],
+                ],
+                clipboard: {
+                  matchVisual: false,
+                },
+              }}
+              onInit={() => {
+                const editorElement = document.querySelector('.ql-editor');
+                setupSelectionObserver(editorElement);
+                
+                // Adicionar evento para capturar selection-change
+                if (editorRef.current) {
+                  const editor = editorRef.current.getEditor();
+                  editor.on('selection-change', (range) => {
+                    if (range && range.length > 0) {
+                      // Texto selecionado
+                      const selectedText = editor.getText(range.index, range.length);
+                      if (selectedText.trim().length > 0) {
+                        setTextoSelecionado(selectedText);
+                        setPosicaoSelecao({ index: range.index, length: range.length });
+                        
+                        // Calcular posição para tooltip
+                        const bounds = editor.getBounds(range.index, range.length);
+                        const tooltipPosition = {
+                          x: bounds.left + bounds.width / 2,
+                          y: bounds.top,
+                        };
+                        setTooltipPosition(tooltipPosition);
+                        setMostrarTooltip(true);
+                      }
+                    } else {
+                      // Sem seleção
+                      setMostrarTooltip(false);
+                    }
+                  });
+                }
+              }}
+            />
           </div>
         </div>
       </div>
       
-      {/* Editor Quill */}
-      <div className="bg-white shadow-lg mx-auto rounded-sm overflow-hidden print:shadow-none mb-10">
-        <div id="documento-para-impressao" className="min-h-[29.7cm] w-full max-w-[21cm] mx-auto bg-white border border-gray-200 outline-none md:min-h-[29.7cm] min-h-auto">
-          <ReactQuill
-            value={documentoGerado}
-            onChange={handleDocumentoChange}
-            modules={quillModules}
-            formats={quillFormats}
-            className="print-content"
-            theme="snow"
-            style={{
-              width: '100%',
-              maxWidth: '21cm',
-              minHeight: isMobile ? 'auto' : '27cm',  // Remover altura mínima fixa em dispositivos móveis
-              fontFamily: 'Times New Roman, Times, serif'
-            }}
+      {/* Tooltip para analisar texto selecionado */}
+      <AnimatePresence>
+        {mostrarTooltip && textoSelecionado && tooltipPosition && (
+          <TextSuggestionTooltip 
+            position={tooltipPosition} 
+            onAnalyze={analisarTextoSelecionado}
           />
-        </div>
-      </div>
+        )}
+      </AnimatePresence>
+      
+      {/* Animação temporária de análise */}
+      <AnimatePresence>
+        {analisando && (
+          <AnalysisIndicator />
+        )}
+      </AnimatePresence>
+      
+      {/* Assistente do editor - remover a condição para garantir que seja sempre renderizado */}
+      <EditorAssistant
+        documentoId={documentoAtual || 'temp_doc_id'}
+        tipoDocumento={tipoDocumentoSelecionado}
+        conteudoAtual={documentoGerado}
+        onAplicarSugestao={aplicarSugestaoAssistente}
+      />
     </motion.div>
   );
-
-  // Baixar como DOCX com preservação de formatação
-  const baixarComoDocx = async () => {
-    // Mostrar toast de carregamento
-    const loadingToast = toast.loading('Preparando documento para download...');
-
-    try {
-      // Criar elemento temporário para analisar o HTML do Quill
-      const tempElement = document.createElement('div');
-      tempElement.innerHTML = documentoGerado;
-
-      // Extrair texto e formatação básica do HTML
-      const paragraphs: Paragraph[] = [];
-      const elements = Array.from(tempElement.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, div'));
-      
-      for (const element of elements) {
-        // Pular elementos aninhados para evitar duplicação
-        if (element.parentElement && elements.includes(element.parentElement)) {
-          continue;
-        }
-        
-        // Obter texto simples do elemento
-        const text = element.textContent || '';
-        
-        // Determinar alinhamento
-        let alignment;
-        const computedStyle = window.getComputedStyle(element);
-        const textAlign = computedStyle.textAlign;
-        
-        // Mapear valores de alinhamento entre CSS e docx
-        if (textAlign === 'center') {
-          alignment = AlignmentType.CENTER;
-        } else if (textAlign === 'right') {
-          alignment = AlignmentType.RIGHT;
-        } else if (textAlign === 'left') {
-          alignment = AlignmentType.LEFT;
-        } else {
-          alignment = AlignmentType.JUSTIFIED;
-        }
-
-        // Determinar se é título
-        let heading = undefined;
-        if (element.tagName.match(/^H[1-6]$/)) {
-          const level = parseInt(element.tagName.substring(1));
-          switch (level) {
-            case 1: heading = HeadingLevel.HEADING_1; break;
-            case 2: heading = HeadingLevel.HEADING_2; break;
-            case 3: heading = HeadingLevel.HEADING_3; break;
-            case 4: heading = HeadingLevel.HEADING_4; break;
-            case 5: heading = HeadingLevel.HEADING_5; break;
-            case 6: heading = HeadingLevel.HEADING_6; break;
-          }
-        }
-
-        // Criar TextRun simples
-        const textRun = new TextRun({
-          text: text
-        });
-        
-        // Criar parágrafo com o TextRun
-        paragraphs.push(new Paragraph({
-          heading,
-          alignment,
-          children: [textRun],
-          spacing: {
-            after: 200,
-          }
-        }));
-      }
-
-      // Criar título se existir
-      if (tituloDocumento) {
-        paragraphs.unshift(new Paragraph({
-          text: tituloDocumento,
-          heading: HeadingLevel.HEADING_1,
-          alignment: AlignmentType.CENTER,
-          spacing: {
-            before: 400,
-            after: 400
-          }
-        }));
-      }
-
-      // Criar documento
-      const doc = new Document({
-        sections: [{
-          properties: {
-            page: {
-              margin: {
-                top: convertInchesToTwip(1),
-                right: convertInchesToTwip(1),
-                bottom: convertInchesToTwip(1),
-                left: convertInchesToTwip(1)
-              }
-            }
-          },
-          children: paragraphs
-        }]
-      });
-
-      // Gerar arquivo
-      const buffer = await Packer.toBuffer(doc);
-      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-      saveAs(blob, `${tituloDocumento || 'documento'}.docx`);
-
-      toast.success('Documento DOCX gerado com sucesso! Para melhor experiência, edite-o no Word ou Google Docs.', { id: loadingToast, duration: 5000 });
-    } catch (error) {
-      console.error('Erro ao gerar DOCX:', error);
-      toast.error('Não foi possível gerar o documento DOCX. Tentando alternativa...', { id: loadingToast });
-      
-      try {
-        // Fallback: exportar como HTML que pode ser aberto no Word
-        const htmlContent = `<!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <title>${tituloDocumento || 'Documento Jurídico'}</title>
-          <style>
-            body {
-              font-family: 'Times New Roman', Times, serif;
-              font-size: 12pt;
-              line-height: 1.5;
-              margin: 0;
-              padding: 0;
-            }
-            .documento {
-              padding: 2.54cm;
-              width: 21cm;
-              min-height: 29.7cm;
-              box-sizing: border-box;
-            }
-            h1, h2, h3, h4 {
-              font-weight: bold;
-            }
-            h1 {
-              font-size: 14pt;
-              text-align: center;
-              margin-bottom: 24pt;
-            }
-            p {
-              margin-bottom: 10pt;
-              text-align: justify;
-            }
-            .ql-align-center {
-              text-align: center;
-            }
-            .ql-align-right {
-              text-align: right;
-            }
-            .ql-align-left {
-              text-align: left;
-            }
-            strong, b {
-              font-weight: bold;
-            }
-            em, i {
-              font-style: italic;
-            }
-            u {
-              text-decoration: underline;
-            }
-            ol, ul {
-              padding-left: 2em;
-              margin-bottom: 10pt;
-            }
-            li {
-              margin-bottom: 5pt;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="documento">
-            <h1>${tituloDocumento}</h1>
-            ${documentoGerado}
-          </div>
-        </body>
-        </html>`;
-        
-        const blob = new Blob([htmlContent], { type: 'text/html' });
-        saveAs(blob, `${tituloDocumento || 'documento'}.html`);
-        toast.success('Documento salvo como HTML. Abra no Word e salve como DOCX para melhor compatibilidade.', { id: loadingToast });
-      } catch (e) {
-        console.error('Erro ao salvar como HTML:', e);
-        toast.error('Falha ao salvar o documento. Tente novamente.', { id: loadingToast });
-      }
-    }
-  };
 
   // Modificar o layout para exibir a barra lateral fixa
   return (
@@ -1615,6 +2194,14 @@ ${camposDoc.map(campo => {
               overflow: visible !important;
               max-height: none !important;
             }
+          }
+          
+          /* Estilos para o botão de análise de texto */
+          #botao-analise-texto {
+            position: fixed;
+            display: none;
+            z-index: 1000;
+            transform: translate(-50%, -100%);
           }
         `}</style>
       </Head>

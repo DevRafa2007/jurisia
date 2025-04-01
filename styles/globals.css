@@ -806,4 +806,133 @@ body {
   position: relative;
   z-index: 20 !important;
   pointer-events: auto !important;
+}
+
+/* Configurações específicas para corrigir problemas de scroll */
+@media (min-width: 1024px) {
+  /* Regras para desktops/PC */
+  html, body {
+    overflow: auto !important;
+    height: auto !important;
+    overflow-x: hidden !important; 
+  }
+  
+  body, #__next {
+    overflow-y: visible !important;
+    overflow-x: hidden !important;
+    height: auto !important;
+  }
+  
+  .landing-page-container {
+    height: auto !important;
+    overflow: visible !important;
+  }
+  
+  .landing-page-content {
+    overflow: visible !important;
+  }
+  
+  main {
+    overflow-y: visible !important;
+    overflow-x: hidden !important;
+  }
+  
+  section, footer, header {
+    overflow: visible !important;
+  }
+}
+
+/* Regras específicas para manter múltiplos scrolls em mobile */
+@media (max-width: 1023px) {
+  html, body, #__next {
+    overflow-x: hidden !important;
+  }
+  
+  .landing-page-container {
+    overflow-x: hidden !important;
+  }
+}
+
+/* Estilos para o assistente de editor */
+#botao-analise-texto {
+  position: absolute;
+  display: none;
+  z-index: 100;
+  transform: translate(-50%, -100%);
+  transition: opacity 0.2s ease-in-out;
+}
+
+.text-suggestion-tooltip {
+  position: absolute;
+  z-index: 100;
+  transform: translate(-50%, -100%);
+  max-width: 300px;
+}
+
+.editor-assistant-container {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 50;
+}
+
+.editor-assistant-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.editor-assistant-button:hover {
+  transform: scale(1.05);
+}
+
+.editor-chat-panel {
+  position: fixed;
+  right: 20px;
+  bottom: 80px;
+  width: 350px;
+  height: 500px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+}
+
+.dark .editor-chat-panel {
+  background-color: #1f2937;
+}
+
+@media (max-width: 640px) {
+  .editor-chat-panel {
+    width: calc(100% - 40px);
+    height: 400px;
+  }
+}
+
+/* Animação de pulso para o indicador de análise */
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 0.6;
+    transform: scale(0.98);
+  }
+}
+
+.analysis-indicator {
+  animation: pulse 1.5s infinite ease-in-out;
 } 

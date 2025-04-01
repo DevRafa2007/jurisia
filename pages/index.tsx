@@ -532,12 +532,12 @@ Como posso auxiliar você hoje?`,
                         exit={{ opacity: 0, y: 10 }}
                         transition={{ duration: 0.3 }}
                       >
-                        <svg className="h-5 w-5 animate-pulse" fill="currentColor" viewBox="0 0 24 24">
-                          <circle cx="4" cy="12" r="3" />
-                          <circle cx="12" cy="12" r="3" />
-                          <circle cx="20" cy="12" r="3" />
-                        </svg>
-                        <span>Assistente jurídico está digitando...</span>
+                        <span>Assistente jurídico está digitando</span>
+                        <span className="flex space-x-1">
+                          <span className="h-2 w-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                          <span className="h-2 w-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                          <span className="h-2 w-2 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                        </span>
                       </motion.div>
                     )}
                   </AnimatePresence>

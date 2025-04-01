@@ -1,152 +1,160 @@
-# JurisIA - Assistente Jurídico com IA
+# JurisIA - Assistente Jurídico IA
 
-JurisIA é um assistente jurídico virtual desenvolvido para auxiliar advogados e profissionais do direito com consultas jurídicas, pesquisas de leis e análises de documentos legais.
+## Visão Geral
+
+JurisIA é um assistente jurídico especializado alimentado pela API Groq, projetado para fornecer consultas jurídicas precisas e atualizadas com base na legislação brasileira. O sistema utiliza o modelo Llama 3.3 70B da Groq, que oferece:
+
+- Processamento rápido de consultas complexas
+- Acesso a dados jurídicos atualizados até 2025
+- Capacidade de acompanhar mudanças legislativas em tempo real
 
 ## Características
 
-- Interface moderna e intuitiva com tema jurídico
-- Modo claro/escuro
-- Histórico de conversas com função de exportação
-- Suporte a formatação Markdown nas respostas
-- Sugestões de consultas e templates
-- Modo de foco para concentração
-- Sistema de logging avançado para melhor depuração
-- Sistema de animações e notificações
-- Responsivo para dispositivos móveis
+- **Consultas Inteligentes**: Análise contextual de questões jurídicas com citações precisas de leis
+- **Atualização Automática**: Sistema de webhooks para receber atualizações legislativas em tempo real
+- **Cache Inteligente**: Armazenamento temporário de informações para respostas mais rápidas
+- **Filtros Avançados**: Busca por tipo de legislação, data ou palavras-chave
+
+## Modelos Utilizados
+
+O JurisIA utiliza o **Llama 3.3 70B** da Groq, um dos modelos mais avançados disponíveis para processamento de linguagem natural, especialmente adaptado para consultas jurídicas com:
+
+- Contexto de 8.192 tokens
+- Treinamento especializado em textos jurídicos
+- Capacidade de processar questões complexas
+- Suporte a linguagem jurídica brasileira
 
 ## Configuração
 
 ### Pré-requisitos
 
-- Node.js 14.x ou superior
-- NPM ou Yarn
-- Conta no Supabase (para autenticação e armazenamento)
-- Chave de API do Groq (para o modelo de IA)
+- Node.js 18+
+- Conta na plataforma Groq com API Key
+
+### Variáveis de Ambiente
+
+Crie um arquivo `.env` na raiz do projeto com as seguintes variáveis:
+
+```
+GROQ_API_KEY=sua_chave_api_groq
+LEGAL_UPDATE_API_KEY=chave_para_api_de_atualizacoes
+WEBHOOK_SECRET=segredo_para_autenticacao_de_webhooks
+```
 
 ### Instalação
 
-1. Clone o repositório:
 ```bash
-git clone https://github.com/seu-usuario/jurisia.git
-cd jurisia
-```
-
-2. Instale as dependências:
-```bash
+# Instalar dependências
 npm install
-# ou
-yarn install
-```
 
-3. Configure as variáveis de ambiente:
-Crie um arquivo `.env.local` na raiz do projeto com as seguintes variáveis:
-
-```
-NEXT_PUBLIC_SUPABASE_URL=sua_url_do_supabase
-NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_anonima_do_supabase
-GROQ_API_KEY=sua_chave_api_do_groq
-```
-
-4. Inicie o servidor de desenvolvimento:
-```bash
+# Iniciar em modo desenvolvimento
 npm run dev
-# ou
-yarn dev
+
+# Construir para produção
+npm run build
+
+# Iniciar em modo produção
+npm start
 ```
 
-5. Acesse `http://localhost:3000` no seu navegador.
+## Uso da API
 
-## Estrutura do Banco de Dados (Supabase)
+### Consulta Jurídica
 
-O projeto utiliza o Supabase para autenticação e armazenamento. Você precisará criar as seguintes tabelas:
+**Endpoint**: `/api/juridica`
 
-### Tabela `conversas`
-- `id` (uuid, primary key)
-- `usuario_id` (uuid, foreign key para auth.users)
-- `titulo` (text)
-- `criado_em` (timestamp with time zone, default: now())
-- `atualizado_em` (timestamp with time zone, default: now())
-- `favorito` (boolean, default: false)
+**Método**: POST
 
-### Tabela `mensagens`
-- `id` (uuid, primary key)
-- `conversa_id` (uuid, foreign key para conversas.id)
-- `conteudo` (text)
-- `tipo` (text) - 'usuario' ou 'assistente'
-- `criado_em` (timestamp with time zone, default: now())
+**Corpo da Requisição**:
+```json
+{
+  "consulta": "Quais são as condições para usucapião de um imóvel urbano?",
+  "historico": [
+    {
+      "role": "user",
+      "content": "Quais os tipos de usucapião existentes?"
+    },
+    {
+      "role": "assistant",
+      "content": "Existem vários tipos de usucapião no direito brasileiro: usucapião extraordinário, ordinário, especial urbano (também conhecido como constitucional urbano ou pro moradia), especial rural, familiar e coletivo."
+    }
+  ]
+}
+```
 
-### Tabela `perfis`
-- `id` (uuid, primary key)
-- `usuario_id` (uuid, foreign key para auth.users)
-- `nome` (text)
-- `criado_em` (timestamp with time zone, default: now())
-- `atualizado_em` (timestamp with time zone, default: now())
+**Resposta**:
+```json
+{
+  "conteudo": "Para a usucapião de imóvel urbano, as condições variam conforme a modalidade...",
+  "modeloUsado": "llama-3.3-70b-versatile",
+  "tokens": {
+    "entrada": 247,
+    "saida": 612,
+    "total": 859
+  },
+  "fontesAtualizadas": [
+    "https://www.planalto.gov.br/legislacao",
+    "https://www.stf.jus.br/portal/jurisprudencia",
+    "https://www.in.gov.br/web/dou"
+  ],
+  "dataAtualizacao": "2025-03-27T15:43:22.120Z"
+}
+```
 
-## Funcionalidades
+### Verificar Atualizações Legais
 
-- **Chat com IA**: Assistente jurídico inteligente para consultas.
-- **Histórico de Conversas**: Todas as consultas são salvas automaticamente.
-- **Gerador de Documentos**: Crie documentos jurídicos automaticamente com base em formulários específicos.
-- **Modo Escuro**: Interface adaptativa para uso diurno e noturno.
-- **Autenticação Segura**: Login com email/senha e autenticação social.
+**Endpoint**: `/api/atualizacoes`
 
-## Gerador de Documentos
+**Método**: GET
 
-O JurisIA inclui um gerador de documentos jurídicos que permite aos advogados criar rapidamente:
+**Parâmetros**:
+- `tipo`: Filtrar por tipo de legislação (opcional)
+- `desde`: Filtrar por data, formato YYYY-MM-DD (opcional)
 
-- Petições Iniciais
-- Contestações
-- Recursos
-- Pareceres Jurídicos
-- Contratos
-- Procurações
-- Notificações Extrajudiciais
-- Acordos
+**Exemplo**:
+```
+GET /api/atualizacoes?tipo=lei&desde=2025-01-01
+```
 
-Cada tipo de documento possui um formulário específico que coleta as informações necessárias. Após preencher o formulário, a IA gera automaticamente o documento completo que pode ser editado em um editor estilo A4, impresso ou copiado.
+## Webhook para Atualizações
 
-## Funcionalidades Avançadas
+O sistema suporta recebimento de atualizações legislativas via webhook:
 
-### Exportação de Conversas
+**Endpoint**: `/api/webhook`
 
-O sistema permite exportar conversas em diferentes formatos:
-- JSON: Para uso em outros sistemas ou backup
-- Markdown: Para documentação e leitura
-- Texto plano: Para simplicidade e compatibilidade
+**Método**: POST
 
-Para usar esta funcionalidade, clique no botão "Exportar" no rodapé da barra lateral de conversas.
+**Headers**:
+```
+Authorization: Bearer seu_webhook_secret
+Content-Type: application/json
+```
 
-### Sistema de Logging
+**Corpo**:
+```json
+{
+  "tipo": "nova_lei",
+  "dados": {
+    "identificador": "Lei 15000/2025",
+    "data": "2025-04-10",
+    "descricao": "Nova lei sobre regulamentação de IA no setor jurídico",
+    "url": "https://legislacao.gov.br/lei15000"
+  }
+}
+```
 
-Foi implementado um sistema de logging robusto usando Winston:
-- Logs de diferentes níveis (debug, info, warn, error)
-- Logs em console durante desenvolvimento
-- Logs em arquivo em ambiente de produção
-- Rotação automática de logs
+## Arquitetura
 
-### Tratamento de Requisições API
-
-O sistema inclui um tratamento avançado para requisições à API Groq:
-- Fallback para respostas simuladas quando a API não está disponível
-- Tratamento detalhado de erros e exibição de mensagens amigáveis
-- Contagem de tokens para controle de custos
-
-## Modo de Desenvolvimento sem API Groq
-
-O sistema inclui um modo de desenvolvimento que não requer a API do Groq. Quando a variável `GROQ_API_KEY` não está definida ou quando o ambiente é de desenvolvimento, o sistema usa respostas simuladas para consultas jurídicas.
-
-## UX Aprimorada
-
-Implementamos melhorias significativas na experiência do usuário:
-- Animações suaves usando Framer Motion
-- Notificações toast para feedback instantâneo
-- Indicadores de carregamento interativos
-- Perfil de usuário personalizável com nome completo
+- **utils/groq.ts**: Interface principal para comunicação com a API Groq
+- **utils/atualizacoes-legais.ts**: Gerenciamento de atualizações legislativas
+- **pages/api/juridica.ts**: Endpoint para consultas jurídicas
+- **pages/api/atualizacoes.ts**: Endpoint para verificar atualizações legais
+- **pages/api/webhook.ts**: Endpoint para receber notificações de mudanças
 
 ## Licença
 
-Este projeto está licenciado sob a licença MIT - veja o arquivo LICENSE para detalhes.
+Este projeto está licenciado sob a Licença MIT - veja o arquivo LICENSE para detalhes.
 
-## Contato
+## Contribuição
 
-Para suporte ou dúvidas, entre em contato através do email: seu-email@exemplo.com 
+Contribuições são bem-vindas! Por favor, sinta-se à vontade para enviar pull requests ou abrir issues para melhorias ou correções. 

@@ -1,0 +1,883 @@
+# IMPLEMENTAÇÃO DE ASSISTENTE IA NO EDITOR DE DOCUMENTOS - PLANO DE EXECUÇÃO
+
+## OBJETIVO
+Integrar um assistente de IA similar ao do chat na página do editor de documentos, permitindo ao usuário obter ajuda, sugestões e melhorias durante a criação de documentos jurídicos, aumentando a produtividade e a qualidade dos documentos gerados.
+
+## ANÁLISE COMPETITIVA
+- **JusIA**: Oferece assistência geral, mas sem integração direta no editor de documentos.
+- **Juridico IA**: Possui sugestões de textos, mas apresenta interação limitada durante a redação.
+- **Nossa Vantagem**: IA especializada integrada diretamente ao editor, com análises em tempo real e correções jurídicas específicas.
+
+## ETAPAS DE IMPLEMENTAÇÃO
+
+### FASE 1: ANÁLISE E PREPARAÇÃO
+- [x] 1.1. Analisar a estrutura atual da página de documentos (pages/documentos.tsx)
+- [x] 1.2. Identificar pontos ideais para integração do componente de chat
+- [x] 1.3. Avaliar o componente ChatMessage para reutilização no editor
+- [x] 1.4. Definir modelos de mensagens específicas para assistência na redação de documentos
+- [x] 1.5. Mapear endpoints da API necessários para a integração
+
+### FASE 2: DESENVOLVIMENTO DO COMPONENTE
+- [x] 2.1. Criar componente EditorAssistant.tsx para exibir o assistente no editor
+  - [x] 2.1.1. Botão flutuante para exibir/ocultar o assistente
+  - [x] 2.1.2. Interface de chat lateral ou em modal
+  - [x] 2.1.3. Histórico de interações específico para o documento atual
+- [x] 2.2. Desenvolver componente específico para sugestões diretas no texto
+  - [x] 2.2.1. Tooltip integrado ao editor Quill
+  - [x] 2.2.2. Sugestões inline com opção de aceitar/rejeitar
+- [x] 2.3. Implementar componente de feedback visual para análise em andamento
+
+### FASE 3: INTEGRAÇÃO COM O EDITOR
+- [x] 3.1. Modificar pages/documentos.tsx para incluir o componente de assistente
+- [x] 3.2. Adicionar opção toggleable para mostrar/esconder o assistente
+- [x] 3.3. Implementar sistema de comunicação entre editor e assistente
+  - [x] 3.3.1. Capturar seleções de texto para análise específica
+  - [x] 3.3.2. Permitir aplicação direta de sugestões do assistente no editor
+- [x] 3.4. Garantir que a interface seja responsiva tanto em desktop quanto mobile
+
+### FASE 4: FUNCIONALIDADES ESPECIALIZADAS
+- [x] 4.1. Implementar detecção e análise de erros jurídicos
+  - [x] 4.1.1. Verificação de terminologia legal correta
+  - [x] 4.1.2. Consistência de argumentação jurídica
+  - [x] 4.1.3. Detecção de citações legais incorretas
+- [x] 4.2. Desenvolver sugestão de trechos com base no tipo de documento
+  - [x] 4.2.1. Modelos de cláusulas para diferentes tipos de contratos
+  - [x] 4.2.2. Estruturas padrão para petições conforme tribunal
+  - [x] 4.2.3. Trechos personalizados com base no histórico do usuário
+- [x] 4.3. Adicionar análise de leis e jurisprudências relevantes
+  - [x] 4.3.1. Detecção de temas jurídicos no texto
+  - [x] 4.3.2. Sugestão de jurisprudência relacionada
+  - [x] 4.3.3. Atualização sobre mudanças recentes na legislação
+
+### FASE 5: BACKEND E INTEGRAÇÃO
+- [x] 5.1. Adaptar endpoints da API para o contexto do editor de documentos
+- [x] 5.2. Implementar cache para reduzir chamadas repetitivas à API
+- [x] 5.3. Criar histórico específico de interações com o assistente para cada documento
+- [x] 5.4. Implementar sistema de feedback para melhorar sugestões do assistente
+
+### FASE 6: TESTES E OTIMIZAÇÃO
+- [ ] 6.1. Realizar testes de usabilidade com advogados
+- [ ] 6.2. Otimizar desempenho para documentos extensos
+- [ ] 6.3. Testar em diferentes dispositivos e navegadores
+- [ ] 6.4. Implementar melhorias com base nos feedbacks recebidos
+
+### FASE 7: LANÇAMENTO E MONITORAMENTO
+- [ ] 7.1. Implementar tutorial interativo para novos usuários
+- [ ] 7.2. Adicionar sistema de telemetria para monitorar uso do assistente
+- [ ] 7.3. Criar documentação para usuários sobre o assistente no editor
+- [ ] 7.4. Lançar feature com destaque na interface e e-mail marketing
+
+### FASE 8: INTEGRAÇÃO DE LEITURA E MANIPULAÇÃO AVANÇADA DE TEXTO
+- [ ] 8.1. Aprimorar a integração com o editor Quill para acesso completo ao documento
+  - [ ] 8.1.1. Implementar método para leitura completa do conteúdo do documento
+  - [ ] 8.1.2. Desenvolver sistema de parsing que mantenha formatação e estrutura
+  - [ ] 8.1.3. Criar cache local do documento para análise sem requisições constantes
+  - [ ] 8.1.4. Implementar observadores de mudança para manter o cache atualizado
+- [ ] 8.2. Desenvolver sistema avançado de manipulação de texto
+  - [ ] 8.2.1. Criar função para substituição precisa de trechos específicos
+  - [ ] 8.2.2. Implementar busca e substituição com expressões regulares
+  - [ ] 8.2.3. Adicionar suporte para operações em múltiplos trechos simultaneamente
+  - [ ] 8.2.4. Desenvolver sistema de desfazer/refazer específico para operações da IA
+- [ ] 8.3. Implementar interface para edição avançada
+  - [ ] 8.3.1. Criar comandos de texto naturais para manipulação ("substitua X por Y", "mova o parágrafo X para Y")
+  - [ ] 8.3.2. Desenvolver visualização prévia das alterações antes da aplicação
+  - [ ] 8.3.3. Implementar sistema de diff visual para mostrar alterações propostas
+  - [ ] 8.3.4. Criar comandos rápidos para operações comuns de edição
+- [ ] 8.4. Adicionar recursos de análise contextual avançada
+  - [ ] 8.4.1. Implementar análise semântica de seções do documento
+  - [ ] 8.4.2. Desenvolver sistema de detecção de consistência entre seções diferentes
+  - [ ] 8.4.3. Criar análise estrutural completa do documento (introdução, desenvolvimento, conclusão)
+  - [ ] 8.4.4. Adicionar resumo automático do documento completo
+
+## MELHORIAS DIFERENCIAIS
+
+### MELHORIAS TÉCNICAS
+- [ ] Análise de sentimento da redação jurídica para sugerir tom mais apropriado
+- [ ] Sistema de memória contextual para lembrar preferências do usuário por tipo de documento
+- [ ] Integração com bases de dados jurídicas para citações de leis e jurisprudência
+- [ ] Detecção e sugestão de correção para terminologias jurídicas desatualizadas
+- [ ] Sistema de aprendizagem personalizada para adaptar-se ao estilo de escrita do usuário
+
+### MELHORIAS DE INTERFACE
+- [ ] Modo "redação focada" que simplifica a interface durante a escrita
+- [ ] Comentários laterais do assistente vinculados a trechos específicos
+- [ ] Visualização de sugestões em tempo real com preview
+- [ ] Estatísticas de qualidade do documento com pontuações em clareza, precisão jurídica e persuasão
+- [ ] Sistema de tags visuais para identificar diferentes tipos de sugestões (estilo, conteúdo, legal)
+
+### Implementação da Classe DocumentoService
+
+A classe `DocumentoService` será o componente central desta implementação, atuando como uma camada de abstração entre o componente EditorAssistant e o editor Quill. Abaixo está o esqueleto da classe com suas principais responsabilidades:
+
+```typescript
+/**
+ * Serviço para gerenciar a interação com o editor de documentos,
+ * fornecendo uma API unificada para leitura e manipulação.
+ */
+class DocumentoService {
+  private editorRef: React.RefObject<any>;
+  private cache: DocumentoCache | null = null;
+  private lastUpdateTimestamp: number = 0;
+  private observerAttached: boolean = false;
+  
+  constructor(editorRef: React.RefObject<any>) {
+    this.editorRef = editorRef;
+    this.setupObservers();
+  }
+  
+  /**
+   * Configura observadores para manter o cache atualizado
+   */
+  private setupObservers(): void {
+    if (this.observerAttached || !this.editorRef.current) return;
+    
+    try {
+      const editor = this.getEditor();
+      if (editor) {
+        editor.on('text-change', this.handleTextChange);
+        this.observerAttached = true;
+      }
+    } catch (error) {
+      console.error('Erro ao configurar observadores:', error);
+    }
+  }
+  
+  /**
+   * Manipulador de eventos para mudanças no texto
+   */
+  private handleTextChange = (delta: any, oldDelta: any, source: string): void => {
+    if (source === 'user') {
+      this.updateCache();
+    }
+  };
+  
+  /**
+   * Atualiza o cache do documento
+   */
+  private updateCache(): void {
+    try {
+      const editor = this.getEditor();
+      if (!editor) return;
+      
+      this.cache = {
+        conteudoHTML: editor.root.innerHTML,
+        conteudoTexto: editor.getText(),
+        timestamp: Date.now(),
+        secoes: this.analisarSecoes(editor.root.innerHTML)
+      };
+      
+      this.lastUpdateTimestamp = Date.now();
+    } catch (error) {
+      console.error('Erro ao atualizar cache:', error);
+    }
+  }
+  
+  /**
+   * Analisa o conteúdo HTML para identificar seções do documento
+   */
+  private analisarSecoes(html: string): Array<{ titulo: string; indice: number; conteudo: string }> {
+    // Implementação da análise de seções...
+    return [];
+  }
+  
+  /**
+   * Obtém o editor Quill
+   * Tenta diferentes métodos para acessar o editor, com fallbacks
+   */
+  private getEditor(): any {
+    try {
+      if (!this.editorRef.current) return null;
+      
+      // Tentar método getEditor() (comum em algumas versões)
+      if (typeof this.editorRef.current.getEditor === 'function') {
+        return this.editorRef.current.getEditor();
+      }
+      
+      // Tentar acessar a propriedade editor diretamente
+      if (this.editorRef.current.editor) {
+        return this.editorRef.current.editor;
+      }
+      
+      // Tentar encontrar através do DOM
+      const editorElement = document.querySelector('.ql-editor');
+      if (editorElement) {
+        // Quill armazena a instância no elemento como __quill
+        return (editorElement as any).__quill;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Erro ao acessar o editor:', error);
+      return null;
+    }
+  }
+  
+  /**
+   * Verifica se o editor está disponível e inicializado
+   */
+  public isEditorReady(): boolean {
+    return !!this.getEditor();
+  }
+  
+  /**
+   * Obtém o conteúdo completo do documento em HTML
+   */
+  public getConteudoHTML(): string {
+    if (this.cache && Date.now() - this.lastUpdateTimestamp < 5000) {
+      return this.cache.conteudoHTML;
+    }
+    
+    const editor = this.getEditor();
+    if (!editor) return '';
+    
+    try {
+      return editor.root.innerHTML;
+    } catch (error) {
+      console.error('Erro ao obter conteúdo HTML:', error);
+      return '';
+    }
+  }
+  
+  /**
+   * Obtém o conteúdo completo do documento como texto simples
+   */
+  public getConteudoTexto(): string {
+    if (this.cache && Date.now() - this.lastUpdateTimestamp < 5000) {
+      return this.cache.conteudoTexto;
+    }
+    
+    const editor = this.getEditor();
+    if (!editor) return '';
+    
+    try {
+      return editor.getText();
+    } catch (error) {
+      console.error('Erro ao obter conteúdo de texto:', error);
+      
+      // Fallback: tentar extrair texto do DOM
+      try {
+        const editorElement = document.querySelector('.ql-editor');
+        return editorElement ? editorElement.textContent || '' : '';
+      } catch (domError) {
+        console.error('Erro no fallback para obter texto:', domError);
+        return '';
+      }
+    }
+  }
+  
+  /**
+   * Obtém uma seção específica do documento
+   */
+  public getSecao(inicio: number, fim: number): string {
+    const editor = this.getEditor();
+    if (!editor) return '';
+    
+    try {
+      return editor.getText(inicio, fim - inicio);
+    } catch (error) {
+      console.error('Erro ao obter seção:', error);
+      return '';
+    }
+  }
+  
+  /**
+   * Busca ocorrências de texto no documento
+   */
+  public buscarTexto(texto: string, regex: boolean = false): Array<{indice: number, texto: string, comprimento: number}> {
+    const conteudo = this.getConteudoTexto();
+    const resultados = [];
+    
+    if (regex) {
+      try {
+        const regexp = new RegExp(texto, 'g');
+        let match;
+        
+        while ((match = regexp.exec(conteudo)) !== null) {
+          resultados.push({
+            indice: match.index,
+            texto: match[0],
+            comprimento: match[0].length
+          });
+        }
+      } catch (error) {
+        console.error('Erro na busca com regex:', error);
+      }
+    } else {
+      let indice = conteudo.indexOf(texto);
+      while (indice !== -1) {
+        resultados.push({
+          indice,
+          texto,
+          comprimento: texto.length
+        });
+        indice = conteudo.indexOf(texto, indice + 1);
+      }
+    }
+    
+    return resultados;
+  }
+  
+  /**
+   * Substitui texto no documento
+   */
+  public substituirTexto(inicio: number, fim: number, novoTexto: string): boolean {
+    const editor = this.getEditor();
+    if (!editor) return false;
+    
+    try {
+      editor.deleteText(inicio, fim - inicio);
+      editor.insertText(inicio, novoTexto);
+      this.updateCache();
+      return true;
+    } catch (error) {
+      console.error('Erro ao substituir texto:', error);
+      
+      // Fallback: tentar manipular o DOM diretamente
+      try {
+        const editorElement = document.querySelector('.ql-editor');
+        if (!editorElement) return false;
+        
+        const selection = window.getSelection();
+        if (!selection) return false;
+        
+        const range = document.createRange();
+        const textNodes = this.getTextNodes(editorElement);
+        
+        let charCount = 0;
+        let startNode = null, startOffset = 0;
+        let endNode = null, endOffset = 0;
+        
+        // Encontrar os nós de texto e offsets correspondentes às posições
+        for (const node of textNodes) {
+          const nodeTextLength = node.textContent?.length || 0;
+          
+          if (!startNode && charCount + nodeTextLength > inicio) {
+            startNode = node;
+            startOffset = inicio - charCount;
+          }
+          
+          if (!endNode && charCount + nodeTextLength >= fim) {
+            endNode = node;
+            endOffset = fim - charCount;
+            break;
+          }
+          
+          charCount += nodeTextLength;
+        }
+        
+        if (startNode && endNode) {
+          range.setStart(startNode, startOffset);
+          range.setEnd(endNode, endOffset);
+          selection.removeAllRanges();
+          selection.addRange(range);
+          
+          document.execCommand('insertText', false, novoTexto);
+          this.updateCache();
+          return true;
+        }
+        
+        return false;
+      } catch (domError) {
+        console.error('Erro no fallback para substituir texto:', domError);
+        return false;
+      }
+    }
+  }
+  
+  /**
+   * Auxiliar para obter todos os nós de texto dentro de um elemento
+   */
+  private getTextNodes(node: Node): Text[] {
+    const textNodes: Text[] = [];
+    
+    const walker = document.createTreeWalker(
+      node,
+      NodeFilter.SHOW_TEXT,
+      null
+    );
+    
+    let currentNode: Node | null;
+    while (currentNode = walker.nextNode()) {
+      textNodes.push(currentNode as Text);
+    }
+    
+    return textNodes;
+  }
+  
+  /**
+   * Move conteúdo de uma posição para outra
+   */
+  public moverConteudo(origem: {inicio: number, fim: number}, destino: number): boolean {
+    const editor = this.getEditor();
+    if (!editor) return false;
+    
+    try {
+      const conteudo = editor.getText(origem.inicio, origem.fim - origem.inicio);
+      
+      // Ajustar o índice de destino se estiver após a origem
+      const destinoAjustado = destino > origem.inicio ? destino - (origem.fim - origem.inicio) : destino;
+      
+      editor.deleteText(origem.inicio, origem.fim - origem.inicio);
+      editor.insertText(destinoAjustado, conteudo);
+      this.updateCache();
+      return true;
+    } catch (error) {
+      console.error('Erro ao mover conteúdo:', error);
+      return false;
+    }
+  }
+  
+  /**
+   * Aplica formatação a um trecho de texto
+   */
+  public formatarTexto(inicio: number, fim: number, formato: 'bold' | 'italic' | 'underline' | 'header', valor: any): boolean {
+    const editor = this.getEditor();
+    if (!editor) return false;
+    
+    try {
+      editor.formatText(inicio, fim - inicio, formato, valor);
+      this.updateCache();
+      return true;
+    } catch (error) {
+      console.error('Erro ao formatar texto:', error);
+      return false;
+    }
+  }
+}
+```
+
+### Considerações Sobre a Implementação
+
+1. **Robustez**: A implementação inclui múltiplos fallbacks para garantir que a funcionalidade funcione mesmo quando o acesso direto ao Quill não estiver disponível.
+
+2. **Desempenho**: O sistema de cache reduz chamadas desnecessárias ao editor e melhora o desempenho em operações frequentes.
+
+3. **Flexibilidade**: A abordagem modular permite que novos métodos de manipulação sejam adicionados facilmente.
+
+4. **Compatibilidade**: Os métodos implementados são compatíveis com diferentes versões do ReactQuill.
+
+A implementação deste plano resultará em uma IA consideravelmente mais poderosa, capaz de entender o documento completo e realizar edições complexas de maneira intuitiva, similar à experiência oferecida pelo Claude no ambiente Cursor.
+
+## IMPLEMENTAÇÃO TÉCNICA DETALHADA
+
+### 1. Acesso completo ao documento (8.1)
+
+#### Arquitetura e Componentes
+1. **Serviço de Acesso ao Documento**: Criar uma classe `DocumentoService` que atuará como intermediária entre o componente EditorAssistant e o editor Quill
+2. **Métodos de Acesso**:
+   ```typescript
+   class DocumentoService {
+     // Referência ao editor Quill
+     private editorRef: React.RefObject<any>;
+     
+     // Método para obter conteúdo completo
+     getConteudoCompleto(): string;
+     
+     // Método para obter seção específica
+     getSecao(inicio: number, fim: number): string;
+     
+     // Método para buscar texto ou padrão
+     buscarTexto(texto: string, regex: boolean = false): Array<{indice: number, texto: string}>;
+     
+     // Método para substituir texto
+     substituirTexto(posicaoInicio: number, posicaoFim: number, novoTexto: string): boolean;
+     
+     // Método para mover conteúdo
+     moverConteudo(origem: {inicio: number, fim: number}, destino: number): boolean;
+   }
+   ```
+
+#### Sistema de Cache do Documento
+1. **Implementação**:
+   ```typescript
+   interface DocumentoCache {
+     conteudoHTML: string;
+     conteudoTexto: string;
+     timestamp: number;
+     secoes: Array<{
+       titulo: string;
+       indice: number;
+       conteudo: string;
+     }>;
+   }
+   ```
+
+2. **Observador de Mudanças**:
+   ```typescript
+   setupDocumentObserver() {
+     const editor = this.editorRef.current?.getEditor();
+     if (editor) {
+       editor.on('text-change', (delta, oldDelta, source) => {
+         if (source === 'user') {
+           this.atualizarCache();
+         }
+       });
+     }
+   }
+   ```
+
+### 2. Sistema de Manipulação de Texto (8.2)
+
+#### Funções de Manipulação
+
+1. **Substituição Precisa**:
+   ```typescript
+   substituirTexto(inicio: number, fim: number, novoTexto: string): boolean {
+     try {
+       const editor = this.editorRef.current?.getEditor();
+       if (editor) {
+         editor.deleteText(inicio, fim - inicio);
+         editor.insertText(inicio, novoTexto);
+         return true;
+       }
+       return false;
+     } catch (error) {
+       console.error('Erro ao substituir texto:', error);
+       return false;
+     }
+   }
+   ```
+
+2. **Busca com Expressões Regulares**:
+   ```typescript
+   buscarComRegex(pattern: string): Array<{inicio: number, fim: number, texto: string}> {
+     const conteudo = this.getConteudoCompleto();
+     const regex = new RegExp(pattern, 'g');
+     const resultados = [];
+     let match;
+     
+     while ((match = regex.exec(conteudo)) !== null) {
+       resultados.push({
+         inicio: match.index,
+         fim: match.index + match[0].length,
+         texto: match[0]
+       });
+     }
+     
+     return resultados;
+   }
+   ```
+
+3. **Sistema de Desfazer/Refazer**:
+   ```typescript
+   class EditorHistorico {
+     private historico: Array<{
+       operacao: 'inserir' | 'deletar' | 'substituir' | 'mover';
+       dados: any;
+     }> = [];
+     private posicaoAtual = -1;
+     
+     registrarOperacao(operacao: 'inserir' | 'deletar' | 'substituir' | 'mover', dados: any) {
+       // Limpa histórico futuro se estiver no meio do histórico
+       if (this.posicaoAtual < this.historico.length - 1) {
+         this.historico = this.historico.slice(0, this.posicaoAtual + 1);
+       }
+       
+       this.historico.push({ operacao, dados });
+       this.posicaoAtual++;
+     }
+     
+     desfazer() {
+       if (this.posicaoAtual >= 0) {
+         const operacao = this.historico[this.posicaoAtual];
+         // Lógica para reverter cada tipo de operação
+         this.posicaoAtual--;
+         return operacao;
+       }
+       return null;
+     }
+     
+     refazer() {
+       if (this.posicaoAtual < this.historico.length - 1) {
+         this.posicaoAtual++;
+         return this.historico[this.posicaoAtual];
+       }
+       return null;
+     }
+   }
+   ```
+
+### 3. Interface para Edição Avançada (8.3)
+
+#### Processador de Comandos Naturais
+
+1. **Interpretação de Comandos**:
+   ```typescript
+   processarComandoNatural(comando: string): {
+     tipo: 'substituir' | 'mover' | 'inserir' | 'deletar' | 'desconhecido';
+     parametros: any;
+   } {
+     // Substituição
+     const regexSubstituir = /substituir?\s+"([^"]+)"\s+por\s+"([^"]+)"/i;
+     if (regexSubstituir.test(comando)) {
+       const [_, textoAntigo, textoNovo] = comando.match(regexSubstituir);
+       return {
+         tipo: 'substituir',
+         parametros: { buscar: textoAntigo, substituir: textoNovo }
+       };
+     }
+     
+     // Mover
+     const regexMover = /mover?\s+(?:o\s+)?(?:parágrafo|trecho|seção)\s+"([^"]+)"\s+(?:para|após|antes)\s+"([^"]+)"/i;
+     if (regexMover.test(comando)) {
+       const [_, trechoMover, referencia] = comando.match(regexMover);
+       return {
+         tipo: 'mover',
+         parametros: { trecho: trechoMover, referencia: referencia }
+       };
+     }
+     
+     // Outros padrões...
+     
+     return { tipo: 'desconhecido', parametros: null };
+   }
+   ```
+
+2. **Visualização de Diff**:
+   ```typescript
+   gerarDiffVisual(textoOriginal: string, textoModificado: string): string {
+     // Implementar algoritmo de diff (pode-se usar bibliotecas como diff-match-patch)
+     const diff = computarDiff(textoOriginal, textoModificado);
+     
+     // Gerar HTML com marcações
+     return diff.map(parte => {
+       if (parte.added) {
+         return `<span class="texto-adicionado">${parte.value}</span>`;
+       }
+       if (parte.removed) {
+         return `<span class="texto-removido">${parte.value}</span>`;
+       }
+       return parte.value;
+     }).join('');
+   }
+   ```
+
+### 4. Análise Contextual Avançada (8.4)
+
+#### Análise Semântica e Estrutural
+
+1. **Detecção de Estrutura**:
+   ```typescript
+   analisarEstrutura(documento: string): {
+     secoes: Array<{
+       tipo: 'introducao' | 'desenvolvimento' | 'conclusao' | 'argumentacao' | 'citacao' | 'outro';
+       inicio: number;
+       fim: number;
+       conteudo: string;
+     }>;
+     problemas: Array<{
+       tipo: 'inconsistencia' | 'falta_secao' | 'ordem_incorreta';
+       descricao: string;
+       localizacao: number;
+     }>;
+   }
+   ```
+
+2. **Resumo Automático**:
+   ```typescript
+   gerarResumoDocumento(documento: string): {
+     resumoGeral: string;
+     pontosPrincipais: string[];
+     estrutura: {
+       introducao: string;
+       argumentosPrincipais: string[];
+       conclusao: string;
+     }
+   }
+   ```
+
+## MODIFICAÇÕES NECESSÁRIAS NO COMPONENTE EditorAssistant.tsx
+
+### 1. Adicionar Novos Métodos e Props
+
+```typescript
+interface EditorAssistantProps {
+  documentoId: string;
+  tipoDocumento: string;
+  conteudoAtual: string;
+  onAplicarSugestao?: (sugestao: string, selecao?: { index: number, length: number }) => void;
+  
+  // Novas props
+  editorRef: React.RefObject<any>; // Referência direta ao editor
+  onSubstituirTexto?: (inicio: number, fim: number, novoTexto: string) => boolean;
+  onMoverConteudo?: (origem: {inicio: number, fim: number}, destino: number) => boolean;
+}
+```
+
+### 2. Integrar Serviço de Documento
+
+```typescript
+const EditorAssistant: React.FC<EditorAssistantProps> = ({ 
+  // props existentes...
+  editorRef
+}) => {
+  // estados existentes...
+  const [documentoService, setDocumentoService] = useState<DocumentoService | null>(null);
+  
+  // Inicializar o serviço
+  useEffect(() => {
+    if (editorRef?.current) {
+      const service = new DocumentoService(editorRef);
+      setDocumentoService(service);
+    }
+  }, [editorRef?.current]);
+  
+  // Função para processar comandos avançados
+  const processarComandoAvancado = async (comando: string) => {
+    if (!documentoService) return false;
+    
+    const instrucao = processarComandoNatural(comando);
+    if (instrucao.tipo === 'desconhecido') {
+      return false;
+    }
+    
+    // Executar operação com base no tipo
+    switch (instrucao.tipo) {
+      case 'substituir':
+        const ocorrencias = documentoService.buscarTexto(instrucao.parametros.buscar);
+        // Mostrar prévia com as ocorrências encontradas
+        // Permitir que o usuário selecione quais substituir
+        return true;
+      
+      case 'mover':
+        // Implementar lógica de movimento
+        return true;
+        
+      // outros casos...
+    }
+  };
+  
+  // Expandir a função enviarMensagem para processar comandos avançados
+  const enviarMensagem = async () => {
+    if (!inputMensagem.trim() || isAnalisando) return;
+    
+    // Verificar se é um comando de edição avançada
+    const comandosPossiveis = [
+      'substituir', 'mover', 'inserir após', 'remover', 'formatar'
+    ];
+    
+    const podeSerComandoAvancado = comandosPossiveis.some(cmd => 
+      inputMensagem.toLowerCase().includes(cmd)
+    );
+    
+    if (podeSerComandoAvancado && documentoService) {
+      const foiProcessado = await processarComandoAvancado(inputMensagem);
+      if (foiProcessado) {
+        // Comando foi processado como edição avançada
+        // Restante da lógica...
+        return;
+      }
+    }
+    
+    // Continuar com o processamento normal de mensagens...
+  };
+  
+  // Restante do componente...
+};
+```
+
+### 3. Implementar Interface para Comandos Avançados
+
+Adicionar uma nova seção na interface para comandos avançados:
+
+```tsx
+{/* Interface para comandos avançados */}
+<div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-3">
+  <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+    Comandos avançados:
+  </div>
+  <div className="grid grid-cols-2 gap-2">
+    <button
+      onClick={() => setInputMensagem('substituir "texto antigo" por "texto novo"')}
+      className="text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 py-1 px-2 rounded text-gray-700 dark:text-gray-300"
+    >
+      Substituir texto
+    </button>
+    <button
+      onClick={() => setInputMensagem('mover parágrafo "início do parágrafo" para após "referência"')}
+      className="text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 py-1 px-2 rounded text-gray-700 dark:text-gray-300"
+    >
+      Mover conteúdo
+    </button>
+    {/* Outros comandos rápidos */}
+  </div>
+</div>
+```
+
+## MODIFICAÇÕES NECESSÁRIAS EM pages/documentos.tsx
+
+### 1. Passar a Referência do Editor para o Assistente
+
+```tsx
+// Dentro do componente da página de documentos
+const editorRef = useRef<any>(null);
+
+// Modificar a função que renderiza o editor
+const renderEditor = () => {
+  return (
+    <div className="relative">
+      <ReactQuill
+        ref={editorRef}
+        theme="snow"
+        value={conteudo}
+        onChange={handleEditorChange}
+        // Outras props...
+      />
+      
+      {/* Outros componentes... */}
+      
+      <EditorAssistant
+        documentoId={documentoId}
+        tipoDocumento={tipoDocumento}
+        conteudoAtual={conteudo}
+        onAplicarSugestao={aplicarSugestaoAssistente}
+        editorRef={editorRef} // Passar a referência
+        onSubstituirTexto={substituirTextoEditor}
+        onMoverConteudo={moverConteudoEditor}
+      />
+    </div>
+  );
+};
+
+// Implementar novas funções de manipulação
+const substituirTextoEditor = (inicio: number, fim: number, novoTexto: string): boolean => {
+  try {
+    const editor = editorRef.current?.getEditor();
+    if (editor) {
+      editor.deleteText(inicio, fim - inicio);
+      editor.insertText(inicio, novoTexto);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Erro ao substituir texto no editor:', error);
+    return false;
+  }
+};
+
+const moverConteudoEditor = (origem: {inicio: number, fim: number}, destino: number): boolean => {
+  try {
+    const editor = editorRef.current?.getEditor();
+    if (editor) {
+      // Obter o texto a ser movido
+      const delta = editor.getContents(origem.inicio, origem.fim - origem.inicio);
+      const textoMover = editor.getText(origem.inicio, origem.fim - origem.inicio);
+      
+      // Inserir no destino
+      editor.insertText(destino, textoMover);
+      
+      // Remover da origem (ajustando índices se necessário)
+      const ajuste = destino < origem.inicio ? textoMover.length : 0;
+      editor.deleteText(origem.inicio + ajuste, origem.fim - origem.inicio);
+      
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Erro ao mover conteúdo no editor:', error);
+    return false;
+  }
+};
+```
+
+## NOTAS ADICIONAIS
