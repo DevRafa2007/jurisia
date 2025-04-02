@@ -59,21 +59,104 @@ export class DocumentoService {
   /**
    * Atualiza o cache do documento
    */
-  private updateCache(): void {
+  public updateCache(): void {
     try {
       const editor = this.getEditor();
       if (!editor) return;
       
+      // Verificar se o conteúdo mudou significativamente
+      let atualizarCache = true;
+      
+      if (this.cache) {
+        const conteudoTextoAtual = editor.getText();
+        
+        // Verificações de desempenho:
+        // 1. Se o conteúdo for muito grande (>10kb), verifique apenas a cada 15 segundos
+        // 2. Se o tamanho mudou menos de 2%, apenas verifique a cada 20 segundos
+        
+        const tempoDesdeUltimoUpdate = Date.now() - this.lastUpdateTimestamp;
+        
+        if (this.cache.conteudoTexto.length > 10000 && tempoDesdeUltimoUpdate < 15000) {
+          atualizarCache = false;
+          console.log('Pulando atualização de cache para documento grande (verificação throttled)');
+          return;
+        }
+        
+        // Calcular diferença percentual
+        const diferenca = Math.abs(this.cache.conteudoTexto.length - conteudoTextoAtual.length);
+        const percentualDiferenca = diferenca / (this.cache.conteudoTexto.length || 1);
+        
+        if (percentualDiferenca < 0.02 && tempoDesdeUltimoUpdate < 20000) {
+          atualizarCache = false;
+          console.log('Pulando atualização de cache (mudança pequena detectada)');
+          return;
+        }
+      }
+      
+      // Usar um timeout de baixa prioridade para não bloquear a UI durante a atualização
+      if (atualizarCache) {
+        // Marcar como atualizado agora para evitar atualizações duplicadas
+        this.lastUpdateTimestamp = Date.now();
+        
+        // Executar a operação pesada de análise de seções em um setTimeout
+        setTimeout(() => {
+          try {
+            const conteudoHTML = editor.root.innerHTML;
+            const conteudoTexto = editor.getText();
+            
+            this.cache = {
+              conteudoHTML,
+              conteudoTexto,
+              timestamp: Date.now(),
+              secoes: this.analisarSecoes(conteudoHTML)
+            };
+            
+            console.log(`Cache atualizado: ${conteudoTexto.length} caracteres, ${this.cache.secoes.length} seções`);
+          } catch (innerError) {
+            console.error('Erro durante atualização assíncrona de cache:', innerError);
+          }
+        }, 50); // Pequeno atraso para permitir que a UI responda primeiro
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar cache:', error);
+    }
+  }
+  
+  /**
+   * Força a atualização do cache, independente do tempo desde a última atualização
+   */
+  public forceUpdateCache(): void {
+    try {
+      const editor = this.getEditor();
+      if (!editor) return;
+      
+      const conteudoHTML = editor.root.innerHTML;
+      const conteudoTexto = editor.getText();
+      
+      // Atualiza imediatamente apenas os dados básicos
       this.cache = {
-        conteudoHTML: editor.root.innerHTML,
-        conteudoTexto: editor.getText(),
+        conteudoHTML,
+        conteudoTexto,
         timestamp: Date.now(),
-        secoes: this.analisarSecoes(editor.root.innerHTML)
+        secoes: this.cache?.secoes || [] // Manter seções existentes inicialmente
       };
       
       this.lastUpdateTimestamp = Date.now();
+      
+      // Atualiza seções em segundo plano
+      setTimeout(() => {
+        try {
+          if (this.cache) {
+            this.cache.secoes = this.analisarSecoes(conteudoHTML);
+          }
+        } catch (err) {
+          console.error('Erro ao processar seções em segundo plano:', err);
+        }
+      }, 100);
+      
+      console.log('Cache forçadamente atualizado com processamento em segundo plano');
     } catch (error) {
-      console.error('Erro ao atualizar cache:', error);
+      console.error('Erro ao forçar atualização do cache:', error);
     }
   }
   

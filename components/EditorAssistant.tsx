@@ -8,6 +8,7 @@ import ReactMarkdown from 'react-markdown';
 import { CheckIcon } from '@heroicons/react/24/solid';
 import { DocumentoService } from '../services/DocumentoService';
 import { v4 as uuidv4 } from 'uuid';
+import DocumentoContextualAnalysis from './DocumentoContextualAnalysis';
 
 interface Mensagem {
   id?: string;
@@ -18,6 +19,8 @@ interface Mensagem {
   foiUtil?: boolean;
   avaliacao?: number;
   metadata?: Record<string, any>;
+  tipo?: 'texto' | 'contextual';
+  analiseContextual?: AnaliseContextual;
 }
 
 interface EditorAssistantProps {
@@ -30,6 +33,43 @@ interface EditorAssistantProps {
   editorRef?: React.RefObject<any>; // Referência direta ao editor
   onSubstituirTexto?: (inicio: number, fim: number, novoTexto: string) => boolean;
   onMoverConteudo?: (origem: {inicio: number, fim: number}, destino: number) => boolean;
+}
+
+interface SecaoDocumento {
+  tipo: 'introducao' | 'desenvolvimento' | 'conclusao' | 'argumentacao' | 'citacao' | 'outro';
+  titulo: string;
+  indice: number;
+  conteudo: string;
+  nivel: number;
+}
+
+interface ProblemaDocumento {
+  tipo: 'inconsistencia' | 'falta_secao' | 'ordem_incorreta' | 'citacao_invalida' | 'terminologia';
+  descricao: string;
+  localizacao: number;
+  sugestao?: string;
+  severidade: 'alta' | 'media' | 'baixa';
+}
+
+interface AnaliseEstrutura {
+  secoes: SecaoDocumento[];
+  problemas: ProblemaDocumento[];
+}
+
+interface ResumoDocumento {
+  resumoGeral: string;
+  pontosPrincipais: string[];
+  estrutura: {
+    introducao?: string;
+    argumentosPrincipais: string[];
+    conclusao?: string;
+  };
+}
+
+interface AnaliseContextual {
+  analiseEstrutura?: AnaliseEstrutura;
+  resumoDocumento?: ResumoDocumento;
+  sugestoesAprimoramento?: string[];
 }
 
 const EditorAssistant: React.FC<EditorAssistantProps> = ({ 
@@ -56,9 +96,157 @@ const EditorAssistant: React.FC<EditorAssistantProps> = ({
   const [isTyping, setIsTyping] = useState(false);
   const [mostrarSugestaoEditor, setMostrarSugestaoEditor] = useState(false);
   const [sugestaoPendente, setSugestaoPendente] = useState('');
+  // Adicionar estado local para conteúdo do documento
+  const [conteudoDocumentoLocal, setConteudoDocumentoLocal] = useState(conteudoAtual || '');
+  // Adicionar estado para controlar a atualização ativa do contexto
+  const [isAtualizandoContexto, setIsAtualizandoContexto] = useState(false);
+  // Controle para evitar múltiplas notificações
+  const [ultimaNotificacao, setUltimaNotificacao] = useState<number>(0);
 
   // Adicionar estado para o serviço de documento
   const [documentoService, setDocumentoService] = useState<DocumentoService | null>(null);
+  
+  // Adicionar estado para rastrear se temos acesso ao conteúdo do documento
+  const [temConteudoDocumento, setTemConteudoDocumento] = useState<boolean>(false);
+
+  // Função para adicionar mensagens ao estado
+  const adicionarMensagem = (mensagem: Mensagem) => {
+    setMensagens(prev => [...prev, mensagem]);
+  };
+  
+  // Função para enviar mensagem ao assistente via API
+  const enviarMensagemAoAssistente = async (
+    conteudo: string,
+    documentoId: string,
+    tipoDocumento: string,
+    contexto: string = ''
+  ) => {
+    try {
+      console.log('🔍 Iniciando envio de mensagem para o assistente', {
+        documentoId,
+        tipoDocumento,
+        tamanhoConteudo: conteudo.length,
+        temContexto: contexto ? 'sim' : 'não'
+      });
+      
+      // Obter o conteúdo completo do documento através do DocumentoService
+      let conteudoCompletoDocumento = '';
+      
+      if (documentoService && documentoService.isEditorReady()) {
+        // Usar DocumentoService para obter o conteúdo completo
+        conteudoCompletoDocumento = documentoService.getConteudoTexto();
+        console.log(`✅ Obtido conteúdo completo do documento via DocumentoService: ${conteudoCompletoDocumento.length} caracteres`);
+      } else {
+        // Tentativa de fallback para obter o conteúdo do editor
+        console.log('⚠️ DocumentoService não disponível ou editor não pronto, tentando métodos alternativos');
+        
+        try {
+          if (editorRef?.current) {
+            if (typeof editorRef.current.getEditor === 'function') {
+              const quill = editorRef.current.getEditor();
+              conteudoCompletoDocumento = quill.getText();
+              console.log(`✅ Obtido conteúdo do documento via getEditor(): ${conteudoCompletoDocumento.length} caracteres`);
+            } else if (editorRef.current.editor) {
+              conteudoCompletoDocumento = editorRef.current.editor.getText();
+              console.log(`✅ Obtido conteúdo do documento via editor.getText(): ${conteudoCompletoDocumento.length} caracteres`);
+            }
+          }
+        } catch (error) {
+          console.error('❌ Erro ao tentar obter conteúdo do editor via API direta:', error);
+        }
+        
+        // Se ainda não conseguimos o conteúdo, tentar via DOM
+        if (!conteudoCompletoDocumento) {
+          try {
+            const editorElement = document.querySelector('.ql-editor');
+            if (editorElement) {
+              conteudoCompletoDocumento = editorElement.textContent || '';
+              console.log(`✅ Obtido conteúdo do documento via DOM: ${conteudoCompletoDocumento.length} caracteres`);
+            }
+          } catch (error) {
+            console.error('❌ Erro ao tentar obter conteúdo do editor via DOM:', error);
+          }
+        }
+      }
+      
+      if (!conteudoCompletoDocumento) {
+        console.warn('⚠️ Não foi possível obter o conteúdo completo do documento. A IA terá contexto limitado.');
+        conteudoCompletoDocumento = conteudoAtual || '';
+      }
+      
+      // Tente primeiro a API de teste para verificar se a infraestrutura está funcionando
+      console.log('🔍 Testando API básica primeiro');
+      const { data: testData } = await axios.post('/api/documento-assistente-teste', {
+        operacao: 'teste',
+        texto: conteudo.substring(0, 50), // Enviar apenas um trecho para o teste
+        documentoId,
+        tipoDocumento
+      });
+      
+      console.log('✅ API de teste respondeu com sucesso:', testData);
+      
+      // Se passarmos do teste, tentamos a API real
+      console.log('🔍 Enviando requisição para API principal');
+      
+      // Criar dados corretos compatíveis com a nova estrutura da API
+      const dadosRequisicao = {
+        operacao: 'perguntar',
+        mensagem: conteudo, 
+        texto: conteudo, // Campo alternativo para compatibilidade
+        documento_id: documentoId,
+        tipo_documento: tipoDocumento,
+        documentoId: documentoId, // Duplicado para compatibilidade
+        tipoDocumento: tipoDocumento, // Duplicado para compatibilidade
+        usuarioId: usuarioId || 'usuario_anonimo',
+        conteudo_documento: conteudoCompletoDocumento, // Enviar o conteúdo completo do documento
+        contexto: {
+          selecao: contexto,
+          conteudoAtual: conteudoCompletoDocumento // Usar documento completo para contexto
+        }
+      };
+      
+      console.log(`📤 Enviando requisição com conteúdo completo do documento (${conteudoCompletoDocumento.length} caracteres)`);
+      
+      const { data } = await axios.post('/api/documento-assistente', dadosRequisicao);
+      
+      console.log('📥 Resposta recebida da API:', data);
+      
+      // Salvar a interação
+      await salvarInteracaoDocumento(
+        'pergunta',
+        conteudo,
+        data.resposta,
+        {
+          modeloUsado: data.modeloUsado,
+          tokens: data.tokens
+        }
+      );
+      
+      return {
+        texto: data.resposta,
+        metadata: {
+          modeloUsado: data.modeloUsado,
+          tokens: data.tokens
+        }
+      };
+    } catch (error) {
+      console.error('❌ Erro ao enviar mensagem para o assistente:', error);
+      
+      // Verificar se há detalhes adicionais no erro
+      if (error.response?.data) {
+        console.error('❌ Resposta de erro da API:', JSON.stringify(error.response.data));
+      }
+      
+      // Retornar uma resposta de contingência em caso de erro
+      return {
+        texto: "Desculpe, estou enfrentando alguns problemas técnicos no momento. Nossa equipe está trabalhando para resolver isso o mais rápido possível. Por favor, tente novamente em alguns instantes.",
+        metadata: {
+          modeloUsado: "contingência",
+          tokens: { entrada: 0, saida: 0, total: 0 }
+        }
+      };
+    }
+  };
   
   // Inicializar o serviço quando a referência do editor estiver disponível
   useEffect(() => {
@@ -378,6 +566,10 @@ const EditorAssistant: React.FC<EditorAssistantProps> = ({
       isUsuario: true,
       timestamp: new Date().toISOString()
     };
+
+    console.log('Verificando se adicionarMensagem está definida:', typeof adicionarMensagem);
+    console.log('Mensagem a ser adicionada:', mensagemUsuario);
+
     adicionarMensagem(mensagemUsuario);
     
     // Limpar o input
@@ -752,7 +944,7 @@ const EditorAssistant: React.FC<EditorAssistantProps> = ({
         usuarioId,
         dadosContexto: {
           ...dados,
-          conteudoAtual: conteudoAtual.substring(0, 500) // Enviar parte do conteúdo atual para contexto
+          conteudoAtual: conteudoDocumentoLocal.substring(0, 500) // Usar o estado local para o contexto
         }
       });
       
@@ -806,6 +998,173 @@ const EditorAssistant: React.FC<EditorAssistantProps> = ({
       setIsTyping(false);
     }
   };
+
+  // Adicionando função para solicitar análise contextual
+  const solicitarAnaliseContextual = async () => {
+    if (!conteudoDocumentoLocal) {
+      adicionarMensagem({
+        id: uuidv4(),
+        conteudo: "Por favor, insira algum texto no editor para ser analisado.",
+        isUsuario: false,
+        timestamp: new Date()
+      });
+      return;
+    }
+
+    const mensagemId = uuidv4();
+    const novaMensagem: Mensagem = {
+      id: mensagemId,
+      conteudo: "Analisando o documento...",
+      isUsuario: false,
+      timestamp: new Date().toISOString(),
+      processando: true
+    };
+    
+    setMensagens(mensagens => [...mensagens, novaMensagem]);
+
+    try {
+      const resposta = await fetch('/api/documento-analise', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          conteudo: conteudoDocumentoLocal,
+          documentoNome: tipoDocumento || 'Documento sem título'
+        }),
+      });
+
+      if (!resposta.ok) {
+        throw new Error(`Erro na API: ${resposta.status}`);
+      }
+
+      const dados = await resposta.json();
+      
+      // Atualiza a mensagem com o resultado da análise contextual
+      setMensagens(mensagens => mensagens.map(msg => 
+        msg.id === mensagemId 
+          ? {
+              ...msg,
+              texto: "Análise contextual do documento concluída",
+              processando: false,
+              tipo: 'contextual',
+              analiseContextual: dados
+            }
+          : msg
+      ));
+    } catch (erro) {
+      console.error('Erro ao solicitar análise contextual:', erro);
+      
+      // Atualiza a mensagem com erro
+      setMensagens(mensagens => mensagens.map(msg => 
+        msg.id === mensagemId 
+          ? {
+              ...msg,
+              texto: "Não foi possível realizar a análise contextual. Por favor, tente novamente mais tarde.",
+              processando: false
+            }
+          : msg
+      ));
+    }
+  };
+
+  // Adicionar função para atualizar manualmente o contexto do documento
+  const atualizarContextoDocumento = () => {
+    // Evitar atualizações se já estiver em processo de atualização
+    if (isAtualizandoContexto) return;
+    
+    // Evitar múltiplas notificações em curto período
+    const agora = Date.now();
+    const deveNotificar = agora - ultimaNotificacao > 60000; // Notificar no máximo a cada 1 minuto
+    
+    try {
+      setIsAtualizandoContexto(true);
+      
+      if (documentoService && documentoService.isEditorReady()) {
+        documentoService.forceUpdateCache();
+        const conteudo = documentoService.getConteudoTexto();
+        setConteudoDocumentoLocal(conteudo);
+        setTemConteudoDocumento(!!conteudo && conteudo.length > 0);
+        
+        if (deveNotificar) {
+          toast.success(`Contexto do documento atualizado (${conteudo.length} caracteres)`, {
+            duration: 2000,
+            icon: '📄'
+          });
+          setUltimaNotificacao(agora);
+        }
+        return;
+      }
+      
+      // Método alternativo se DocumentoService não estiver disponível
+      let conteudoObtido = '';
+      if (editorRef?.current) {
+        try {
+          if (typeof editorRef.current.getEditor === 'function') {
+            const quill = editorRef.current.getEditor();
+            conteudoObtido = quill.getText();
+          } else if (editorRef.current.editor) {
+            conteudoObtido = editorRef.current.editor.getText();
+          }
+        } catch (e) {
+          console.error('Erro ao obter conteúdo:', e);
+        }
+      }
+      
+      // Último recurso: tentar via DOM
+      if (!conteudoObtido) {
+        const editorElement = document.querySelector('.ql-editor');
+        if (editorElement) {
+          conteudoObtido = editorElement.textContent || '';
+        }
+      }
+      
+      if (conteudoObtido) {
+        setConteudoDocumentoLocal(conteudoObtido);
+        setTemConteudoDocumento(true);
+        
+        if (deveNotificar) {
+          toast.success(`Contexto do documento atualizado (${conteudoObtido.length} caracteres)`, {
+            duration: 2000,
+            icon: '📄'
+          });
+          setUltimaNotificacao(agora);
+        }
+      } else {
+        if (deveNotificar) {
+          toast.error('Não foi possível acessar o conteúdo do documento.', {
+            duration: 3000,
+            icon: '⚠️'
+          });
+          setUltimaNotificacao(agora);
+        }
+        setTemConteudoDocumento(false);
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar contexto do documento:', error);
+      if (deveNotificar) {
+        toast.error('Erro ao atualizar contexto do documento.');
+        setUltimaNotificacao(agora);
+      }
+      setTemConteudoDocumento(false);
+    } finally {
+      setIsAtualizandoContexto(false);
+    }
+  };
+
+  // Tentar obter o conteúdo inicialmente
+  useEffect(() => {
+    if (editorRef?.current) {
+      atualizarContextoDocumento();
+      
+      // Configurar atualização periódica a cada 2 minutos (menos frequente)
+      const intervalo = setInterval(atualizarContextoDocumento, 120000);
+      
+      return () => {
+        clearInterval(intervalo);
+      };
+    }
+  }, [editorRef?.current]);
 
   // Renderizar uma mensagem individual
   const renderizarMensagem = (mensagem: Mensagem) => {
@@ -959,20 +1318,47 @@ const EditorAssistant: React.FC<EditorAssistantProps> = ({
               exit={{ opacity: 0 }}
               className="flex flex-col h-full"
             >
-              {/* Cabeçalho */}
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gradient-to-r from-primary-500 to-indigo-600 text-white rounded-t-xl">
-                <h3 className="font-medium">Assistente Jurídico IA</h3>
-                <div className="flex space-x-2">
-                  <button 
-                    onClick={() => setIsVisible(false)}
-                    className="text-white/80 hover:text-white transition-colors focus:outline-none p-1 rounded-md hover:bg-white/10"
-                    aria-label="Fechar assistente"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+              {/* Cabeçalho do chat */}
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg flex justify-between items-center">
+                <h3 className="font-semibold">Assistente Jurídico IA</h3>
+                <button
+                  onClick={() => setIsVisible(false)}
+                  className="p-1 rounded-full hover:bg-white/20 transition-colors"
+                  aria-label="Fechar assistente"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Área de status do contexto do documento */}
+              <div className="px-4 py-2 bg-gray-100 dark:bg-gray-700 flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className={`inline-block w-3 h-3 rounded-full ${temConteudoDocumento ? 'bg-green-500' : 'bg-red-500'} mr-2`}></span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    {temConteudoDocumento 
+                      ? `IA tem acesso ao documento (${conteudoDocumentoLocal.length} caracteres)` 
+                      : 'IA sem acesso ao documento'}
+                  </span>
                 </div>
+                <button 
+                  onClick={atualizarContextoDocumento}
+                  disabled={isAtualizandoContexto}
+                  className={`text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 
+                    ${isAtualizandoContexto ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  title="Atualizar o contexto do documento"
+                >
+                  {isAtualizandoContexto ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  )}
+                </button>
               </div>
 
               {/* Área de mensagens */}

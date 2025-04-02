@@ -83,11 +83,11 @@ Integrar um assistente de IA similar ao do chat na página do editor de document
   - [x] 8.3.2. Desenvolver visualização prévia das alterações antes da aplicação
   - [x] 8.3.3. Implementar sistema de diff visual para mostrar alterações propostas
   - [x] 8.3.4. Criar comandos rápidos para operações comuns de edição
-- [ ] 8.4. Adicionar recursos de análise contextual avançada
-  - [ ] 8.4.1. Implementar análise semântica de seções do documento
-  - [ ] 8.4.2. Desenvolver sistema de detecção de consistência entre seções diferentes
-  - [ ] 8.4.3. Criar análise estrutural completa do documento (introdução, desenvolvimento, conclusão)
-  - [ ] 8.4.4. Adicionar resumo automático do documento completo
+- [x] 8.4. Adicionar recursos de análise contextual avançada
+  - [x] 8.4.1. Implementar análise semântica de seções do documento
+  - [x] 8.4.2. Desenvolver sistema de detecção de consistência entre seções diferentes
+  - [x] 8.4.3. Criar análise estrutural completa do documento (introdução, desenvolvimento, conclusão)
+  - [x] 8.4.4. Adicionar resumo automático do documento completo
 
 ## MELHORIAS DIFERENCIAIS
 

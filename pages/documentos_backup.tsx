@@ -20,7 +20,6 @@ import {
 import EditorAssistant from '../components/EditorAssistant';
 import TextSuggestionTooltip from '../components/TextSuggestionTooltip';
 import AnalysisIndicator from '../components/AnalysisIndicator';
-import { useDocumentoService } from '../hooks/useDocumentoService';
 
 // Importação dinâmica do React Quill para evitar problemas de SSR
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
@@ -224,14 +223,6 @@ export default function Documentos() {
   const [mostrarTooltip, setMostrarTooltip] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [analisando, setAnalisando] = useState(false);
-
-  // Adiciona o serviço de documento
-  const { 
-    documentoService, 
-    conteudoEditor,
-    aplicarSugestao,
-    irParaPosicao
-  } = useDocumentoService(editorRef, documentoAtual);
 
   // Função para sugerir trechos com base no tipo de documento
   const sugerirTrechos = async () => {
@@ -783,70 +774,27 @@ O presente documento constitui o acordo integral entre as partes, substituindo t
   
   // Função alterada para conectar o editorRef quando o ReactQuill é montado
   const handleEditorRef = (ref: any) => {
-    console.log('🔍 handleEditorRef chamado', ref ? 'ref existe' : 'ref é null');
     editorRef.current = ref;
     
-    // Log detalhado do objeto ref para debug
     if (ref) {
-      console.log('🔍 Propriedades do ref:', Object.keys(ref));
-      console.log('🔍 ref.editor existe?', !!ref.editor);
-      console.log('🔍 ref.getEditor existe?', typeof ref.getEditor === 'function');
-      
-      try {
-        // Tenta obter o editor de diferentes maneiras
-        let editorInstance = null;
-        
-        // Método 1: Tentar usar getEditor()
-        if (typeof ref.getEditor === 'function') {
-          console.log('🔍 Tentando obter editor via getEditor()');
-          editorInstance = ref.getEditor();
-        } 
-        // Método 2: Tentar acessar a propriedade editor diretamente
-        else if (ref.editor) {
-          console.log('🔍 Tentando obter editor via ref.editor');
-          editorInstance = ref.editor;
-        }
-        // Método 3: Tentar usar querySelector como fallback
-        else {
-          console.log('🔍 Tentando obter editor via DOM');
-          const editorElement = document.querySelector('.ql-editor');
-          if (editorElement) {
-            console.log('🔍 Elemento .ql-editor encontrado no DOM');
-            setupSelectionObserver(editorElement);
-          } else {
-            console.error('❌ Não foi possível encontrar o elemento .ql-editor no DOM');
-          }
-        }
-        
-        if (editorInstance) {
-          console.log('✅ Editor Quill obtido com sucesso');
-          
-          // Configurar observer para eventos de seleção
-          editorInstance.on('selection-change', (range: any, oldRange: any, source: string) => {
-            console.log('🔄 Evento selection-change disparado', { range, source });
-            if (range) {
-              setSelecao({
-                index: range.index,
-                length: range.length
-              });
-            }
-          });
-        } else {
-          console.error('❌ Não foi possível obter uma instância válida do editor Quill');
-        }
-      } catch (error) {
-        console.error('❌ Erro ao acessar o editor Quill:', error);
+      // A API mudou ou a referência não está acessando o editor corretamente
+      // Vamos verificar se o editor está acessível de outras formas
+      if (typeof ref.getEditor === 'function') {
+        const quill = ref.getEditor();
+        quill.on('selection-change', handleTextSelection);
+      } else if (ref.editor) {
+        // Algumas versões do ReactQuill expõem o editor diretamente
+        ref.editor.on('selection-change', handleTextSelection);
+      } else if (ref.el && ref.el.querySelector('.ql-editor')) {
+        // Como fallback, podemos obter o editor a partir do DOM
+        // mas não podemos adicionar o listener desta forma
+        console.log('Editor encontrado via DOM, mas não é possível adicionar listeners.');
+        // Vamos tentar usar um MutationObserver para capturar seleções
+        setupSelectionObserver(ref.el.querySelector('.ql-editor'));
+      } else {
+        console.error('Não foi possível acessar o editor Quill.');
       }
     }
-    
-    // Sempre tentar configurar o observer como último recurso
-    setTimeout(() => {
-      const editorElement = document.querySelector('.ql-editor');
-      if (editorElement) {
-        console.log('🔍 Configurando observer de seleção como fallback');
-        setupSelectionObserver(editorElement);
-      }
-    }, 1000);
   };
 
   // Função para configurar um observer para capturar seleções (fallback)
@@ -1887,258 +1835,441 @@ ${camposDoc.map(campo => {
   };
 
   // Modificar o renderEditor para corrigir a visibilidade
-  function renderEditor() {
+  const renderEditor = () => (
+    <div className="flex-1 flex flex-col relative mt-4 sm:mt-6 overflow-hidden">
+      <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 flex items-center">
+        <button
+          onClick={voltarEtapa}
+          className="mr-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          title="Voltar para etapa anterior"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M7.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l2.293 2.293a1 1 0 010 1.414z" clipRule="evenodd" />
+          </svg>
+        </button>
+        
+        <input
+          type="text"
+          value={tituloDocumento}
+          onChange={handleTituloChange}
+          placeholder="Título do documento"
+          className="flex-1 bg-transparent border-b border-gray-300 dark:border-gray-600 px-2 py-1 text-lg font-medium text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+        />
+        
+        <div className="flex items-center ml-auto space-x-2">
+          {ultimoSalvamento && (
+            <span id="status-salvamento" className="text-xs text-gray-500 dark:text-gray-400 mr-2">
+              {salvando ? 'Salvando...' : 'Todas as alterações salvas'}
+            </span>
+          )}
+          
+          <button
+            onClick={salvarDocumento}
+            disabled={salvando}
+            className={`px-3 py-1.5 rounded-md ${
+              salvando 
+                ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
+                : 'bg-primary-500 hover:bg-primary-600 text-white'
+            } text-sm font-medium transition-colors`}
+            title="Salvar documento"
+          >
+            {salvando ? 'Salvando...' : 'Salvar'}
+          </button>
+          
+          <button
+            onClick={() => {
+              // Exportar documento como DOCX
+              const loadingToast = toast.loading('Preparando documento para download...');
+              
+              try {
+                // Criar elemento temporário para analisar o HTML do Quill
+                const tempElement = document.createElement('div');
+                tempElement.innerHTML = documentoGerado;
+                
+                // Extrair texto e formatação básica do HTML
+                const paragraphs: Paragraph[] = [];
+                const elements = Array.from(tempElement.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, div'));
+                
+                for (const element of elements) {
+                  // Pular elementos aninhados para evitar duplicação
+                  if (element.parentElement && elements.includes(element.parentElement)) {
+                    continue;
+                  }
+                  
+                  // Obter texto simples do elemento
+                  const text = element.textContent || '';
+                  
+                  // Determinar alinhamento
+                  let alignment;
+                  const computedStyle = window.getComputedStyle(element);
+                  const textAlign = computedStyle.textAlign;
+                  
+                  // Mapear valores de alinhamento entre CSS e docx
+                  if (textAlign === 'center') {
+                    alignment = AlignmentType.CENTER;
+                  } else if (textAlign === 'right') {
+                    alignment = AlignmentType.RIGHT;
+                  } else if (textAlign === 'left') {
+                    alignment = AlignmentType.LEFT;
+                  } else {
+                    alignment = AlignmentType.JUSTIFIED;
+                  }
+                  
+                  // Determinar se é título
+                  let heading = undefined;
+                  if (element.tagName.match(/^H[1-6]$/)) {
+                    const level = parseInt(element.tagName.substring(1));
+                    switch (level) {
+                      case 1: heading = HeadingLevel.HEADING_1; break;
+                      case 2: heading = HeadingLevel.HEADING_2; break;
+                      case 3: heading = HeadingLevel.HEADING_3; break;
+                      case 4: heading = HeadingLevel.HEADING_4; break;
+                      case 5: heading = HeadingLevel.HEADING_5; break;
+                      case 6: heading = HeadingLevel.HEADING_6; break;
+                    }
+                  }
+                  
+                  // Criar TextRun simples
+                  const textRun = new TextRun({
+                    text: text
+                  });
+                  
+                  // Criar parágrafo com o TextRun
+                  paragraphs.push(new Paragraph({
+                    heading,
+                    alignment,
+                    children: [textRun],
+                    spacing: {
+                      after: 200,
+                    }
+                  }));
+                }
+                
+                // Criar título se existir
+                if (tituloDocumento) {
+                  paragraphs.unshift(new Paragraph({
+                    text: tituloDocumento,
+                    heading: HeadingLevel.HEADING_1,
+                    alignment: AlignmentType.CENTER,
+                    spacing: {
+                      before: 400,
+                      after: 400
+                    }
+                  }));
+                }
+                
+                // Criar documento
+                const doc = new Document({
+                  sections: [{
+                    properties: {
+                      page: {
+                        margin: {
+                          top: convertInchesToTwip(1),
+                          right: convertInchesToTwip(1),
+                          bottom: convertInchesToTwip(1),
+                          left: convertInchesToTwip(1)
+                        }
+                      }
+                    },
+                    children: paragraphs
+                  }]
+                });
+                
+                // Gerar arquivo
+                Packer.toBuffer(doc).then(buffer => {
+                  const blob = new Blob([buffer], { 
+                    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+                  });
+                  saveAs(blob, `${tituloDocumento || 'documento'}.docx`);
+                  toast.success('Documento DOCX gerado com sucesso!', { id: loadingToast });
+                });
+              } catch (error) {
+                console.error('Erro ao gerar documento:', error);
+                toast.error('Falha ao exportar o documento. Tente novamente.', { id: loadingToast });
+              }
+            }}
+            className="px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/30 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-md text-sm font-medium transition-colors"
+            title="Exportar como DOCX"
+          >
+            Exportar
+          </button>
+          
+          <button
+            onClick={imprimirDocumento}
+            className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md text-sm font-medium transition-colors"
+            title="Imprimir documento"
+          >
+            Imprimir
+          </button>
+        </div>
+      </div>
+      
+      <div className="flex-1 overflow-auto bg-white dark:bg-gray-900 z-10">
+        <div className="relative h-full">
+  const renderEditor = () => {
     return (
-      <>
-        <div className="flex-1 flex flex-col relative mt-4 sm:mt-6 overflow-hidden">
-          <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 flex items-center">
+      <div
+        className="flex-1 flex flex-col relative mt-4 sm:mt-6 overflow-hidden"
+      >
+        <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 flex items-center">
+          <button
+            onClick={voltarEtapa}
+            className="mr-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            title="Voltar para etapa anterior"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M7.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l2.293 2.293a1 1 0 010 1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+          
+          <input
+            type="text"
+            value={tituloDocumento}
+            onChange={handleTituloChange}
+            placeholder="Título do documento"
+            className="flex-1 bg-transparent border-b border-gray-300 dark:border-gray-600 px-2 py-1 text-lg font-medium text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+          />
+          
+          <div className="flex items-center ml-auto space-x-2">
+            {ultimoSalvamento && (
+              <span id="status-salvamento" className="text-xs text-gray-500 dark:text-gray-400 mr-2">
+                {salvando ? 'Salvando...' : 'Todas as alterações salvas'}
+              </span>
+            )}
+            
             <button
-              onClick={voltarEtapa}
-              className="mr-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              title="Voltar para etapa anterior"
+              onClick={salvarDocumento}
+              disabled={salvando}
+              className={`px-3 py-1.5 rounded-md ${
+                salvando 
+                  ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
+                  : 'bg-primary-500 hover:bg-primary-600 text-white'
+              } text-sm font-medium transition-colors`}
+              title="Salvar documento"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M7.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l2.293 2.293a1 1 0 010 1.414z" clipRule="evenodd" />
-              </svg>
+              {salvando ? 'Salvando...' : 'Salvar'}
             </button>
             
-            <input
-              type="text"
-              value={tituloDocumento}
-              onChange={handleTituloChange}
-              placeholder="Título do documento"
-              className="flex-1 bg-transparent border-b border-gray-300 dark:border-gray-600 px-2 py-1 text-lg font-medium text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
-            />
-            
-            <div className="flex items-center ml-auto space-x-2">
-              {ultimoSalvamento && (
-                <span id="status-salvamento" className="text-xs text-gray-500 dark:text-gray-400 mr-2">
-                  {salvando ? 'Salvando...' : 'Todas as alterações salvas'}
-                </span>
-              )}
-              
-              <button
-                onClick={salvarDocumento}
-                disabled={salvando}
-                className={`px-3 py-1.5 rounded-md ${
-                  salvando 
-                    ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
-                    : 'bg-primary-500 hover:bg-primary-600 text-white'
-                } text-sm font-medium transition-colors`}
-                title="Salvar documento"
-              >
-                {salvando ? 'Salvando...' : 'Salvar'}
-              </button>
-              
-              <button
-                onClick={() => {
-                  // Exportar documento como DOCX
-                  const loadingToast = toast.loading('Preparando documento para download...');
+            <button
+              onClick={() => {
+                // Exportar documento como DOCX
+                const loadingToast = toast.loading('Preparando documento para download...');
+                
+                try {
+                  // Criar elemento temporário para analisar o HTML do Quill
+                  const tempElement = document.createElement('div');
+                  tempElement.innerHTML = documentoGerado;
                   
-                  try {
-                    // Criar elemento temporário para analisar o HTML do Quill
-                    const tempElement = document.createElement('div');
-                    tempElement.innerHTML = documentoGerado;
-                    
-                    // Extrair texto e formatação básica do HTML
-                    const paragraphs = [];
-                    const elements = Array.from(tempElement.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, div'));
-                    
-                    for (const element of elements) {
-                      // Pular elementos aninhados para evitar duplicação
-                      if (element.parentElement && elements.includes(element.parentElement)) {
-                        continue;
-                      }
-                      
-                      // Obter texto simples do elemento
-                      const text = element.textContent || '';
-                      
-                      // Determinar alinhamento
-                      let alignment;
-                      const computedStyle = window.getComputedStyle(element);
-                      const textAlign = computedStyle.textAlign;
-                      
-                      // Mapear valores de alinhamento entre CSS e docx
-                      if (textAlign === 'center') {
-                        alignment = AlignmentType.CENTER;
-                      } else if (textAlign === 'right') {
-                        alignment = AlignmentType.RIGHT;
-                      } else if (textAlign === 'left') {
-                        alignment = AlignmentType.LEFT;
-                      } else {
-                        alignment = AlignmentType.JUSTIFIED;
-                      }
-                      
-                      // Determinar se é título
-                      let heading = undefined;
-                      if (element.tagName.match(/^H[1-6]$/)) {
-                        const level = parseInt(element.tagName.substring(1));
-                        switch (level) {
-                          case 1: heading = HeadingLevel.HEADING_1; break;
-                          case 2: heading = HeadingLevel.HEADING_2; break;
-                          case 3: heading = HeadingLevel.HEADING_3; break;
-                          case 4: heading = HeadingLevel.HEADING_4; break;
-                          case 5: heading = HeadingLevel.HEADING_5; break;
-                          case 6: heading = HeadingLevel.HEADING_6; break;
-                        }
-                      }
-                      
-                      // Criar TextRun simples
-                      const textRun = new TextRun({
-                        text: text
-                      });
-                      
-                      // Criar parágrafo com o TextRun
-                      paragraphs.push(new Paragraph({
-                        heading,
-                        alignment,
-                        children: [textRun],
-                        spacing: {
-                          after: 200,
-                        }
-                      }));
+                  // Extrair texto e formatação básica do HTML
+                  const paragraphs: Paragraph[] = [];
+                  const elements = Array.from(tempElement.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, div'));
+                  
+                  for (const element of elements) {
+                    // Pular elementos aninhados para evitar duplicação
+                    if (element.parentElement && elements.includes(element.parentElement)) {
+                      continue;
                     }
                     
-                    // Criar título se existir
-                    if (tituloDocumento) {
-                      paragraphs.unshift(new Paragraph({
-                        text: tituloDocumento,
-                        heading: HeadingLevel.HEADING_1,
-                        alignment: AlignmentType.CENTER,
-                        spacing: {
-                          before: 400,
-                          after: 400
-                        }
-                      }));
+                    // Obter texto simples do elemento
+                    const text = element.textContent || '';
+                    
+                    // Determinar alinhamento
+                    let alignment;
+                    const computedStyle = window.getComputedStyle(element);
+                    const textAlign = computedStyle.textAlign;
+                    
+                    // Mapear valores de alinhamento entre CSS e docx
+                    if (textAlign === 'center') {
+                      alignment = AlignmentType.CENTER;
+                    } else if (textAlign === 'right') {
+                      alignment = AlignmentType.RIGHT;
+                    } else if (textAlign === 'left') {
+                      alignment = AlignmentType.LEFT;
+                    } else {
+                      alignment = AlignmentType.JUSTIFIED;
                     }
                     
-                    // Criar documento
-                    const doc = new Document({
-                      sections: [{
-                        properties: {
-                          page: {
-                            margin: {
-                              top: convertInchesToTwip(1),
-                              right: convertInchesToTwip(1),
-                              bottom: convertInchesToTwip(1),
-                              left: convertInchesToTwip(1)
-                            }
+                    // Determinar se é título
+                    let heading = undefined;
+                    if (element.tagName.match(/^H[1-6]$/)) {
+                      const level = parseInt(element.tagName.substring(1));
+                      switch (level) {
+                        case 1: heading = HeadingLevel.HEADING_1; break;
+                        case 2: heading = HeadingLevel.HEADING_2; break;
+                        case 3: heading = HeadingLevel.HEADING_3; break;
+                        case 4: heading = HeadingLevel.HEADING_4; break;
+                        case 5: heading = HeadingLevel.HEADING_5; break;
+                        case 6: heading = HeadingLevel.HEADING_6; break;
+                      }
+                    }
+                    
+                    // Criar TextRun simples
+                    const textRun = new TextRun({
+                      text: text
+                    });
+                    
+                    // Criar parágrafo com o TextRun
+                    paragraphs.push(new Paragraph({
+                      heading,
+                      alignment,
+                      children: [textRun],
+                      spacing: {
+                        after: 200,
+                      }
+                    }));
+                  }
+                  
+                  // Criar título se existir
+                  if (tituloDocumento) {
+                    paragraphs.unshift(new Paragraph({
+                      text: tituloDocumento,
+                      heading: HeadingLevel.HEADING_1,
+                      alignment: AlignmentType.CENTER,
+                      spacing: {
+                        before: 400,
+                        after: 400
+                      }
+                    }));
+                  }
+                  
+                  // Criar documento
+                  const doc = new Document({
+                    sections: [{
+                      properties: {
+                        page: {
+                          margin: {
+                            top: convertInchesToTwip(1),
+                            right: convertInchesToTwip(1),
+                            bottom: convertInchesToTwip(1),
+                            left: convertInchesToTwip(1)
                           }
-                        },
-                        children: paragraphs
-                      }]
+                        }
+                      },
+                      children: paragraphs
+                    }]
+                  });
+                  
+                  // Gerar arquivo
+                  Packer.toBuffer(doc).then(buffer => {
+                    const blob = new Blob([buffer], { 
+                      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
                     });
-                    
-                    // Gerar arquivo
-                    Packer.toBuffer(doc).then(buffer => {
-                      const blob = new Blob([buffer], { 
-                        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
-                      });
-                      saveAs(blob, `${tituloDocumento || 'documento'}.docx`);
-                      toast.success('Documento DOCX gerado com sucesso!', { id: loadingToast });
+                    saveAs(blob, `${tituloDocumento || 'documento'}.docx`);
+                    toast.success('Documento DOCX gerado com sucesso!', { id: loadingToast });
+                  });
+                } catch (error) {
+                  console.error('Erro ao gerar documento:', error);
+                  toast.error('Falha ao exportar o documento. Tente novamente.', { id: loadingToast });
+                }
+              }}
+              className="px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/30 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-md text-sm font-medium transition-colors"
+              title="Exportar como DOCX"
+            >
+              Exportar
+            </button>
+            
+            <button
+              onClick={imprimirDocumento}
+              className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md text-sm font-medium transition-colors"
+              title="Imprimir documento"
+            >
+              Imprimir
+            </button>
+          </div>
+        </div>
+        
+        <div className="flex-1 overflow-auto bg-white dark:bg-gray-900 z-10">
+          <div className="relative h-full">
+            <div className="flex-1 h-full print-content bg-white dark:bg-white z-20" id="documento-para-impressao">
+              <ReactQuill
+                ref={handleEditorRef}
+                theme="snow"
+                value={documentoGerado}
+                onChange={(value) => {
+                  setDocumentoGerado(value);
+                  documentoModificado.current = true;
+                }}
+                modules={{
+                  toolbar: [
+                    [{ header: [1, 2, 3, 4, 5, 6, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ list: 'ordered' }, { list: 'bullet' }],
+                    [{ indent: '-1' }, { indent: '+1' }],
+                    [{ align: [] }],
+                    ['clean'],
+                  ],
+                  clipboard: {
+                    matchVisual: false,
+                  },
+                }}
+                onInit={() => {
+                  const editorElement = document.querySelector('.ql-editor');
+                  setupSelectionObserver(editorElement);
+                  
+                  // Adicionar evento para capturar selection-change
+                  if (editorRef.current) {
+                    const editor = editorRef.current.getEditor();
+                    editor.on('selection-change', (range) => {
+                      if (range && range.length > 0) {
+                        // Texto selecionado
+                        const selectedText = editor.getText(range.index, range.length);
+                        if (selectedText.trim().length > 0) {
+                          setTextoSelecionado(selectedText);
+                          setPosicaoSelecao({ index: range.index, length: range.length });
+                          
+                          // Calcular posição para tooltip
+                          const bounds = editor.getBounds(range.index, range.length);
+                          const tooltipPosition = {
+                            x: bounds.left + bounds.width / 2,
+                            y: bounds.top,
+                          };
+                          setTooltipPosition(tooltipPosition);
+                          setMostrarTooltip(true);
+                        }
+                      } else {
+                        // Sem seleção
+                        setMostrarTooltip(false);
+                      }
                     });
-                  } catch (error) {
-                    console.error('Erro ao gerar documento:', error);
-                    toast.error('Falha ao exportar o documento. Tente novamente.', { id: loadingToast });
                   }
                 }}
-                className="px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/30 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-md text-sm font-medium transition-colors"
-                title="Exportar como DOCX"
-              >
-                Exportar
-              </button>
-              
-              <button
-                onClick={imprimirDocumento}
-                className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md text-sm font-medium transition-colors"
-                title="Imprimir documento"
-              >
-                Imprimir
-              </button>
-            </div>
-          </div>
-          
-          <div className="flex-1 overflow-auto bg-white dark:bg-gray-900 z-10">
-            <div className="relative h-full">
-              <div className="flex-1 h-full print-content bg-white dark:bg-white z-20" id="documento-para-impressao">
-                <ReactQuill
-                  ref={handleEditorRef}
-                  theme="snow"
-                  value={documentoGerado}
-                  onChange={(value) => {
-                    setDocumentoGerado(value);
-                    documentoModificado.current = true;
-                  }}
-                  modules={{
-                    toolbar: [
-                      [{ header: [1, 2, 3, 4, 5, 6, false] }],
-                      ['bold', 'italic', 'underline', 'strike'],
-                      [{ list: 'ordered' }, { list: 'bullet' }],
-                      [{ indent: '-1' }, { indent: '+1' }],
-                      [{ align: [] }],
-                      ['clean'],
-                    ],
-                    clipboard: {
-                      matchVisual: false,
-                    },
-                  }}
-                  onInit={() => {
-                    const editorElement = document.querySelector('.ql-editor');
-                    setupSelectionObserver(editorElement);
-                    
-                    if (editorRef.current) {
-                      const editor = editorRef.current.getEditor();
-                      editor.on('selection-change', (range) => {
-                        if (range && range.length > 0) {
-                          const selectedText = editor.getText(range.index, range.length);
-                          if (selectedText.trim().length > 0) {
-                            setTextoSelecionado(selectedText);
-                            setPosicaoSelecao({ index: range.index, length: range.length });
-                            
-                            const bounds = editor.getBounds(range.index, range.length);
-                            const tooltipPosition = {
-                              x: bounds.left + bounds.width / 2,
-                              y: bounds.top,
-                            };
-                            setTooltipPosition(tooltipPosition);
-                            setMostrarTooltip(true);
-                          }
-                        } else {
-                          setMostrarTooltip(false);
-                        }
-                      });
-                    }
-                  }}
-                  className="z-30 relative"
-                />
-              </div>
+                className="z-30 relative" // Adicionando z-index e relative ao editor
+              />
             </div>
           </div>
         </div>
         
-        {mostrarTooltip && textoSelecionado && tooltipPosition && (
-          <TextSuggestionTooltip 
-            position={tooltipPosition} 
-            onAnalyze={analisarTextoSelecionado}
-          />
-        )}
+        {/* Tooltip para analisar texto selecionado */}
+        <AnimatePresence>
+          {mostrarTooltip && textoSelecionado && tooltipPosition && (
+            <TextSuggestionTooltip 
+              position={tooltipPosition} 
+              onAnalyze={analisarTextoSelecionado}
+            />
+          )}
+        </AnimatePresence>
         
-        {analisando && (
-          <AnalysisIndicator />
-        )}
+        {/* Animação temporária de análise */}
+        <AnimatePresence>
+          {analisando && (
+            <AnalysisIndicator />
+          )}
+        </AnimatePresence>
         
+        {/* Assistente do editor - passar a referência do editor */}
         <EditorAssistant
           documentoId={documentoAtual || 'temp_doc_id'}
           tipoDocumento={tipoDocumentoSelecionado}
           conteudoAtual={documentoGerado}
           onAplicarSugestao={aplicarSugestaoAssistente}
-          editorRef={editorRef}
+          editorRef={editorRef} // Passar a referência
           onSubstituirTexto={substituirTextoEditor}
           onMoverConteudo={moverConteudoEditor}
         />
-      </>
-    );
-  }
+      </div>
+    </div>
+  );
+};
 
   // Modificar o layout para exibir a barra lateral fixa
   return (
